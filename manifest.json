@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Lazy Notes",
+  "version": "1.0",
+  "description": "Highlight text on any page, tag it by color, save it as a structured note.",
+
+  "permissions": [
+    "contextMenus",
+    "commands",
+    "downloads",
+    "storage",
+    "sidePanel"
+  ],
+
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "commands": {
+    "toggle-highlighter": {
+      "suggested_key": {
+        "default": "Alt+Shift+H"
+      },
+      "description": "Toggle the Lazy Notes highlighter on or off"
+    },
+    "create-course": {
+      "suggested_key": {
+        "default": "Alt+Shift+C"
+      },
+      "description": "Open the create-course form"
+    }
+  },
+
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+
+  "action": {
+    "default_title": "Lazy Notes"
+  }
+}
