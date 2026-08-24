@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lazy Notes — Notes</title>
+<link rel="stylesheet" href="viewer.css" />
+</head>
+<body data-page="display">
+
+<div id="app">
+  <header id="page-header">
+    <a id="back-link" href="#">&larr; Topics</a>
+    <h1 id="topic-heading"></h1>
+    <div class="filter-row">
+      <label for="category-filter">Category</label>
+      <select id="category-filter">
+        <option value="">All</option>
+        <option value="header">header</option>
+        <option value="definition">definition</option>
+        <option value="formula">formula</option>
+        <option value="list head">list head</option>
+        <option value="list point">list point</option>
+        <option value="summary">summary</option>
+      </select>
+
+      <label for="highlight-sort">Sort by</label>
+      <select id="highlight-sort">
+        <option value="chronological">Chronological</option>
+        <option value="date">Newest first</option>
+      </select>
+    </div>
+  </header>
+
+  <main id="highlight-list"></main>
+</div>
+
+<div id="meta-panel" class="mp-hidden"></div>
+
+<script src="utils.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

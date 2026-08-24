@@ -1,4 +1,6 @@
 // Lazy Notes — Highlighter Content Script
+// Courses and topics are plain name strings (no numeric ids — those only
+// existed for the old Flask backend). All data comes from chrome.storage.local.
 
 const CATEGORIES = [
   "header",
@@ -20,22 +22,18 @@ const contextRequiredCategories = [
 // ---------------------------------------------------------------------------
 
 let highlighterActive = false;
-let currentCourse     = null;   // name string, for display
-let currentCourseId   = null;   // integer id
-let currentTopic      = null;   // { id, name } | null — active session topic
-let availableCourses  = [];     // [{ id, name }, ...]
-let availableTopics   = [];     // [{ id, name }, ...] for current course
+let currentCourse     = null;   // course name string | null
+let currentTopic      = null;   // topic name string | null — active session topic
+let courseTree        = {};     // lazynotes.courses, read straight from storage
 
-// Session-level: { [topicId]: lastUsedCategory }
-// Cleared implicitly when topic changes; reset on course/highlighter change.
+// Session-level: { [topicName]: lastUsedCategory }
 const sessionCategoryMemory = {};
 
 // Last topic used this session — default for popup on next selection.
-// Reverts to null on course change or highlighter off.
 let lastUsedTopic = null;
 
-let selectedCourse     = null;   // { id, name }
-let selectedTopic      = null;   // { id, name } | null
+let selectedCourse     = null;   // name string | null
+let selectedTopic      = null;   // name string | null
 let selectedCategory   = CATEGORIES[0];
 let selectedAnnotation = "";
 
@@ -51,6 +49,19 @@ let topicMenuEl       = null;
 let categoryBtnEl     = null;
 let categoryMenuEl    = null;
 let annotationInputEl = null;
+
+// ---------------------------------------------------------------------------
+// Data helpers
+// ---------------------------------------------------------------------------
+
+function courseNames() {
+  return Object.keys(courseTree);
+}
+
+function topicNamesFor(courseName) {
+  if (!courseName || !courseTree[courseName]) return [];
+  return Object.keys(courseTree[courseName].topics || {});
+}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -421,59 +432,45 @@ function buildPopup() {
 }
 
 // ---------------------------------------------------------------------------
-// Option selection helpers
+// Option selection helpers (course/topic are plain name strings)
 // ---------------------------------------------------------------------------
 
-function selectCourseOption(course) {
-  // course is { id, name }
-  selectedCourse = course;
+function selectCourseOption(courseName) {
+  selectedCourse = courseName;
 
-  if (courseBtnEl) courseBtnEl.textContent = course.name;
+  if (courseBtnEl) courseBtnEl.textContent = courseName || "No courses";
 
   if (courseMenuEl) {
     courseMenuEl.querySelectorAll(".lazy-notes-dropdown-item").forEach((item) => {
-      item.classList.toggle("focused", parseInt(item.dataset.value, 10) === course.id);
+      item.classList.toggle("focused", item.dataset.value === courseName);
     });
   }
 
-  // Switching course resets topic to null and reloads topic list.
-  // The popup can only show topics for the currently selected course —
-  // if the user switches course we don't have those topics in memory,
-  // so show empty and let them pick from the side panel.
-  // (Content script only holds availableTopics for currentCourseId.)
-  if (course.id !== currentCourseId) {
-    selectedTopic = null;
-    populateTopicOptions([]);
-  } else {
-    populateTopicOptions(availableTopics);
-    // Restore last used topic for this course if it's still available
-    const restored = lastUsedTopic && availableTopics.find(
-      (t) => t.id === lastUsedTopic.id
-    );
-    selectTopicOption(restored || (availableTopics[0] ?? null));
-  }
+  const topics = topicNamesFor(courseName);
+  populateTopicOptions(topics);
+
+  const restored = lastUsedTopic && topics.includes(lastUsedTopic)
+    ? lastUsedTopic
+    : (topics[0] ?? null);
+
+  selectTopicOption(restored);
 }
 
-function selectTopicOption(topic) {
-  // topic is { id, name } | null
-  selectedTopic = topic;
+function selectTopicOption(topicName) {
+  selectedTopic = topicName;
 
   if (topicBtnEl) {
-    topicBtnEl.textContent = topic ? topic.name : "No topics";
+    topicBtnEl.textContent = topicName || "No topics";
   }
 
   if (topicMenuEl) {
     topicMenuEl.querySelectorAll(".lazy-notes-dropdown-item").forEach((item) => {
-      item.classList.toggle(
-        "focused",
-        topic !== null && parseInt(item.dataset.value, 10) === topic.id
-      );
+      item.classList.toggle("focused", topicName !== null && item.dataset.value === topicName);
     });
   }
 
-  // Apply category memory for this topic
-  if (topic) {
-    const remembered = sessionCategoryMemory[topic.id];
+  if (topicName) {
+    const remembered = sessionCategoryMemory[topicName];
     selectCategoryOption(remembered || CATEGORIES[0]);
   }
 }
@@ -482,7 +479,7 @@ function selectCategoryOption(cat) {
   selectedCategory = cat;
 
   if (selectedTopic) {
-    sessionCategoryMemory[selectedTopic.id] = cat;
+    sessionCategoryMemory[selectedTopic] = cat;
   }
 
   if (categoryBtnEl) categoryBtnEl.textContent = cat;
@@ -498,15 +495,15 @@ function populateCourseOptions() {
   if (!courseMenuEl) return;
   courseMenuEl.innerHTML = "";
 
-  availableCourses.forEach((course) => {
+  courseNames().forEach((name) => {
     const item = document.createElement("div");
     item.className = "lazy-notes-dropdown-item";
-    item.dataset.value = String(course.id);
-    item.textContent = course.name;
+    item.dataset.value = name;
+    item.textContent = name;
 
     item.addEventListener("click", (e) => {
       e.stopPropagation();
-      selectCourseOption(course);
+      selectCourseOption(name);
       courseMenuEl.classList.remove("open");
     });
 
@@ -526,15 +523,15 @@ function populateTopicOptions(topics) {
     return;
   }
 
-  topics.forEach((topic) => {
+  topics.forEach((name) => {
     const item = document.createElement("div");
     item.className = "lazy-notes-dropdown-item";
-    item.dataset.value = String(topic.id);
-    item.textContent = topic.name;
+    item.dataset.value = name;
+    item.textContent = name;
 
     item.addEventListener("click", (e) => {
       e.stopPropagation();
-      selectTopicOption(topic);
+      selectTopicOption(name);
       topicMenuEl.classList.remove("open");
     });
 
@@ -550,29 +547,13 @@ function resetPopupState() {
   selectedAnnotation = "";
 
   populateCourseOptions();
-  populateTopicOptions(availableTopics);
 
-  // Default course
-  const defaultCourse = currentCourse
-    ? availableCourses.find((c) => c.id === currentCourseId) || availableCourses[0] || null
-    : availableCourses[0] || null;
+  const names = courseNames();
+  const defaultCourse = (currentCourse && names.includes(currentCourse))
+    ? currentCourse
+    : (names[0] ?? null);
 
-  if (defaultCourse) {
-    selectCourseOption(defaultCourse);
-  } else {
-    selectedCourse = null;
-    if (courseBtnEl) courseBtnEl.textContent = "No courses";
-  }
-
-  // Default topic — last used this session, or first available, or null
-  if (availableTopics.length > 0) {
-    const restored = lastUsedTopic && availableTopics.find(
-      (t) => t.id === lastUsedTopic.id
-    );
-    selectTopicOption(restored || availableTopics[0]);
-  } else {
-    selectTopicOption(null);
-  }
+  selectCourseOption(defaultCourse);
 
   if (courseMenuEl)    courseMenuEl.classList.remove("open");
   if (topicMenuEl)     topicMenuEl.classList.remove("open");
@@ -598,7 +579,6 @@ function handleKeyDown(event) {
   const isTopicOpen     = topicMenuEl?.classList.contains("open");
   const isCategoryOpen  = categoryMenuEl?.classList.contains("open");
 
-  // Escape: close open menu, or hide popup
   if (event.key === "Escape") {
     event.preventDefault();
     if (isCourseOpen)   courseMenuEl.classList.remove("open");
@@ -610,6 +590,8 @@ function handleKeyDown(event) {
 
   // ── COURSE BUTTON ──────────────────────────────────────────────────────────
   if (active === courseBtnEl) {
+    const names = courseNames();
+
     if (event.key === " ") {
       event.preventDefault();
       topicMenuEl?.classList.remove("open");
@@ -618,18 +600,13 @@ function handleKeyDown(event) {
       return;
     }
 
-    if (isCourseOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    if (isCourseOpen && (event.key === "ArrowDown" || event.key === "ArrowUp") && names.length > 0) {
       event.preventDefault();
-      const currentIndex = availableCourses.findIndex(
-        (c) => c.id === selectedCourse?.id
-      );
-      let newIndex = currentIndex;
-      if (event.key === "ArrowDown") {
-        newIndex = (currentIndex + 1) % availableCourses.length;
-      } else {
-        newIndex = (currentIndex - 1 + availableCourses.length) % availableCourses.length;
-      }
-      selectCourseOption(availableCourses[newIndex]);
+      const currentIndex = names.indexOf(selectedCourse);
+      let newIndex = currentIndex < 0 ? 0 : currentIndex;
+      if (event.key === "ArrowDown") newIndex = (newIndex + 1) % names.length;
+      else newIndex = (newIndex - 1 + names.length) % names.length;
+      selectCourseOption(names[newIndex]);
       return;
     }
 
@@ -642,6 +619,8 @@ function handleKeyDown(event) {
 
   // ── TOPIC BUTTON ───────────────────────────────────────────────────────────
   if (active === topicBtnEl) {
+    const topics = topicNamesFor(selectedCourse);
+
     if (event.key === " ") {
       event.preventDefault();
       courseMenuEl?.classList.remove("open");
@@ -650,18 +629,13 @@ function handleKeyDown(event) {
       return;
     }
 
-    if (isTopicOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    if (isTopicOpen && (event.key === "ArrowDown" || event.key === "ArrowUp") && topics.length > 0) {
       event.preventDefault();
-      const currentIndex = availableTopics.findIndex(
-        (t) => t.id === selectedTopic?.id
-      );
+      const currentIndex = topics.indexOf(selectedTopic);
       let newIndex = currentIndex < 0 ? 0 : currentIndex;
-      if (event.key === "ArrowDown") {
-        newIndex = (currentIndex + 1) % availableTopics.length;
-      } else {
-        newIndex = (currentIndex - 1 + availableTopics.length) % availableTopics.length;
-      }
-      selectTopicOption(availableTopics[newIndex]);
+      if (event.key === "ArrowDown") newIndex = (newIndex + 1) % topics.length;
+      else newIndex = (newIndex - 1 + topics.length) % topics.length;
+      selectTopicOption(topics[newIndex]);
       return;
     }
 
@@ -692,11 +666,8 @@ function handleKeyDown(event) {
       event.preventDefault();
       const currentIndex = CATEGORIES.indexOf(selectedCategory);
       let newIndex = currentIndex;
-      if (event.key === "ArrowDown") {
-        newIndex = (currentIndex + 1) % CATEGORIES.length;
-      } else {
-        newIndex = (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
-      }
+      if (event.key === "ArrowDown") newIndex = (currentIndex + 1) % CATEGORIES.length;
+      else newIndex = (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
       selectCategoryOption(CATEGORIES[newIndex]);
       return;
     }
@@ -732,7 +703,6 @@ function handleKeyDown(event) {
     }
   }
 
-  // Global Enter — saves when no menus are open and annotation isn't focused
   if (
     event.key === "Enter" &&
     !isCourseOpen && !isTopicOpen && !isCategoryOpen &&
@@ -750,13 +720,13 @@ function handleKeyDown(event) {
 
 function activateHighlighter() {
   document.addEventListener("mouseup", handleMouseUp);
-  document.addEventListener("mousedown", handleDocumentClick);
+  document.addEventListener("mouseup", handleDocumentClick);
   document.addEventListener("keydown", handleKeyDown);
 }
 
 function deactivateHighlighter() {
   document.removeEventListener("mouseup", handleMouseUp);
-  document.removeEventListener("mousedown", handleDocumentClick);
+  document.removeEventListener("mouseup", handleDocumentClick);
   document.removeEventListener("keydown", handleKeyDown);
   hidePopup();
 }
@@ -783,8 +753,6 @@ function showPopup(rect, selectedText, paragraphElement) {
   positionPopup(rect);
   popupContainer.style.display = "block";
 
-  // Focus the topic button first (it's row 2, which is the first meaningful
-  // choice — course is usually already correct).
   setTimeout(() => topicBtnEl?.focus(), 50);
 }
 
@@ -835,6 +803,10 @@ function handleMouseUp(event) {
 function handleDocumentClick(event) {
   if (!popupContainer || popupContainer.style.display === "none") return;
   if (isEventInsidePopup(event)) return;
+  // If this mouseup produced a non-empty selection, handleMouseUp (which runs
+  // first) just showed the popup — don't immediately dismiss it.
+  const sel = window.getSelection();
+  if (sel && sel.toString().trim().length > 0) return;
   hidePopup();
 }
 
@@ -848,26 +820,25 @@ function sendHighlight() {
     return;
   }
 
-  if (!selectedTopic) {
-    console.warn("LazyNotes: Cannot send highlight — no topic selected");
+  if (!selectedTopic || !selectedCourse) {
+    console.warn("LazyNotes: Cannot send highlight — no course/topic selected");
     return;
   }
 
-  // Record as last used topic for this session
   lastUsedTopic = selectedTopic;
 
   const includeContext = contextRequiredCategories.includes(selectedCategory);
 
   const payload = {
     type:       "NEW_HIGHLIGHT",
+    id:         crypto.randomUUID(),
     text:       currentSelectedText,
     context:    includeContext && currentParagraphElement
                   ? currentParagraphElement.textContent
                   : null,
     category:   selectedCategory,
-    topicId:    selectedTopic.id,
-    topicName:  selectedTopic.name,
-    course:     selectedCourse?.name ?? null,
+    course:     selectedCourse,
+    topic:      selectedTopic,
     annotation: selectedAnnotation,
     sourceUrl:  window.location.href
   };
@@ -887,17 +858,12 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "TOGGLE_HIGHLIGHTER") {
     highlighterActive = message.active;
 
-    if (message.activeCourse     !== undefined) currentCourse   = message.activeCourse;
-    if (message.activeCourseId   !== undefined) currentCourseId = message.activeCourseId;
-    if (message.availableCourses !== undefined) availableCourses = message.availableCourses;
-    if (message.availableTopics  !== undefined) availableTopics  = message.availableTopics;
-
-    if (message.activeTopic !== undefined) {
+    if (message.activeCourse !== undefined) currentCourse = message.activeCourse;
+    if (message.activeTopic  !== undefined) {
       currentTopic  = message.activeTopic;
       lastUsedTopic = message.activeTopic;
     }
 
-    // Clear session topic memory on highlighter off
     if (!highlighterActive) {
       currentTopic  = null;
       lastUsedTopic = null;
@@ -909,13 +875,21 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 
   if (message.type === "ACTIVE_COURSE_CHANGED") {
-    currentCourse    = message.activeCourse    ?? currentCourse;
-    currentCourseId  = message.activeCourseId  ?? currentCourseId;
-    availableTopics  = message.availableTopics ?? [];
-    // Course change resets topic session state
+    currentCourse = message.activeCourse ?? currentCourse;
     currentTopic  = null;
     lastUsedTopic = null;
     return;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Storage sync — keep courseTree fresh without background having to push it
+// ---------------------------------------------------------------------------
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+  if (changes.lazynotes) {
+    courseTree = changes.lazynotes.newValue?.courses || {};
   }
 });
 
@@ -927,27 +901,13 @@ function initializeScript() {
   buildPopup();
 
   chrome.storage.local.get(
-    [
-      "highlighterActive",
-      "activeCourse",
-      "activeCourseId",
-      "activeTopic",
-      "availableCourses",
-      "availableTopics"
-    ],
+    ["lazynotes", "highlighterActive", "activeCourse", "activeTopic"],
     (result) => {
+      courseTree       = result.lazynotes?.courses ?? {};
       highlighterActive = result.highlighterActive ?? false;
-      currentCourse     = result.activeCourse      ?? null;
-      currentCourseId   = result.activeCourseId    ?? null;
-      currentTopic      = result.activeTopic        ?? null;
-      availableCourses  = result.availableCourses   ?? [];
-
-      const topicsMap   = result.availableTopics    ?? {};
-      availableTopics   = currentCourseId
-        ? (topicsMap[String(currentCourseId)] ?? [])
-        : [];
-
-      lastUsedTopic = currentTopic;
+      currentCourse     = result.activeCourse ?? null;
+      currentTopic      = result.activeTopic ?? null;
+      lastUsedTopic     = currentTopic;
 
       if (highlighterActive) activateHighlighter();
     }

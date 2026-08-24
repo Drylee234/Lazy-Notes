@@ -2,24 +2,27 @@
   "manifest_version": 3,
   "name": "Lazy Notes",
   "version": "1.0",
-  "description": "Highlight text on any page, tag it by color, save it as a structured note.",
+  "description": "Highlight text on any page, tag it by category, save it as a structured note.",
 
   "permissions": [
-    "contextMenus",
-    "commands",
-    "downloads",
     "storage",
-    "sidePanel"
+    "unlimitedStorage",
+    "contextMenus",
+    "sidePanel",
+    "tabs",
+    "downloads",
+    "activeTab",
+    "commands"
   ],
 
   "host_permissions": [
-    "http://localhost:5000/*",
     "http://*/*",
     "https://*/*"
   ],
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
 
   "content_scripts": [

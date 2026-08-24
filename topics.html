@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lazy Notes — Topics</title>
+<link rel="stylesheet" href="viewer.css" />
+</head>
+<body data-page="topics">
+
+<div id="app">
+  <header id="page-header">
+    <a id="back-link" href="courses.html">&larr; Courses</a>
+    <h1 id="course-heading"></h1>
+    <div class="sort-row">
+      <label for="topic-sort">Sort by</label>
+      <select id="topic-sort">
+        <option value="chronological">Chronological</option>
+        <option value="name">Name (A–Z)</option>
+        <option value="highlights">Note Count</option>
+      </select>
+    </div>
+  </header>
+
+  <main id="topic-list"></main>
+</div>
+
+<script src="utils.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

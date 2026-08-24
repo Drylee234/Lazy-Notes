@@ -490,10 +490,17 @@
       <div id="home-topic-list"></div>
     </div>
 
-    <!-- Last highlights -->
+    <!-- Sort control -->
     <div class="section">
-      <div class="section-label">Last Highlighted</div>
-      <div id="last-highlights"></div>
+      <div class="section-label">Sort Topics By</div>
+      <div class="course-select-wrap">
+        <select id="home-topic-sort" class="course-select">
+          <option value="chronological">Chronological</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="highlights">Note Count</option>
+        </select>
+        <span class="course-select-arrow">▾</span>
+      </div>
     </div>
 
     <!-- Actions -->
@@ -553,14 +560,15 @@
 
       <div class="row-pair">
         <div class="field-row">
-          <label for="cc-year">Year</label>
-          <select id="cc-year">
+          <label for="cc-level">Level</label>
+          <select id="cc-level">
             <option value="">—</option>
-            <option value="1">Year 1</option>
-            <option value="2">Year 2</option>
-            <option value="3">Year 3</option>
-            <option value="4">Year 4</option>
-            <option value="5">Year 5</option>
+            <option value="100 Level / Year 1">100 Level / Year 1</option>
+            <option value="200 Level / Year 2">200 Level / Year 2</option>
+            <option value="300 Level / Year 3">300 Level / Year 3</option>
+            <option value="400 Level / Year 4">400 Level / Year 4</option>
+            <option value="500 Level / Year 5">500 Level / Year 5</option>
+            <option value="600 Level / Year 6">600 Level / Year 6</option>
           </select>
         </div>
 
@@ -568,8 +576,9 @@
           <label for="cc-semester">Semester</label>
           <select id="cc-semester">
             <option value="">—</option>
-            <option value="1">Semester 1</option>
-            <option value="2">Semester 2</option>
+            <option value="S1">S1</option>
+            <option value="S2">S2</option>
+            <option value="S3">S3</option>
           </select>
         </div>
       </div>
@@ -601,10 +610,6 @@
         <input type="text" id="ct-name" placeholder="e.g. Week 3 — Cell Division" />
       </div>
 
-      <div class="field-row">
-        <label for="ct-details">Details <span style="color:var(--dim);font-size:9px;text-transform:none">(optional)</span></label>
-        <textarea id="ct-details" placeholder="e.g. chapters covered, exam focus..."></textarea>
-      </div>
     </div>
 
     <div class="ln-dialog-footer">
@@ -614,6 +619,7 @@
   </div>
 </div>
 
+<script src="utils.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

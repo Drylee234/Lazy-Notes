@@ -1,26 +1,22 @@
-// Lazy Notes — Side Panel
+// Lazy Notes — Side Panel (rebuilt against local-storage schema)
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-let allCourses        = [];   // [{ id, name, year, semester, details, topicCount }, ...]
-let availableTopics   = {};   // { [courseId]: [{ id, name }, ...] }
+let courseTree = {};   // lazynotes.courses — { name: { level, semester, details, topics } }
 
-let activeCourseId    = null;
-let activeTopicId     = null;
+let activeCourse = null;   // name string | null
+let activeTopic  = null;   // name string | null
 
-// Which course is selected in each view's dropdown
-let homeSelectedCourseId  = null;
-let studySelectedCourseId = null;
+let homeSelectedCourse  = null;
+let studySelectedCourse = null;
+let studySelectedTopic  = null;
 
-// Which topic is selected in the study view tab strip
-let studySelectedTopicId  = null;
+let homeTopicSort = "chronological";
 
-// Pending topic creation — set when background tells us to open the topic
-// modal for a specific course (after course creation or context menu)
-let pendingTopicCourseId   = null;
-let pendingTopicCourseName = null;
+// Pending topic creation — background tells us which course to attach to
+let pendingTopicCourse = null;
 
 // ---------------------------------------------------------------------------
 // DOM refs
@@ -34,7 +30,7 @@ const studyView         = document.getElementById("study-view");
 // Home
 const homeCourseSelect  = document.getElementById("home-course-select");
 const homeTopicList     = document.getElementById("home-topic-list");
-const lastHighlightsEl  = document.getElementById("last-highlights");
+const homeTopicSortSel  = document.getElementById("home-topic-sort");
 const openCreateCourse  = document.getElementById("open-create-course");
 const openCreateTopic   = document.getElementById("open-create-topic");
 
@@ -54,7 +50,7 @@ const metaPanel         = document.getElementById("meta-panel");
 // Create Course modal
 const createCourseModal = document.getElementById("create-course-modal");
 const ccName            = document.getElementById("cc-name");
-const ccYear            = document.getElementById("cc-year");
+const ccLevel           = document.getElementById("cc-level");
 const ccSemester        = document.getElementById("cc-semester");
 const ccDetails         = document.getElementById("cc-details");
 const ccCancel          = document.getElementById("cc-cancel");
@@ -64,7 +60,6 @@ const ccSubmit          = document.getElementById("cc-submit");
 const createTopicModal  = document.getElementById("create-topic-modal");
 const ctSubtitle        = document.getElementById("ct-subtitle");
 const ctName            = document.getElementById("ct-name");
-const ctDetails         = document.getElementById("ct-details");
 const ctCancel          = document.getElementById("ct-cancel");
 const ctSubmit          = document.getElementById("ct-submit");
 
@@ -74,32 +69,26 @@ const ctSubmit          = document.getElementById("ct-submit");
 
 async function init() {
   const stored = await storageGet([
+    "lazynotes",
     "highlighterActive",
     "activeCourse",
-    "activeCourseId",
-    "activeTopic",
-    "availableTopics",
-    "lastHighlights",
-    "notesUpdatedAt"
+    "activeTopic"
   ]);
 
-  activeCourseId  = stored.activeCourseId ?? null;
-  activeTopicId   = stored.activeTopic?.id ?? null;
-  availableTopics = stored.availableTopics ?? {};
+  courseTree   = stored.lazynotes?.courses ?? {};
+  activeCourse = stored.activeCourse ?? null;
+  activeTopic  = stored.activeTopic ?? null;
 
   setToggleBtn(stored.highlighterActive ?? false);
-  renderLastHighlights(stored.lastHighlights ?? []);
 
-  await loadCourses();
-
-  homeSelectedCourseId  = activeCourseId;
-  studySelectedCourseId = activeCourseId;
+  homeSelectedCourse  = activeCourse;
+  studySelectedCourse = activeCourse;
 
   renderHomeCourseSelect();
   renderStudyCourseSelect();
 
-  await loadHomeTopics(homeSelectedCourseId);
-  await loadStudyTopics(studySelectedCourseId);
+  await loadHomeTopics();
+  await loadStudyTopics();
 }
 
 // ---------------------------------------------------------------------------
@@ -112,62 +101,50 @@ function storageGet(keys) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Courses — load from Flask
-// ---------------------------------------------------------------------------
-
-async function loadCourses() {
-  try {
-    const response = await fetch("http://localhost:5000/listCourses");
-    if (!response.ok) return;
-    allCourses = await response.json();
-
-    // Keep storage mirror of { id, name } pairs for background + content scripts
-    const coursesMirror = allCourses.map((c) => ({ id: c.id, name: c.name }));
-    chrome.storage.local.set({ availableCourses: coursesMirror });
-  } catch (err) {
-    console.error("LazyNotes [Panel]: loadCourses failed ->", err.message);
-  }
+async function refreshCourseTree() {
+  const { lazynotes } = await storageGet("lazynotes");
+  courseTree = lazynotes?.courses ?? {};
 }
 
 // ---------------------------------------------------------------------------
 // Course select renders (shared pattern)
 // ---------------------------------------------------------------------------
 
-function populateCourseSelect(selectEl, selectedId) {
-  const currentVal = selectEl.value;
+function populateCourseSelect(selectEl, selectedName) {
   selectEl.innerHTML = '<option value="">— select a course —</option>';
 
-  allCourses.forEach((c) => {
+  Object.entries(courseTree).forEach(([name, course]) => {
     const opt = document.createElement("option");
-    opt.value = String(c.id);
-    opt.textContent = `${c.name} · Y${c.year} S${c.semester}`;
-    if (c.id === selectedId) opt.selected = true;
+    opt.value = name;
+    opt.textContent = `${name}${course.semester ? " · " + course.semester : ""}`;
+    if (name === selectedName) opt.selected = true;
     selectEl.appendChild(opt);
   });
-
-  // Restore selection if it was set before allCourses loaded
-  if (!selectedId && currentVal) selectEl.value = currentVal;
 }
 
 function renderHomeCourseSelect() {
-  populateCourseSelect(homeCourseSelect, homeSelectedCourseId);
+  populateCourseSelect(homeCourseSelect, homeSelectedCourse);
 }
 
 function renderStudyCourseSelect() {
-  populateCourseSelect(studyCourseSelect, studySelectedCourseId);
+  populateCourseSelect(studyCourseSelect, studySelectedCourse);
 }
 
 // ---------------------------------------------------------------------------
 // Home — topic list
 // ---------------------------------------------------------------------------
 
-async function loadHomeTopics(courseId) {
+async function loadHomeTopics() {
   homeTopicList.innerHTML = "";
 
-  if (!courseId) return;
+  if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) return;
 
-  const topics = await fetchTopics(courseId);
+  const topicsDict = courseTree[homeSelectedCourse].topics || {};
+  const topics = Object.entries(topicsDict).map(([name, t]) => ({
+    name,
+    created: t.created,
+    highlightCount: Object.keys(t.highlights || {}).length
+  }));
 
   if (topics.length === 0) {
     const empty = document.createElement("div");
@@ -177,10 +154,14 @@ async function loadHomeTopics(courseId) {
     return;
   }
 
-  topics.forEach((topic) => {
+  const sorted = sortTopics(topics, homeTopicSort);
+
+  sorted.forEach((topic) => {
     const row = document.createElement("div");
     row.className = "topic-row";
-    if (topic.id === activeTopicId) row.classList.add("active");
+    if (topic.name === activeTopic && homeSelectedCourse === activeCourse) {
+      row.classList.add("active");
+    }
 
     const name = document.createElement("span");
     name.className = "topic-name";
@@ -188,7 +169,7 @@ async function loadHomeTopics(courseId) {
 
     const meta = document.createElement("span");
     meta.className = "topic-meta";
-    meta.textContent = `${topic.highlightCount ?? 0} note${topic.highlightCount === 1 ? "" : "s"}`;
+    meta.textContent = `${topic.highlightCount} note${topic.highlightCount === 1 ? "" : "s"}`;
 
     row.appendChild(name);
     row.appendChild(meta);
@@ -196,188 +177,152 @@ async function loadHomeTopics(courseId) {
     row.addEventListener("click", () => {
       chrome.runtime.sendMessage({
         type:       "SET_ACTIVE_TOPIC",
-        topicId:    topic.id,
-        topicName:  topic.name,
-        courseId,
-        courseName: allCourses.find((c) => c.id === courseId)?.name ?? ""
+        courseName: homeSelectedCourse,
+        topicName:  topic.name
       });
-      activeTopicId = topic.id;
-      renderHomeTopicList(topics);
+      activeCourse = homeSelectedCourse;
+      activeTopic  = topic.name;
+      renderHomeTopicActiveState();
     });
 
     homeTopicList.appendChild(row);
   });
 }
 
-function renderHomeTopicList(topics) {
-  // Re-render just the active state, not a full reload
-  homeTopicList.querySelectorAll(".topic-row").forEach((row, i) => {
-    row.classList.toggle("active", topics[i]?.id === activeTopicId);
+function renderHomeTopicActiveState() {
+  homeTopicList.querySelectorAll(".topic-row").forEach((row) => {
+    const name = row.querySelector(".topic-name")?.textContent;
+    row.classList.toggle(
+      "active",
+      name === activeTopic && homeSelectedCourse === activeCourse
+    );
   });
 }
+
+homeCourseSelect.addEventListener("change", async () => {
+  homeSelectedCourse = homeCourseSelect.value || null;
+  await loadHomeTopics();
+});
+
+homeTopicSortSel.addEventListener("change", async () => {
+  homeTopicSort = homeTopicSortSel.value;
+  await loadHomeTopics();
+});
 
 // ---------------------------------------------------------------------------
 // Study — topic tabs + notes
 // ---------------------------------------------------------------------------
 
-async function loadStudyTopics(courseId) {
+async function loadStudyTopics() {
   topicTabs.innerHTML = "";
   noteList.innerHTML  = "";
   emptyStudy.style.display = "none";
 
-  if (!courseId) {
+  if (!studySelectedCourse || !courseTree[studySelectedCourse]) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "Select a course to view notes.";
+    updateNoteCount(0);
     return;
   }
 
-  const topics = await fetchTopics(courseId);
+  const topicsDict = courseTree[studySelectedCourse].topics || {};
+  const topicNames = Object.keys(topicsDict);
 
-  if (topics.length === 0) {
+  if (topicNames.length === 0) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "No topics for this course yet.";
+    updateNoteCount(0);
     return;
   }
 
-  // Select first topic if none active for this course, or restore the active one
-  const topicForCourse = topics.find((t) => t.id === studySelectedTopicId)
-    ?? topics[0];
+  studySelectedTopic = topicNames.includes(studySelectedTopic)
+    ? studySelectedTopic
+    : topicNames[0];
 
-  studySelectedTopicId = topicForCourse.id;
-
-  topics.forEach((topic) => {
+  topicNames.forEach((name) => {
     const tab = document.createElement("button");
     tab.className = "topic-tab";
-    tab.textContent = topic.name;
-    if (topic.id === studySelectedTopicId) tab.classList.add("active");
+    if (name === studySelectedTopic) tab.classList.add("active");
+    tab.textContent = name;
 
-    tab.addEventListener("click", () => {
-      studySelectedTopicId = topic.id;
+    tab.addEventListener("click", async () => {
+      studySelectedTopic = name;
       topicTabs.querySelectorAll(".topic-tab").forEach((t) =>
         t.classList.toggle("active", t === tab)
       );
-      loadNotes(topic.id);
+      await loadNotes();
     });
 
     topicTabs.appendChild(tab);
   });
 
-  await loadNotes(studySelectedTopicId);
+  await loadNotes();
 }
 
-// ---------------------------------------------------------------------------
-// Notes — load from Flask
-// ---------------------------------------------------------------------------
+studyCourseSelect.addEventListener("change", async () => {
+  studySelectedCourse = studyCourseSelect.value || null;
+  studySelectedTopic  = null;
+  await loadStudyTopics();
+});
 
-async function loadNotes(topicId) {
-  noteList.innerHTML      = "";
+async function loadNotes() {
+  noteList.innerHTML = "";
   emptyStudy.style.display = "none";
 
-  if (!topicId) {
-    emptyStudy.style.display = "block";
+  if (!studySelectedCourse || !studySelectedTopic) {
+    updateNoteCount(0);
     return;
   }
 
-  try {
-    const response = await fetch(
-      `http://localhost:5000/displayNotes?topicId=${topicId}`
-    );
+  const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
+  const highlightsDict = topic?.highlights || {};
 
-    if (!response.ok) {
-      emptyStudy.style.display = "block";
-      emptyStudy.textContent   = "Could not load notes.";
-      return;
-    }
+  const notes = Object.entries(highlightsDict).map(([id, fields]) => ({
+    id,
+    ...fields
+  }));
 
-    const notes = await response.json();
+  const sorted = sortHighlights(notes, "chronological");
 
-    if (notes.length === 0) {
-      emptyStudy.style.display = "block";
-      emptyStudy.textContent   = "No notes for this topic yet.";
-      noteCount.textContent    = "";
-      return;
-    }
-
-    noteCount.textContent = `${notes.length} note${notes.length === 1 ? "" : "s"}`;
-    emptyStudy.style.display = "none";
-
-    notes.forEach((note) => {
-      const line = document.createElement("div");
-      line.className = "note-line";
-      line.textContent = stripHtml(note.html);
-      line.dataset.id  = note.id;
-
-      line.addEventListener("mouseenter", (e) => showMeta(e, note));
-      line.addEventListener("mouseleave", hideMeta);
-
-      noteList.appendChild(line);
-    });
-  } catch (err) {
-    console.error("LazyNotes [Panel]: loadNotes failed ->", err.message);
+  if (sorted.length === 0) {
     emptyStudy.style.display = "block";
-    emptyStudy.textContent   = "Flask unreachable.";
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Topics — fetch + cache
-// ---------------------------------------------------------------------------
-
-async function fetchTopics(courseId) {
-  if (!courseId) return [];
-
-  try {
-    const response = await fetch(
-      `http://localhost:5000/listTopics?courseId=${courseId}`
-    );
-
-    if (!response.ok) return [];
-
-    const topics = await response.json();
-
-    // Update local cache and storage
-    availableTopics[String(courseId)] = topics.map((t) => ({
-      id:   t.id,
-      name: t.name
-    }));
-
-    chrome.storage.local.set({ availableTopics });
-
-    return topics;
-  } catch (err) {
-    console.error("LazyNotes [Panel]: fetchTopics failed ->", err.message);
-    return [];
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Last highlights
-// ---------------------------------------------------------------------------
-
-function renderLastHighlights(highlights) {
-  lastHighlightsEl.innerHTML = "";
-
-  if (!highlights || highlights.length === 0) {
-    const empty = document.createElement("div");
-    empty.style.cssText = "font-size:12px;color:var(--dim);";
-    empty.textContent   = "Nothing highlighted yet.";
-    lastHighlightsEl.appendChild(empty);
+    emptyStudy.textContent   = "No notes for this topic yet.";
+    updateNoteCount(0);
     return;
   }
 
-  highlights.forEach((h) => {
-    const el = document.createElement("div");
-    el.className = "last-highlight";
+  sorted.forEach((note) => {
+    const line = document.createElement("div");
+    line.className = "note-line";
+    line.textContent = stripHtml(note.text);
 
-    const course = document.createElement("div");
-    course.className = "lh-course";
-    course.textContent = [h.course, h.topicName].filter(Boolean).join(" · ");
+    line.addEventListener("mouseenter", (e) => showMeta(e, note));
+    line.addEventListener("mouseleave", hideMeta);
 
-    el.appendChild(course);
-    el.appendChild(document.createTextNode(h.text));
-    lastHighlightsEl.appendChild(el);
+    noteList.appendChild(line);
   });
+
+  updateNoteCount(sorted.length);
 }
+
+function updateNoteCount(n) {
+  noteCount.textContent = `${n} note${n === 1 ? "" : "s"}`;
+}
+
+// ---------------------------------------------------------------------------
+// View tabs
+// ---------------------------------------------------------------------------
+
+viewTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    viewTabs.forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+
+    const view = tab.dataset.view;
+    homeView.classList.toggle("visible", view === "home");
+    studyView.classList.toggle("visible", view === "study");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Toggle button
@@ -393,67 +338,15 @@ toggleBtn.addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// View tabs
-// ---------------------------------------------------------------------------
-
-viewTabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    viewTabs.forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-
-    const view = tab.dataset.view;
-    homeView.classList.toggle("visible",  view === "home");
-    studyView.classList.toggle("visible", view === "study");
-
-    if (view === "study") {
-      renderStudyCourseSelect();
-      loadStudyTopics(studySelectedCourseId);
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Course select — home
-// ---------------------------------------------------------------------------
-
-homeCourseSelect.addEventListener("change", async () => {
-  const id = parseInt(homeCourseSelect.value, 10) || null;
-  homeSelectedCourseId = id;
-
-  if (id) {
-    const name = allCourses.find((c) => c.id === id)?.name ?? "";
-    chrome.runtime.sendMessage({
-      type:       "SET_ACTIVE_COURSE",
-      courseId:   id,
-      courseName: name
-    });
-  }
-
-  await loadHomeTopics(id);
-});
-
-// ---------------------------------------------------------------------------
-// Course select — study
-// ---------------------------------------------------------------------------
-
-studyCourseSelect.addEventListener("change", async () => {
-  const id = parseInt(studyCourseSelect.value, 10) || null;
-  studySelectedCourseId = id;
-  studySelectedTopicId  = null;
-  await loadStudyTopics(id);
-});
-
-// ---------------------------------------------------------------------------
 // Create Course modal
 // ---------------------------------------------------------------------------
 
-openCreateCourse.addEventListener("click", () => openCourseModal());
-
 function openCourseModal() {
-  ccName.value     = "";
-  ccYear.value     = "";
+  ccName.value    = "";
+  ccLevel.value   = "";
   ccSemester.value = "";
-  ccDetails.value  = "";
+  ccDetails.value = "";
+
   createCourseModal.classList.add("visible");
   createCourseModal.setAttribute("aria-hidden", "false");
   setTimeout(() => ccName.focus(), 50);
@@ -464,59 +357,36 @@ function closeCourseModal() {
   createCourseModal.setAttribute("aria-hidden", "true");
 }
 
+openCreateCourse.addEventListener("click", openCourseModal);
 ccCancel.addEventListener("click", closeCourseModal);
 
-ccSubmit.addEventListener("click", async () => {
-  const name     = ccName.value.trim();
-  const year     = ccYear.value;
-  const semester = ccSemester.value;
-  const details  = ccDetails.value.trim() || null;
-
-  if (!name || !year || !semester) return;
+ccSubmit.addEventListener("click", () => {
+  const name = ccName.value.trim();
+  if (!name) return;
 
   chrome.runtime.sendMessage({
-    type: "CREATE_COURSE",
+    type:     "CREATE_COURSE",
     name,
-    year,
-    semester,
-    details
+    level:    ccLevel.value || "",
+    semester: ccSemester.value || "",
+    details:  ccDetails.value.trim()
   });
 
   closeCourseModal();
-});
-
-// ── Prefill year/semester from last used defaults ──
-chrome.storage.local.get("lastCourseDefaults", ({ lastCourseDefaults }) => {
-  if (!lastCourseDefaults) return;
-  if (lastCourseDefaults.year)     ccYear.value     = lastCourseDefaults.year;
-  if (lastCourseDefaults.semester) ccSemester.value = lastCourseDefaults.semester;
 });
 
 // ---------------------------------------------------------------------------
 // Create Topic modal
 // ---------------------------------------------------------------------------
 
-openCreateTopic.addEventListener("click", () => {
-  const courseId = homeSelectedCourseId;
-  if (!courseId) {
-    // No course selected — nudge user to pick one first
-    homeCourseSelect.focus();
-    return;
-  }
-  const courseName = allCourses.find((c) => c.id === courseId)?.name ?? "";
-  openTopicModal(courseId, courseName);
-});
-
-function openTopicModal(courseId, courseName) {
-  pendingTopicCourseId   = courseId;
-  pendingTopicCourseName = courseName;
+function openTopicModal(courseName) {
+  pendingTopicCourse = courseName;
 
   ctSubtitle.textContent = courseName
     ? `Adding topic to: ${courseName}`
     : "Add a topic to the selected course.";
 
-  ctName.value    = "";
-  ctDetails.value = "";
+  ctName.value = "";
 
   createTopicModal.classList.add("visible");
   createTopicModal.setAttribute("aria-hidden", "false");
@@ -526,24 +396,23 @@ function openTopicModal(courseId, courseName) {
 function closeTopicModal() {
   createTopicModal.classList.remove("visible");
   createTopicModal.setAttribute("aria-hidden", "true");
-  pendingTopicCourseId   = null;
-  pendingTopicCourseName = null;
+  pendingTopicCourse = null;
 }
+
+openCreateTopic.addEventListener("click", () => {
+  openTopicModal(homeSelectedCourse);
+});
 
 ctCancel.addEventListener("click", closeTopicModal);
 
 ctSubmit.addEventListener("click", () => {
-  const name    = ctName.value.trim();
-  const details = ctDetails.value.trim() || null;
-
-  if (!name || !pendingTopicCourseId) return;
+  const name = ctName.value.trim();
+  if (!name || !pendingTopicCourse) return;
 
   chrome.runtime.sendMessage({
     type:       "CREATE_TOPIC",
-    courseId:   pendingTopicCourseId,
-    courseName: pendingTopicCourseName,
-    name,
-    details
+    courseName: pendingTopicCourse,
+    name
   });
 
   closeTopicModal();
@@ -558,31 +427,35 @@ createTopicModal.addEventListener("click", (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Export
+// Export — reads from storage, builds Markdown locally, no Flask
 // ---------------------------------------------------------------------------
 
-exportBtn.addEventListener("click", async () => {
-  const topicId = studySelectedTopicId;
-  if (!topicId) return;
+exportBtn.addEventListener("click", () => {
+  if (!studySelectedCourse || !studySelectedTopic) return;
 
-  try {
-    const response = await fetch(
-      `http://localhost:5000/export?topicId=${topicId}`
-    );
+  const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
+  const highlightsDict = topic?.highlights || {};
+  const notes = sortHighlights(
+    Object.entries(highlightsDict).map(([id, fields]) => ({ id, ...fields })),
+    "chronological"
+  );
 
-    if (!response.ok) return;
+  let md = `# ${studySelectedCourse} — ${studySelectedTopic}\n\n`;
 
-    const data = await response.json();
+  notes.forEach((note) => {
+    md += `## ${note.category}\n\n${note.text}\n\n`;
+    if (note.annotation) md += `> ${note.annotation}\n\n`;
+    if (note.context)    md += `_Context: ${note.context}_\n\n`;
+    md += `Source: ${note.sourceUrl}\n\n---\n\n`;
+  });
 
-    const blob = new Blob([data.md], { type: "text/markdown" });
-    const url  = URL.createObjectURL(blob);
+  const blob = new Blob([md], { type: "text/markdown" });
+  const url  = URL.createObjectURL(blob);
+  const filename = `${studySelectedCourse} - ${studySelectedTopic}.md`.replace(/[\\/:*?"<>|]/g, "_");
 
-    chrome.downloads.download({ url, filename: data.filename }, () => {
-      URL.revokeObjectURL(url);
-    });
-  } catch (err) {
-    console.error("LazyNotes [Panel]: export failed ->", err.message);
-  }
+  chrome.downloads.download({ url, filename }, () => {
+    URL.revokeObjectURL(url);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -600,19 +473,30 @@ function showMeta(event, note) {
 
     rows.push({ label: "Category:", value: note.category });
 
-    if (note.source) {
+    if (note.sourceUrl) {
       try {
-        const url  = new URL(note.source);
+        const url = new URL(note.sourceUrl);
         rows.push({ label: "Source:", value: url.hostname + url.pathname });
       } catch (_) {
-        rows.push({ label: "Source:", value: note.source });
+        rows.push({ label: "Source:", value: note.sourceUrl });
       }
     }
 
-    if (note["last modified"]) {
-      const d = new Date(note["last modified"]);
+    if (note.timestamp) {
+      const d = new Date(note.timestamp);
       rows.push({
         label: "Saved:",
+        value: d.toLocaleString(undefined, {
+          month: "short", day: "numeric",
+          hour: "2-digit", minute: "2-digit"
+        })
+      });
+    }
+
+    if (note.edited) {
+      const d = new Date(note.edited);
+      rows.push({
+        label: "Edited:",
         value: d.toLocaleString(undefined, {
           month: "short", day: "numeric",
           hour: "2-digit", minute: "2-digit"
@@ -640,9 +524,8 @@ function showMeta(event, note) {
       metaPanel.appendChild(row);
     });
 
-    const panelRect = document.getElementById("body").getBoundingClientRect();
     metaPanel.style.top  = `${event.clientY + 8}px`;
-    metaPanel.style.left = `${panelRect.left + 16}px`;
+    metaPanel.style.left = `${event.clientX + 8}px`;
     metaPanel.classList.add("visible");
   }, 300);
 }
@@ -657,84 +540,79 @@ function hideMeta() {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener(async (message) => {
-  // Highlighter toggled
   if (message.type === "TOGGLE_HIGHLIGHTER") {
     setToggleBtn(message.active);
     return;
   }
 
-  // Notes saved to Flask — refresh study view if open
   if (message.type === "NOTES_UPDATED") {
-    if (studyView.classList.contains("visible") && studySelectedTopicId) {
-      await loadNotes(studySelectedTopicId);
-    }
-    const { lastHighlights = [] } = await storageGet("lastHighlights");
-    renderLastHighlights(lastHighlights);
+    await refreshCourseTree();
+    renderHomeCourseSelect();
+    renderStudyCourseSelect();
+    if (studyView.classList.contains("visible")) await loadNotes();
+    if (homeView.classList.contains("visible"))  await loadHomeTopics();
     return;
   }
 
-  // Background tells us to open the topic form (after course creation or
-  // context menu "Create Topic" click)
+  if (message.type === "SHOW_CREATE_COURSE") {
+    if (message.defaults) {
+      ccLevel.value    = message.defaults.level || "";
+      ccSemester.value = message.defaults.semester || "";
+    }
+    openCourseModal();
+    return;
+  }
+
   if (message.type === "SHOW_CREATE_TOPIC") {
-    const { courseId, courseName } = message;
+    const { courseName } = message;
 
-    // Refresh course list first so the new course is available
-    await loadCourses();
-    homeSelectedCourseId = courseId;
+    await refreshCourseTree();
+    homeSelectedCourse = courseName;
     renderHomeCourseSelect();
-    await loadHomeTopics(courseId);
+    await loadHomeTopics();
 
-    // Switch to home view
     viewTabs.forEach((t) => t.classList.remove("active"));
     document.querySelector('[data-view="home"]').classList.add("active");
     homeView.classList.add("visible");
     studyView.classList.remove("visible");
 
-    openTopicModal(courseId, courseName);
+    openTopicModal(courseName);
     return;
   }
 
-  // A topic was successfully created
   if (message.type === "TOPIC_CREATED") {
-    const { courseId } = message;
+    const { courseName } = message;
 
-    // Refresh topic list for this course
-    if (homeSelectedCourseId === courseId) {
-      await loadHomeTopics(courseId);
-    }
+    await refreshCourseTree();
 
-    if (studySelectedCourseId === courseId) {
-      await loadStudyTopics(courseId);
-    }
-
+    if (homeSelectedCourse === courseName)  await loadHomeTopics();
+    if (studySelectedCourse === courseName) await loadStudyTopics();
     return;
   }
 
-  // Active course changed (e.g. context menu course click)
   if (message.type === "ACTIVE_COURSE_CHANGED") {
-    activeCourseId       = message.activeCourseId ?? activeCourseId;
-    homeSelectedCourseId = activeCourseId;
+    activeCourse       = message.activeCourse ?? activeCourse;
+    activeTopic         = message.activeTopic ?? null;
+    homeSelectedCourse  = activeCourse;
 
-    await loadCourses();
+    await refreshCourseTree();
     renderHomeCourseSelect();
-    await loadHomeTopics(activeCourseId);
+    await loadHomeTopics();
     return;
   }
 });
 
 // ---------------------------------------------------------------------------
-// Storage change — handle notesUpdatedAt fallback trigger
+// Storage change — direct listener on the lazynotes key
 // ---------------------------------------------------------------------------
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "local") return;
 
-  if (changes.notesUpdatedAt) {
-    if (studyView.classList.contains("visible") && studySelectedTopicId) {
-      await loadNotes(studySelectedTopicId);
-    }
-    const { lastHighlights = [] } = await storageGet("lastHighlights");
-    renderLastHighlights(lastHighlights);
+  if (changes.lazynotes) {
+    courseTree = changes.lazynotes.newValue?.courses ?? {};
+    if (studyView.classList.contains("visible")) await loadNotes();
+    if (homeView.classList.contains("visible"))  await loadHomeTopics();
   }
 
   if (changes.highlighterActive) {
