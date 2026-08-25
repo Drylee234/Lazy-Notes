@@ -18,6 +18,8 @@ export async function handleCreateCourse(message) {
   await createCourse(name, level, semester, details);
 
   await storageSet({
+    activeCourse:       name,
+    activeTopic:        null,
     lastCourseDefaults: { level, semester }
   });
 
@@ -28,6 +30,12 @@ export async function handleCreateCourse(message) {
     activeCourse: name,
     activeTopic:  null
   });
+
+  // Immediately prompt the user to create a topic for the new course.
+  chrome.runtime.sendMessage(
+    { type: "SHOW_CREATE_TOPIC", courseName: name },
+    () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
+  );
 }
 
 export async function handleCreateTopic(message) {

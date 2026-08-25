@@ -473,12 +473,22 @@
   <!-- HOME VIEW -->
   <div id="home-view" class="visible">
 
-    <!-- Course selector -->
+    <!-- Course + sort in one card -->
     <div class="section">
       <div class="section-label">Course</div>
       <div class="course-select-wrap">
         <select id="home-course-select" class="course-select">
           <option value="">— select a course —</option>
+        </select>
+        <span class="course-select-arrow">▾</span>
+      </div>
+
+      <div class="section-label" style="margin-top:10px;">Sort Topics By</div>
+      <div class="course-select-wrap">
+        <select id="home-topic-sort" class="course-select">
+          <option value="chronological">Chronological</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="highlights">Note Count</option>
         </select>
         <span class="course-select-arrow">▾</span>
       </div>
@@ -490,22 +500,21 @@
       <div id="home-topic-list"></div>
     </div>
 
-    <!-- Sort control -->
-    <div class="section">
-      <div class="section-label">Sort Topics By</div>
-      <div class="course-select-wrap">
-        <select id="home-topic-sort" class="course-select">
-          <option value="chronological">Chronological</option>
-          <option value="name">Name (A–Z)</option>
-          <option value="highlights">Note Count</option>
-        </select>
-        <span class="course-select-arrow">▾</span>
-      </div>
-    </div>
-
     <!-- Actions -->
     <div class="section">
       <button id="open-create-topic" class="action-btn">Create Topic</button>
+    </div>
+
+    <!-- Viewer link — midpage anchor -->
+    <div class="section" style="text-align:center;">
+      <a id="open-viewer-link" href="courses.html" target="_blank" class="action-btn viewer-link-btn"
+         style="display:inline-block;text-decoration:none;">
+        Open Full Notes Viewer ↗
+      </a>
+    </div>
+
+    <!-- Create Course lives here too, slightly separated -->
+    <div class="section">
       <button id="open-create-course" class="action-btn">Create Course</button>
     </div>
 

@@ -40,7 +40,7 @@ export async function validateHighlight(payload) {
 }
 
 export function validateCourse(name, level, semester) {
-  if (!name || !name.trim()) {
+  if (!name || typeof name !== "string" || !name.trim()) {
     return { valid: false, reason: "Course name is required." };
   }
 
@@ -56,7 +56,11 @@ export function validateCourse(name, level, semester) {
 }
 
 export async function validateTopic(courseName, name) {
-  if (!name || !name.trim()) {
+  if (!courseName || typeof courseName !== "string" || !courseName.trim()) {
+    return { valid: false, reason: "A valid parent course is required to create a topic." };
+  }
+
+  if (!name || typeof name !== "string" || !name.trim()) {
     return { valid: false, reason: "Topic name is required." };
   }
 

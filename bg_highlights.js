@@ -37,6 +37,14 @@ export async function setHighlighterActive(active) {
 }
 
 export async function handleToggleTrigger() {
-  const { highlighterActive = false } = await storageGet("highlighterActive");
+  const { highlighterActive = false, activeCourse = null, activeTopic = null } =
+    await storageGet(["highlighterActive", "activeCourse", "activeTopic"]);
+
+  // Can always turn off. Can only turn on if a course AND topic are selected.
+  if (!highlighterActive && (!activeCourse || !activeTopic)) {
+    console.warn("LazyNotes [Background]: cannot enable highlighter — no course/topic selected.");
+    return;
+  }
+
   await setHighlighterActive(!highlighterActive);
 }

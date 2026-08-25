@@ -87,6 +87,9 @@ async function init() {
   renderHomeCourseSelect();
   renderStudyCourseSelect();
 
+  updateCreateTopicBtn();
+  updateToggleBtnGuard();
+
   await loadHomeTopics();
   await loadStudyTopics();
 }
@@ -120,6 +123,12 @@ function populateCourseSelect(selectEl, selectedName) {
     if (name === selectedName) opt.selected = true;
     selectEl.appendChild(opt);
   });
+
+  // Sentinel at the bottom — opens the create-course modal
+  const createOpt = document.createElement("option");
+  createOpt.value = "__create_course__";
+  createOpt.textContent = "+ Create Course";
+  selectEl.appendChild(createOpt);
 }
 
 function renderHomeCourseSelect() {
@@ -183,6 +192,7 @@ async function loadHomeTopics() {
       activeCourse = homeSelectedCourse;
       activeTopic  = topic.name;
       renderHomeTopicActiveState();
+      updateToggleBtnGuard();
     });
 
     homeTopicList.appendChild(row);
@@ -200,9 +210,21 @@ function renderHomeTopicActiveState() {
 }
 
 homeCourseSelect.addEventListener("change", async () => {
+  if (homeCourseSelect.value === "__create_course__") {
+    // Reset select back to previous selection, then open modal
+    homeCourseSelect.value = homeSelectedCourse || "";
+    openCourseModal();
+    return;
+  }
   homeSelectedCourse = homeCourseSelect.value || null;
+  updateCreateTopicBtn();
   await loadHomeTopics();
 });
+
+function updateCreateTopicBtn() {
+  openCreateTopic.disabled = !homeSelectedCourse;
+  openCreateTopic.title = homeSelectedCourse ? "" : "Select a course first";
+}
 
 homeTopicSortSel.addEventListener("change", async () => {
   homeTopicSort = homeTopicSortSel.value;
@@ -331,6 +353,15 @@ viewTabs.forEach((tab) => {
 function setToggleBtn(active) {
   toggleBtn.textContent = active ? "Highlighter on" : "Highlighter off";
   toggleBtn.classList.toggle("active", active);
+  updateToggleBtnGuard();
+}
+
+function updateToggleBtnGuard() {
+  const isActive = toggleBtn.classList.contains("active");
+  // Can always turn off; can only turn on if course+topic are set.
+  const canEnable = isActive || (activeCourse && activeTopic);
+  toggleBtn.disabled = !canEnable;
+  toggleBtn.title = canEnable ? "" : "Select a course and topic first";
 }
 
 toggleBtn.addEventListener("click", () => {
@@ -569,6 +600,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     await refreshCourseTree();
     homeSelectedCourse = courseName;
     renderHomeCourseSelect();
+    updateCreateTopicBtn();
     await loadHomeTopics();
 
     viewTabs.forEach((t) => t.classList.remove("active"));
@@ -584,6 +616,8 @@ chrome.runtime.onMessage.addListener(async (message) => {
     const { courseName } = message;
 
     await refreshCourseTree();
+    renderHomeCourseSelect();
+    renderStudyCourseSelect();
 
     if (homeSelectedCourse === courseName)  await loadHomeTopics();
     if (studySelectedCourse === courseName) await loadStudyTopics();
@@ -592,11 +626,14 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
   if (message.type === "ACTIVE_COURSE_CHANGED") {
     activeCourse       = message.activeCourse ?? activeCourse;
-    activeTopic         = message.activeTopic ?? null;
-    homeSelectedCourse  = activeCourse;
+    activeTopic        = message.activeTopic ?? null;
+    homeSelectedCourse = activeCourse;
 
     await refreshCourseTree();
     renderHomeCourseSelect();
+    renderStudyCourseSelect();
+    updateCreateTopicBtn();
+    updateToggleBtnGuard();
     await loadHomeTopics();
     return;
   }
@@ -611,6 +648,8 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   if (changes.lazynotes) {
     courseTree = changes.lazynotes.newValue?.courses ?? {};
+    renderHomeCourseSelect();
+    renderStudyCourseSelect();
     if (studyView.classList.contains("visible")) await loadNotes();
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
   }
