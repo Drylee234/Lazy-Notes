@@ -31,7 +31,6 @@ const studyView         = document.getElementById("study-view");
 const homeCourseSelect  = document.getElementById("home-course-select");
 const homeTopicList     = document.getElementById("home-topic-list");
 const homeTopicSortSel  = document.getElementById("home-topic-sort");
-const openCreateCourse  = document.getElementById("open-create-course");
 const openCreateTopic   = document.getElementById("open-create-topic");
 
 // Study
@@ -84,6 +83,18 @@ async function init() {
   homeSelectedCourse  = activeCourse;
   studySelectedCourse = activeCourse;
 
+  // Append context to chronological sorting options in the dropdown
+  if (homeTopicSortSel) {
+    Array.from(homeTopicSortSel.options).forEach(opt => {
+      if (opt.value === 'chronological' && !opt.text.includes('(')) {
+         opt.text += ' (Oldest First)';
+      }
+      if (opt.value === 'reverse-chronological' && !opt.text.includes('(')) {
+         opt.text += ' (Latest First)';
+      }
+    });
+  }
+
   renderHomeCourseSelect();
   renderStudyCourseSelect();
 
@@ -92,6 +103,7 @@ async function init() {
 
   await loadHomeTopics();
   await loadStudyTopics();
+  updateFooterCount();
 }
 
 // ---------------------------------------------------------------------------
@@ -116,15 +128,14 @@ async function refreshCourseTree() {
 function populateCourseSelect(selectEl, selectedName) {
   selectEl.innerHTML = '<option value="">— select a course —</option>';
 
-  Object.entries(courseTree).forEach(([name, course]) => {
+  Object.entries(courseTree).forEach(([name]) => {
     const opt = document.createElement("option");
     opt.value = name;
-    opt.textContent = `${name}${course.semester ? " · " + course.semester : ""}`;
+    opt.textContent = name;
     if (name === selectedName) opt.selected = true;
     selectEl.appendChild(opt);
   });
 
-  // Sentinel at the bottom — opens the create-course modal
   const createOpt = document.createElement("option");
   createOpt.value = "__create_course__";
   createOpt.textContent = "+ Create Course";
@@ -140,13 +151,39 @@ function renderStudyCourseSelect() {
 }
 
 // ---------------------------------------------------------------------------
+// Dynamic Footer Count
+// ---------------------------------------------------------------------------
+
+function updateFooterCount() {
+  if (homeView.classList.contains("visible")) {
+    if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
+      noteCount.textContent = "0 topics";
+      return;
+    }
+    const numTopics = Object.keys(courseTree[homeSelectedCourse].topics || {}).length;
+    noteCount.textContent = `${numTopics} topic${numTopics === 1 ? "" : "s"}`;
+  } else {
+    if (!studySelectedCourse || !studySelectedTopic) {
+      noteCount.textContent = "0 notes";
+      return;
+    }
+    const topic = courseTree[studySelectedCourse].topics?.[studySelectedTopic];
+    const numNotes = Object.keys(topic?.highlights || {}).length;
+    noteCount.textContent = `${numNotes} note${numNotes === 1 ? "" : "s"}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Home — topic list
 // ---------------------------------------------------------------------------
 
 async function loadHomeTopics() {
   homeTopicList.innerHTML = "";
 
-  if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) return;
+  if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
+    updateFooterCount();
+    return;
+  }
 
   const topicsDict = courseTree[homeSelectedCourse].topics || {};
   const topics = Object.entries(topicsDict).map(([name, t]) => ({
@@ -160,6 +197,7 @@ async function loadHomeTopics() {
     empty.style.cssText = "font-size:12px;color:var(--dim);padding:4px 0;";
     empty.textContent = "No topics yet — create one below.";
     homeTopicList.appendChild(empty);
+    updateFooterCount();
     return;
   }
 
@@ -197,6 +235,8 @@ async function loadHomeTopics() {
 
     homeTopicList.appendChild(row);
   });
+
+  updateFooterCount();
 }
 
 function renderHomeTopicActiveState() {
@@ -211,7 +251,6 @@ function renderHomeTopicActiveState() {
 
 homeCourseSelect.addEventListener("change", async () => {
   if (homeCourseSelect.value === "__create_course__") {
-    // Reset select back to previous selection, then open modal
     homeCourseSelect.value = homeSelectedCourse || "";
     openCourseModal();
     return;
@@ -243,7 +282,7 @@ async function loadStudyTopics() {
   if (!studySelectedCourse || !courseTree[studySelectedCourse]) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "Select a course to view notes.";
-    updateNoteCount(0);
+    updateFooterCount();
     return;
   }
 
@@ -253,7 +292,7 @@ async function loadStudyTopics() {
   if (topicNames.length === 0) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "No topics for this course yet.";
-    updateNoteCount(0);
+    updateFooterCount();
     return;
   }
 
@@ -282,6 +321,11 @@ async function loadStudyTopics() {
 }
 
 studyCourseSelect.addEventListener("change", async () => {
+  if (studyCourseSelect.value === "__create_course__") {
+    studyCourseSelect.value = studySelectedCourse || "";
+    openCourseModal();
+    return;
+  }
   studySelectedCourse = studyCourseSelect.value || null;
   studySelectedTopic  = null;
   await loadStudyTopics();
@@ -292,7 +336,7 @@ async function loadNotes() {
   emptyStudy.style.display = "none";
 
   if (!studySelectedCourse || !studySelectedTopic) {
-    updateNoteCount(0);
+    updateFooterCount();
     return;
   }
 
@@ -309,7 +353,7 @@ async function loadNotes() {
   if (sorted.length === 0) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "No notes for this topic yet.";
-    updateNoteCount(0);
+    updateFooterCount();
     return;
   }
 
@@ -324,11 +368,7 @@ async function loadNotes() {
     noteList.appendChild(line);
   });
 
-  updateNoteCount(sorted.length);
-}
-
-function updateNoteCount(n) {
-  noteCount.textContent = `${n} note${n === 1 ? "" : "s"}`;
+  updateFooterCount();
 }
 
 // ---------------------------------------------------------------------------
@@ -343,6 +383,9 @@ viewTabs.forEach((tab) => {
     const view = tab.dataset.view;
     homeView.classList.toggle("visible", view === "home");
     studyView.classList.toggle("visible", view === "study");
+    
+    // Switch the footer depending on which tab is active
+    updateFooterCount();
   });
 });
 
@@ -373,10 +416,11 @@ toggleBtn.addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 
 function openCourseModal() {
-  ccName.value    = "";
-  ccLevel.value   = "";
+  if (!createCourseModal) return;
+  ccName.value     = "";
+  ccLevel.value    = "";
   ccSemester.value = "";
-  ccDetails.value = "";
+  ccDetails.value  = "";
 
   createCourseModal.classList.add("visible");
   createCourseModal.setAttribute("aria-hidden", "false");
@@ -384,27 +428,29 @@ function openCourseModal() {
 }
 
 function closeCourseModal() {
+  if (!createCourseModal) return;
   createCourseModal.classList.remove("visible");
   createCourseModal.setAttribute("aria-hidden", "true");
 }
 
-openCreateCourse.addEventListener("click", openCourseModal);
-ccCancel.addEventListener("click", closeCourseModal);
+if (ccCancel) ccCancel.addEventListener("click", closeCourseModal);
 
-ccSubmit.addEventListener("click", () => {
-  const name = ccName.value.trim();
-  if (!name) return;
+if (ccSubmit) {
+  ccSubmit.addEventListener("click", () => {
+    const name = ccName.value.trim();
+    if (!name) return;
 
-  chrome.runtime.sendMessage({
-    type:     "CREATE_COURSE",
-    name,
-    level:    ccLevel.value || "",
-    semester: ccSemester.value || "",
-    details:  ccDetails.value.trim()
+    chrome.runtime.sendMessage({
+      type:     "CREATE_COURSE",
+      name,
+      level:    ccLevel.value || "",
+      semester: ccSemester.value || "",
+      details:  ccDetails.value.trim()
+    });
+
+    closeCourseModal();
   });
-
-  closeCourseModal();
-});
+}
 
 // ---------------------------------------------------------------------------
 // Create Topic modal
@@ -584,7 +630,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
     return;
   }
-
+  
   if (message.type === "SHOW_CREATE_COURSE") {
     if (message.defaults) {
       ccLevel.value    = message.defaults.level || "";
