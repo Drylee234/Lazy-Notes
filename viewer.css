@@ -6,6 +6,7 @@
   --sec:      #555555;
   --dim:      #999999;
   --hover:    #f0f0f0;
+  --danger:   #c0392b;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -16,6 +17,7 @@
     --sec:     #888888;
     --dim:     #444444;
     --hover:   #1e1e1e;
+    --danger:  #e5534b;
   }
 }
 
@@ -262,4 +264,40 @@ mark {
 @keyframes ln-flash {
   from { box-shadow: 0 0 0 4px rgba(255, 204, 0, 0.55); }
   to   { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+}
+
+/* Delete */
+.list-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.delete-btn {
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s, border-color 0.1s;
+}
+.list-row:hover .delete-btn,
+.delete-btn:focus-visible,
+.delete-btn.armed,
+.edit-form .delete-btn { opacity: 1; }
+.delete-btn:hover { color: var(--danger); border-color: var(--border); }
+.delete-btn.armed {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.delete-btn:disabled { opacity: 0.4; cursor: default; }
+.edit-form-footer .push-left { margin-right: auto; }
+
+/* Touch screens have no hover, so keep delete visible there */
+@media (hover: none) {
+  .delete-btn { opacity: 1; }
 }

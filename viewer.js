@@ -36,6 +36,73 @@ async function updateHighlightInStorage(id, courseName, topicName, fields) {
 const CATEGORIES = ["header", "definition", "formula", "list head", "list point", "summary"];
 
 // ---------------------------------------------------------------------------
+// Delete helpers
+// ---------------------------------------------------------------------------
+
+// Deletes go through the background so it can also clear the active
+// course/topic and rebuild the right-click menu.
+function sendDelete(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (reply) => {
+      if (chrome.runtime.lastError || !reply?.ok) {
+        const reason = reply?.reason || chrome.runtime.lastError?.message || "unknown error";
+        alert(`Couldn't delete: ${reason}`);
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    });
+  });
+}
+
+// A delete button that needs a second click within a few seconds, so a stray
+// click can't wipe anything. confirmText says what will be lost.
+function makeDeleteButton(confirmText, onConfirm) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "delete-btn";
+  btn.textContent = "Delete";
+  btn.title = "Delete";
+
+  let armed = false;
+  let timer = null;
+
+  const disarm = () => {
+    armed = false;
+    clearTimeout(timer);
+    btn.classList.remove("armed");
+    btn.textContent = "Delete";
+  };
+
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!armed) {
+      armed = true;
+      btn.classList.add("armed");
+      btn.textContent = confirmText;
+      timer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    btn.disabled = true;
+    const ok = await onConfirm();
+    if (!ok) btn.disabled = false;
+  });
+
+  btn.addEventListener("blur", disarm);
+  return btn;
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function countNotes(course) {
+  return Object.values(course?.topics || {})
+    .reduce((sum, t) => sum + Object.keys(t.highlights || {}).length, 0);
+}
+
+// ---------------------------------------------------------------------------
 // Page 1 — courses.html
 // ---------------------------------------------------------------------------
 
@@ -73,8 +140,16 @@ async function renderCourses() {
       left.appendChild(meta);
 
       const right = document.createElement("div");
-      right.className = "list-row-meta";
-      right.textContent = `${topicCount} topic${topicCount === 1 ? "" : "s"}`;
+      right.className = "list-row-right";
+      const count = document.createElement("span");
+      count.className = "list-row-meta";
+      count.textContent = plural(topicCount, "topic");
+      const noteTotal = countNotes(course);
+      right.appendChild(count);
+      right.appendChild(makeDeleteButton(
+        noteTotal ? `Delete ${plural(noteTotal, "note")}?` : "Confirm",
+        () => sendDelete({ type: "DELETE_COURSE", courseName: name })
+      ));
 
       row.appendChild(left);
       row.appendChild(right);
@@ -289,12 +364,19 @@ async function renderTopics() {
       title.className = "list-row-title";
       title.textContent = topic.name;
 
-      const meta = document.createElement("div");
+      const right = document.createElement("div");
+      right.className = "list-row-right";
+      const meta = document.createElement("span");
       meta.className = "list-row-meta";
-      meta.textContent = `${topic.highlightCount} note${topic.highlightCount === 1 ? "" : "s"}`;
+      meta.textContent = plural(topic.highlightCount, "note");
+      right.appendChild(meta);
+      right.appendChild(makeDeleteButton(
+        topic.highlightCount ? `Delete ${plural(topic.highlightCount, "note")}?` : "Confirm",
+        () => sendDelete({ type: "DELETE_TOPIC", courseName, topicName: topic.name })
+      ));
 
       row.appendChild(title);
-      row.appendChild(meta);
+      row.appendChild(right);
 
       row.addEventListener("click", () => {
         window.location.href =
@@ -518,6 +600,19 @@ async function renderDisplay() {
       draw();
     });
 
+    const deleteBtn = makeDeleteButton("Delete note?", async () => {
+      const ok = await sendDelete({
+        type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName
+      });
+      if (ok) {
+        editingNoteId = null;
+        draw();
+      }
+      return ok;
+    });
+    deleteBtn.classList.add("push-left");
+
+    footer.appendChild(deleteBtn);
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
     form.appendChild(footer);

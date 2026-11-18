@@ -695,9 +695,20 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   if (changes.lazynotes) {
     courseTree = changes.lazynotes.newValue?.courses ?? {};
+
+    // A course or topic may have been deleted from the viewer.
+    if (homeSelectedCourse && !courseTree[homeSelectedCourse]) {
+      homeSelectedCourse = null;
+      updateCreateTopicBtn();
+    }
+    if (studySelectedCourse && !courseTree[studySelectedCourse]) {
+      studySelectedCourse = null;
+      studySelectedTopic  = null;
+    }
+    if (studyView.classList.contains("visible")) await loadStudyTopics();
+
     renderHomeCourseSelect();
     renderStudyCourseSelect();
-    if (studyView.classList.contains("visible")) await loadNotes();
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
   }
 
