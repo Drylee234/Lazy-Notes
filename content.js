@@ -703,10 +703,13 @@ function handleKeyDown(event) {
     }
   }
 
+  // Only save on Enter when focus is inside the popup — otherwise pressing
+  // Enter in a page form while the popup is open would save a note.
   if (
     event.key === "Enter" &&
     !isCourseOpen && !isTopicOpen && !isCategoryOpen &&
-    active !== annotationInputEl
+    active !== annotationInputEl &&
+    popupContainer.contains(active)
   ) {
     event.preventDefault();
     sendHighlight();

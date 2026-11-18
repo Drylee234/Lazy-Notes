@@ -36,50 +36,281 @@ async function updateHighlightInStorage(id, courseName, topicName, fields) {
 const CATEGORIES = ["header", "definition", "formula", "list head", "list point", "summary"];
 
 // ---------------------------------------------------------------------------
+// Delete helpers
+// ---------------------------------------------------------------------------
+
+// Deletes go through the background so it can also clear the active
+// course/topic and rebuild the right-click menu.
+function sendDelete(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (reply) => {
+      if (chrome.runtime.lastError || !reply?.ok) {
+        const reason = reply?.reason || chrome.runtime.lastError?.message || "unknown error";
+        alert(`Couldn't delete: ${reason}`);
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    });
+  });
+}
+
+// A delete button that needs a second click within a few seconds, so a stray
+// click can't wipe anything. confirmText says what will be lost.
+function makeDeleteButton(confirmText, onConfirm) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "delete-btn";
+  btn.textContent = "Delete";
+  btn.title = "Delete";
+
+  let armed = false;
+  let timer = null;
+
+  const disarm = () => {
+    armed = false;
+    clearTimeout(timer);
+    btn.classList.remove("armed");
+    btn.textContent = "Delete";
+  };
+
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!armed) {
+      armed = true;
+      btn.classList.add("armed");
+      btn.textContent = confirmText;
+      timer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    btn.disabled = true;
+    const ok = await onConfirm();
+    if (!ok) btn.disabled = false;
+  });
+
+  btn.addEventListener("blur", disarm);
+  return btn;
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function countNotes(course) {
+  return Object.values(course?.topics || {})
+    .reduce((sum, t) => sum + Object.keys(t.highlights || {}).length, 0);
+}
+
+// ---------------------------------------------------------------------------
 // Page 1 — courses.html
 // ---------------------------------------------------------------------------
 
 async function renderCourses() {
-  const courses = await getCourseTree();
-  const listEl = document.getElementById("course-list");
-  listEl.innerHTML = "";
+  const listEl    = document.getElementById("course-list");
+  const resultsEl = document.getElementById("search-results");
+  const searchEl  = document.getElementById("search-input");
 
-  const names = Object.keys(courses);
+  let courses = await getCourseTree();
 
-  if (names.length === 0) {
-    listEl.innerHTML = '<div class="empty-state">No courses yet.</div>';
-    return;
+  function drawCourses() {
+    listEl.innerHTML = "";
+    const names = Object.keys(courses);
+
+    if (names.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">No courses yet.</div>';
+      return;
+    }
+
+    names.forEach((name) => {
+      const course = courses[name];
+      const topicCount = Object.keys(course.topics || {}).length;
+
+      const row = document.createElement("div");
+      row.className = "list-row";
+
+      const left = document.createElement("div");
+      const title = document.createElement("div");
+      title.className = "list-row-title";
+      title.textContent = name;
+      const meta = document.createElement("div");
+      meta.className = "list-row-meta";
+      meta.textContent = [course.level, course.semester].filter(Boolean).join(" · ") || "—";
+      left.appendChild(title);
+      left.appendChild(meta);
+
+      const right = document.createElement("div");
+      right.className = "list-row-right";
+      const count = document.createElement("span");
+      count.className = "list-row-meta";
+      count.textContent = plural(topicCount, "topic");
+      const noteTotal = countNotes(course);
+      right.appendChild(count);
+      right.appendChild(makeDeleteButton(
+        noteTotal ? `Delete ${plural(noteTotal, "note")}?` : "Confirm",
+        () => sendDelete({ type: "DELETE_COURSE", courseName: name })
+      ));
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      row.addEventListener("click", () => {
+        window.location.href = `topics.html?course=${encodeURIComponent(name)}`;
+      });
+
+      listEl.appendChild(row);
+    });
   }
 
-  names.forEach((name) => {
-    const course = courses[name];
-    const topicCount = Object.keys(course.topics || {}).length;
+  function drawSearch() {
+    const query = searchEl.value.trim();
+    const searching = query.length > 0;
 
-    const row = document.createElement("div");
-    row.className = "list-row";
+    listEl.hidden    = searching;
+    resultsEl.hidden = !searching;
+    if (!searching) return;
 
-    const left = document.createElement("div");
-    const title = document.createElement("div");
-    title.className = "list-row-title";
-    title.textContent = name;
-    const meta = document.createElement("div");
-    meta.className = "list-row-meta";
-    meta.textContent = [course.level, course.semester].filter(Boolean).join(" · ") || "—";
-    left.appendChild(title);
-    left.appendChild(meta);
+    const results = searchNotes(courses, query);
+    resultsEl.innerHTML = "";
 
-    const right = document.createElement("div");
-    right.className = "list-row-meta";
-    right.textContent = `${topicCount} topic${topicCount === 1 ? "" : "s"}`;
+    const summary = document.createElement("div");
+    summary.className = "search-summary";
+    summary.textContent = results.length === 0
+      ? `No notes match "${query}".`
+      : `${results.length} note${results.length === 1 ? " matches" : "s match"} "${query}"`;
+    resultsEl.appendChild(summary);
 
-    row.appendChild(left);
-    row.appendChild(right);
+    results.forEach((r) => {
+      const card = document.createElement("div");
+      card.className = "highlight-card";
 
-    row.addEventListener("click", () => {
-      window.location.href = `topics.html?course=${encodeURIComponent(name)}`;
+      const tag = document.createElement("div");
+      tag.className = "highlight-category-tag";
+      tag.textContent = r.note.category;
+
+      const line = document.createElement("div");
+      line.className = "highlight-line";
+      appendWithMarks(line, r.note.text, query);
+
+      card.appendChild(tag);
+      card.appendChild(line);
+
+      // Show the annotation/context when that's where the match was.
+      if (!matches(r.note.text, query)) {
+        const extra = [r.note.annotation, r.note.context].find((t) => matches(t, query));
+        if (extra) {
+          const sub = document.createElement("div");
+          sub.className = "search-sub";
+          appendWithMarks(sub, snippet(extra, query), query);
+          card.appendChild(sub);
+        }
+      }
+
+      const path = document.createElement("div");
+      path.className = "search-path";
+      path.textContent = `${r.courseName} › ${r.topicName}`;
+      card.appendChild(path);
+
+      card.addEventListener("click", () => {
+        window.location.href =
+          `display.html?course=${encodeURIComponent(r.courseName)}` +
+          `&topic=${encodeURIComponent(r.topicName)}` +
+          `&focus=${encodeURIComponent(r.note.id)}`;
+      });
+
+      resultsEl.appendChild(card);
     });
+  }
 
-    listEl.appendChild(row);
+  // Keep the query in the URL so Back from a result returns to it.
+  const initialQuery = new URLSearchParams(window.location.search).get("q");
+  if (initialQuery) searchEl.value = initialQuery;
+
+  searchEl.addEventListener("input", () => {
+    const q = searchEl.value.trim();
+    history.replaceState(null, "", q ? `?q=${encodeURIComponent(q)}` : "courses.html");
+    drawSearch();
+  });
+
+  drawCourses();
+  drawSearch();
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes.lazynotes) return;
+    courses = changes.lazynotes.newValue?.courses ?? {};
+    drawCourses();
+    drawSearch();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Search helpers
+// ---------------------------------------------------------------------------
+
+function matches(text, query) {
+  return !!text && text.toLowerCase().includes(query.toLowerCase());
+}
+
+// Every whitespace-separated term must appear somewhere in the note.
+function searchNotes(courses, query) {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const results = [];
+
+  Object.entries(courses).forEach(([courseName, course]) => {
+    Object.entries(course.topics || {}).forEach(([topicName, topic]) => {
+      Object.entries(topic.highlights || {}).forEach(([id, fields]) => {
+        const hay = [fields.text, fields.annotation, fields.context]
+          .filter(Boolean).join("\n").toLowerCase();
+        if (terms.every((t) => hay.includes(t))) {
+          results.push({ courseName, topicName, note: { id, ...fields } });
+        }
+      });
+    });
+  });
+
+  // Matches in the note text first, then newest first.
+  return results.sort((a, b) => {
+    const am = matches(a.note.text, terms[0]) ? 0 : 1;
+    const bm = matches(b.note.text, terms[0]) ? 0 : 1;
+    if (am !== bm) return am - bm;
+    return new Date(b.note.timestamp) - new Date(a.note.timestamp);
+  });
+}
+
+// Trim long context to a window around the first match.
+function snippet(text, query, radius = 80) {
+  const i = text.toLowerCase().indexOf(query.toLowerCase().split(/\s+/)[0]);
+  if (i < 0 || text.length <= radius * 2) return text;
+  const start = Math.max(0, i - radius);
+  const end   = Math.min(text.length, i + radius);
+  return (start > 0 ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "");
+}
+
+// Appends text to el with each query term wrapped in <mark>, built from text
+// nodes so note content is never parsed as HTML.
+function appendWithMarks(el, text, query) {
+  const terms = query.split(/\s+/).filter(Boolean)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (terms.length === 0) { el.textContent = text; return; }
+
+  const re = new RegExp(`(${terms.join("|")})`, "gi");
+  String(text).split(re).forEach((part, i) => {
+    if (i % 2 === 1) {
+      const m = document.createElement("mark");
+      m.textContent = part;
+      el.appendChild(m);
+    } else if (part) {
+      el.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+function wireExportButtons(getTarget) {
+  document.querySelectorAll(".export-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const target = await getTarget();
+      if (target) exportNotes({ format: btn.dataset.format, ...target });
+    });
   });
 }
 
@@ -93,12 +324,18 @@ async function renderTopics() {
 
   document.getElementById("course-heading").textContent = courseName || "Unknown course";
 
-  const courses = await getCourseTree();
-  const course = courses[courseName];
+  let course = (await getCourseTree())[courseName];
   const listEl = document.getElementById("topic-list");
   const sortSel = document.getElementById("topic-sort");
 
+  wireExportButtons(async () => {
+    const c = (await getCourseTree())[courseName];
+    return c ? { courseName, course: c, topicName: null } : null;
+  });
+
   function draw() {
+    document.querySelectorAll(".export-btn").forEach((b) => { b.disabled = !course; });
+
     listEl.innerHTML = "";
 
     if (!course) {
@@ -127,12 +364,19 @@ async function renderTopics() {
       title.className = "list-row-title";
       title.textContent = topic.name;
 
-      const meta = document.createElement("div");
+      const right = document.createElement("div");
+      right.className = "list-row-right";
+      const meta = document.createElement("span");
       meta.className = "list-row-meta";
-      meta.textContent = `${topic.highlightCount} note${topic.highlightCount === 1 ? "" : "s"}`;
+      meta.textContent = plural(topic.highlightCount, "note");
+      right.appendChild(meta);
+      right.appendChild(makeDeleteButton(
+        topic.highlightCount ? `Delete ${plural(topic.highlightCount, "note")}?` : "Confirm",
+        () => sendDelete({ type: "DELETE_TOPIC", courseName, topicName: topic.name })
+      ));
 
       row.appendChild(title);
-      row.appendChild(meta);
+      row.appendChild(right);
 
       row.addEventListener("click", () => {
         window.location.href =
@@ -145,6 +389,12 @@ async function renderTopics() {
 
   sortSel.addEventListener("change", draw);
   draw();
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes.lazynotes) return;
+    course = changes.lazynotes.newValue?.courses?.[courseName];
+    draw();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +417,12 @@ async function renderDisplay() {
 
   let metaTimeout = null;
   let editingNoteId = null;  // id of the note currently open in the edit form, or null
+  let focusId = params.get("focus");  // note to scroll to when arriving from search
+
+  wireExportButtons(async () => {
+    const course = (await getCourseTree())[courseName];
+    return course?.topics?.[topicName] ? { courseName, course, topicName } : null;
+  });
 
   function showMeta(event, note) {
     clearTimeout(metaTimeout);
@@ -245,6 +501,7 @@ async function renderDisplay() {
     notes.forEach((note) => {
       const card = document.createElement("div");
       card.className = "highlight-card";
+      card.dataset.id = note.id;
 
       const tag = document.createElement("div");
       tag.className = "highlight-category-tag";
@@ -268,6 +525,15 @@ async function renderDisplay() {
 
       listEl.appendChild(card);
     });
+
+    if (focusId) {
+      const target = listEl.querySelector(`[data-id="${CSS.escape(focusId)}"]`);
+      if (target) {
+        target.classList.add("focused");
+        target.scrollIntoView({ block: "center" });
+      }
+      focusId = null;  // only on first draw
+    }
   }
 
   function expandToEdit(card, note) {
@@ -334,6 +600,19 @@ async function renderDisplay() {
       draw();
     });
 
+    const deleteBtn = makeDeleteButton("Delete note?", async () => {
+      const ok = await sendDelete({
+        type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName
+      });
+      if (ok) {
+        editingNoteId = null;
+        draw();
+      }
+      return ok;
+    });
+    deleteBtn.classList.add("push-left");
+
+    footer.appendChild(deleteBtn);
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
     form.appendChild(footer);

@@ -155,6 +155,7 @@ function renderStudyCourseSelect() {
 // ---------------------------------------------------------------------------
 
 function updateFooterCount() {
+  updateExportBtn();
   if (homeView.classList.contains("visible")) {
     if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
       noteCount.textContent = "0 topics";
@@ -167,7 +168,7 @@ function updateFooterCount() {
       noteCount.textContent = "0 notes";
       return;
     }
-    const topic = courseTree[studySelectedCourse].topics?.[studySelectedTopic];
+    const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
     const numNotes = Object.keys(topic?.highlights || {}).length;
     noteCount.textContent = `${numNotes} note${numNotes === 1 ? "" : "s"}`;
   }
@@ -218,8 +219,13 @@ async function loadHomeTopics() {
     meta.className = "topic-meta";
     meta.textContent = `${topic.highlightCount} note${topic.highlightCount === 1 ? "" : "s"}`;
 
+    const right = document.createElement("span");
+    right.className = "topic-row-right";
+    right.appendChild(meta);
+    right.appendChild(makeTopicDeleteButton(homeSelectedCourse, topic));
+
     row.appendChild(name);
-    row.appendChild(meta);
+    row.appendChild(right);
 
     row.addEventListener("click", () => {
       chrome.runtime.sendMessage({
@@ -239,6 +245,57 @@ async function loadHomeTopics() {
   updateFooterCount();
 }
 
+// "×" that needs a second click within 4s; the armed label says how many
+// notes go with the topic. The background clears the active topic and turns
+// the highlighter off if this was the topic being highlighted into.
+function makeTopicDeleteButton(courseName, topic) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "topic-delete-btn";
+  btn.textContent = "×";
+  btn.title = `Delete "${topic.name}"`;
+  btn.setAttribute("aria-label", `Delete topic ${topic.name}`);
+
+  let armed = false;
+  let timer = null;
+
+  const disarm = () => {
+    armed = false;
+    clearTimeout(timer);
+    btn.classList.remove("armed");
+    btn.textContent = "×";
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();  // don't select the topic
+
+    if (!armed) {
+      armed = true;
+      btn.classList.add("armed");
+      const n = topic.highlightCount;
+      btn.textContent = n ? `Delete ${n} note${n === 1 ? "" : "s"}?` : "Delete?";
+      timer = setTimeout(disarm, 4000);
+      return;
+    }
+
+    disarm();
+    btn.disabled = true;
+    chrome.runtime.sendMessage(
+      { type: "DELETE_TOPIC", courseName, topicName: topic.name },
+      (reply) => {
+        if (chrome.runtime.lastError || !reply?.ok) {
+          btn.disabled = false;
+          alert(`Couldn't delete: ${reply?.reason || chrome.runtime.lastError?.message || "unknown error"}`);
+        }
+        // On success the storage listener redraws the list.
+      }
+    );
+  });
+
+  btn.addEventListener("blur", disarm);
+  return btn;
+}
+
 function renderHomeTopicActiveState() {
   homeTopicList.querySelectorAll(".topic-row").forEach((row) => {
     const name = row.querySelector(".topic-name")?.textContent;
@@ -252,7 +309,7 @@ function renderHomeTopicActiveState() {
 homeCourseSelect.addEventListener("change", async () => {
   if (homeCourseSelect.value === "__create_course__") {
     homeCourseSelect.value = homeSelectedCourse || "";
-    openCourseModal();
+    openCourseModalWithDefaults();
     return;
   }
   homeSelectedCourse = homeCourseSelect.value || null;
@@ -323,7 +380,7 @@ async function loadStudyTopics() {
 studyCourseSelect.addEventListener("change", async () => {
   if (studyCourseSelect.value === "__create_course__") {
     studyCourseSelect.value = studySelectedCourse || "";
-    openCourseModal();
+    openCourseModalWithDefaults();
     return;
   }
   studySelectedCourse = studyCourseSelect.value || null;
@@ -360,7 +417,7 @@ async function loadNotes() {
   sorted.forEach((note) => {
     const line = document.createElement("div");
     line.className = "note-line";
-    line.textContent = stripHtml(note.text);
+    line.textContent = note.text;
 
     line.addEventListener("mouseenter", (e) => showMeta(e, note));
     line.addEventListener("mouseleave", hideMeta);
@@ -415,16 +472,22 @@ toggleBtn.addEventListener("click", () => {
 // Create Course modal
 // ---------------------------------------------------------------------------
 
-function openCourseModal() {
+function openCourseModal(defaults = {}) {
   if (!createCourseModal) return;
   ccName.value     = "";
-  ccLevel.value    = "";
-  ccSemester.value = "";
+  ccLevel.value    = defaults.level || "";
+  ccSemester.value = defaults.semester || "";
   ccDetails.value  = "";
 
   createCourseModal.classList.add("visible");
   createCourseModal.setAttribute("aria-hidden", "false");
   setTimeout(() => ccName.focus(), 50);
+}
+
+// Pre-fill level/semester with whatever the last course used.
+async function openCourseModalWithDefaults() {
+  const { lastCourseDefaults = {} } = await storageGet("lastCourseDefaults");
+  openCourseModal(lastCourseDefaults);
 }
 
 function closeCourseModal() {
@@ -504,35 +567,33 @@ createTopicModal.addEventListener("click", (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Export — reads from storage, builds Markdown locally, no Flask
+// Export — Study view exports the open topic, Home view the selected course.
+// Formatting lives in exporter.js.
 // ---------------------------------------------------------------------------
 
+function exportTarget() {
+  if (homeView.classList.contains("visible")) {
+    const course = courseTree[homeSelectedCourse];
+    return course ? { courseName: homeSelectedCourse, course, topicName: null } : null;
+  }
+  const course = courseTree[studySelectedCourse];
+  if (!course || !studySelectedTopic || !course.topics?.[studySelectedTopic]) return null;
+  return { courseName: studySelectedCourse, course, topicName: studySelectedTopic };
+}
+
+function updateExportBtn() {
+  const target = exportTarget();
+  exportBtn.disabled = !target;
+  exportBtn.textContent = homeView.classList.contains("visible") ? "Export course" : "Export topic";
+  exportBtn.title = target
+    ? `Download ${target.topicName ? `"${target.topicName}"` : `all of "${target.courseName}"`} as Markdown`
+    : (homeView.classList.contains("visible") ? "Select a course first" : "Select a topic first");
+}
+
 exportBtn.addEventListener("click", () => {
-  if (!studySelectedCourse || !studySelectedTopic) return;
-
-  const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
-  const highlightsDict = topic?.highlights || {};
-  const notes = sortHighlights(
-    Object.entries(highlightsDict).map(([id, fields]) => ({ id, ...fields })),
-    "chronological"
-  );
-
-  let md = `# ${studySelectedCourse} — ${studySelectedTopic}\n\n`;
-
-  notes.forEach((note) => {
-    md += `## ${note.category}\n\n${note.text}\n\n`;
-    if (note.annotation) md += `> ${note.annotation}\n\n`;
-    if (note.context)    md += `_Context: ${note.context}_\n\n`;
-    md += `Source: ${note.sourceUrl}\n\n---\n\n`;
-  });
-
-  const blob = new Blob([md], { type: "text/markdown" });
-  const url  = URL.createObjectURL(blob);
-  const filename = `${studySelectedCourse} - ${studySelectedTopic}.md`.replace(/[\\/:*?"<>|]/g, "_");
-
-  chrome.downloads.download({ url, filename }, () => {
-    URL.revokeObjectURL(url);
-  });
+  const target = exportTarget();
+  if (!target) return;
+  exportNotes({ format: "md", ...target });
 });
 
 // ---------------------------------------------------------------------------
@@ -632,11 +693,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
   }
   
   if (message.type === "SHOW_CREATE_COURSE") {
-    if (message.defaults) {
-      ccLevel.value    = message.defaults.level || "";
-      ccSemester.value = message.defaults.semester || "";
-    }
-    openCourseModal();
+    openCourseModal(message.defaults || {});
     return;
   }
 
@@ -694,26 +751,34 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   if (changes.lazynotes) {
     courseTree = changes.lazynotes.newValue?.courses ?? {};
+
+    // A course or topic may have been deleted from the viewer.
+    if (homeSelectedCourse && !courseTree[homeSelectedCourse]) {
+      homeSelectedCourse = null;
+      updateCreateTopicBtn();
+    }
+    if (studySelectedCourse && !courseTree[studySelectedCourse]) {
+      studySelectedCourse = null;
+      studySelectedTopic  = null;
+    }
+    if (studyView.classList.contains("visible")) await loadStudyTopics();
+
     renderHomeCourseSelect();
     renderStudyCourseSelect();
-    if (studyView.classList.contains("visible")) await loadNotes();
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
+  }
+
+  if (changes.activeCourse || changes.activeTopic) {
+    if (changes.activeCourse) activeCourse = changes.activeCourse.newValue ?? null;
+    if (changes.activeTopic)  activeTopic  = changes.activeTopic.newValue ?? null;
+    renderHomeTopicActiveState();
+    updateToggleBtnGuard();
   }
 
   if (changes.highlighterActive) {
     setToggleBtn(changes.highlighterActive.newValue ?? false);
   }
 });
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-
-function stripHtml(html) {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.textContent || div.innerText || "";
-}
 
 // ---------------------------------------------------------------------------
 // Boot

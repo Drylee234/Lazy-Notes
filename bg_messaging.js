@@ -5,8 +5,12 @@ import {
   handleCreateCourse,
   handleCreateTopic,
   handleCourseSelection,
-  handleTopicSelection
+  handleTopicSelection,
+  handleDeleteCourse,
+  handleDeleteTopic,
+  handleDeleteHighlight
 } from './bg_courses.js';
+import { sendShowCreateCourse } from './bg_sidepanel.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -19,7 +23,22 @@ export function broadcastToAllTabs(message) {
   });
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+// Deletes reply with { ok, reason? } so the page can tell the user if it failed.
+const DELETE_HANDLERS = {
+  DELETE_COURSE:    handleDeleteCourse,
+  DELETE_TOPIC:     handleDeleteTopic,
+  DELETE_HIGHLIGHT: handleDeleteHighlight
+};
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  const deleteHandler = DELETE_HANDLERS[message.type];
+  if (deleteHandler) {
+    deleteHandler(message)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ ok: false, reason: String(err) }));
+    return true;  // keep the channel open for the async reply
+  }
+
   switch (message.type) {
     case "NEW_HIGHLIGHT":
       handleNewHighlight(message);
@@ -50,9 +69,6 @@ chrome.commands.onCommand.addListener((command) => {
     handleToggleTrigger();
   }
   if (command === "create-course") {
-    chrome.runtime.sendMessage(
-      { type: "SHOW_CREATE_COURSE" },
-      () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
-    );
+    sendShowCreateCourse();
   }
 });
