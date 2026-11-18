@@ -155,6 +155,7 @@ function renderStudyCourseSelect() {
 // ---------------------------------------------------------------------------
 
 function updateFooterCount() {
+  updateExportBtn();
   if (homeView.classList.contains("visible")) {
     if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
       noteCount.textContent = "0 topics";
@@ -167,7 +168,7 @@ function updateFooterCount() {
       noteCount.textContent = "0 notes";
       return;
     }
-    const topic = courseTree[studySelectedCourse].topics?.[studySelectedTopic];
+    const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
     const numNotes = Object.keys(topic?.highlights || {}).length;
     noteCount.textContent = `${numNotes} note${numNotes === 1 ? "" : "s"}`;
   }
@@ -252,7 +253,7 @@ function renderHomeTopicActiveState() {
 homeCourseSelect.addEventListener("change", async () => {
   if (homeCourseSelect.value === "__create_course__") {
     homeCourseSelect.value = homeSelectedCourse || "";
-    openCourseModal();
+    openCourseModalWithDefaults();
     return;
   }
   homeSelectedCourse = homeCourseSelect.value || null;
@@ -323,7 +324,7 @@ async function loadStudyTopics() {
 studyCourseSelect.addEventListener("change", async () => {
   if (studyCourseSelect.value === "__create_course__") {
     studyCourseSelect.value = studySelectedCourse || "";
-    openCourseModal();
+    openCourseModalWithDefaults();
     return;
   }
   studySelectedCourse = studyCourseSelect.value || null;
@@ -360,7 +361,7 @@ async function loadNotes() {
   sorted.forEach((note) => {
     const line = document.createElement("div");
     line.className = "note-line";
-    line.textContent = stripHtml(note.text);
+    line.textContent = note.text;
 
     line.addEventListener("mouseenter", (e) => showMeta(e, note));
     line.addEventListener("mouseleave", hideMeta);
@@ -415,16 +416,22 @@ toggleBtn.addEventListener("click", () => {
 // Create Course modal
 // ---------------------------------------------------------------------------
 
-function openCourseModal() {
+function openCourseModal(defaults = {}) {
   if (!createCourseModal) return;
   ccName.value     = "";
-  ccLevel.value    = "";
-  ccSemester.value = "";
+  ccLevel.value    = defaults.level || "";
+  ccSemester.value = defaults.semester || "";
   ccDetails.value  = "";
 
   createCourseModal.classList.add("visible");
   createCourseModal.setAttribute("aria-hidden", "false");
   setTimeout(() => ccName.focus(), 50);
+}
+
+// Pre-fill level/semester with whatever the last course used.
+async function openCourseModalWithDefaults() {
+  const { lastCourseDefaults = {} } = await storageGet("lastCourseDefaults");
+  openCourseModal(lastCourseDefaults);
 }
 
 function closeCourseModal() {
@@ -504,35 +511,33 @@ createTopicModal.addEventListener("click", (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Export — reads from storage, builds Markdown locally, no Flask
+// Export — Study view exports the open topic, Home view the selected course.
+// Formatting lives in exporter.js.
 // ---------------------------------------------------------------------------
 
+function exportTarget() {
+  if (homeView.classList.contains("visible")) {
+    const course = courseTree[homeSelectedCourse];
+    return course ? { courseName: homeSelectedCourse, course, topicName: null } : null;
+  }
+  const course = courseTree[studySelectedCourse];
+  if (!course || !studySelectedTopic || !course.topics?.[studySelectedTopic]) return null;
+  return { courseName: studySelectedCourse, course, topicName: studySelectedTopic };
+}
+
+function updateExportBtn() {
+  const target = exportTarget();
+  exportBtn.disabled = !target;
+  exportBtn.textContent = homeView.classList.contains("visible") ? "Export course" : "Export topic";
+  exportBtn.title = target
+    ? `Download ${target.topicName ? `"${target.topicName}"` : `all of "${target.courseName}"`} as Markdown`
+    : (homeView.classList.contains("visible") ? "Select a course first" : "Select a topic first");
+}
+
 exportBtn.addEventListener("click", () => {
-  if (!studySelectedCourse || !studySelectedTopic) return;
-
-  const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
-  const highlightsDict = topic?.highlights || {};
-  const notes = sortHighlights(
-    Object.entries(highlightsDict).map(([id, fields]) => ({ id, ...fields })),
-    "chronological"
-  );
-
-  let md = `# ${studySelectedCourse} — ${studySelectedTopic}\n\n`;
-
-  notes.forEach((note) => {
-    md += `## ${note.category}\n\n${note.text}\n\n`;
-    if (note.annotation) md += `> ${note.annotation}\n\n`;
-    if (note.context)    md += `_Context: ${note.context}_\n\n`;
-    md += `Source: ${note.sourceUrl}\n\n---\n\n`;
-  });
-
-  const blob = new Blob([md], { type: "text/markdown" });
-  const url  = URL.createObjectURL(blob);
-  const filename = `${studySelectedCourse} - ${studySelectedTopic}.md`.replace(/[\\/:*?"<>|]/g, "_");
-
-  chrome.downloads.download({ url, filename }, () => {
-    URL.revokeObjectURL(url);
-  });
+  const target = exportTarget();
+  if (!target) return;
+  exportNotes({ format: "md", ...target });
 });
 
 // ---------------------------------------------------------------------------
@@ -632,11 +637,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
   }
   
   if (message.type === "SHOW_CREATE_COURSE") {
-    if (message.defaults) {
-      ccLevel.value    = message.defaults.level || "";
-      ccSemester.value = message.defaults.semester || "";
-    }
-    openCourseModal();
+    openCourseModal(message.defaults || {});
     return;
   }
 
@@ -700,20 +701,17 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
   }
 
+  if (changes.activeCourse || changes.activeTopic) {
+    if (changes.activeCourse) activeCourse = changes.activeCourse.newValue ?? null;
+    if (changes.activeTopic)  activeTopic  = changes.activeTopic.newValue ?? null;
+    renderHomeTopicActiveState();
+    updateToggleBtnGuard();
+  }
+
   if (changes.highlighterActive) {
     setToggleBtn(changes.highlighterActive.newValue ?? false);
   }
 });
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-
-function stripHtml(html) {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return div.textContent || div.innerText || "";
-}
 
 // ---------------------------------------------------------------------------
 // Boot

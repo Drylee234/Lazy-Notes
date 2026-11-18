@@ -4,6 +4,7 @@ import { storageGet, storageSet, insertHighlight } from './bg_storage.js';
 import { validateHighlight } from './bg_validators.js';
 import { notifySidePanel } from './bg_sidepanel.js';
 import { broadcastToAllTabs } from './bg_messaging.js';
+import { refreshCourseContextMenuItems } from './bg_context_menus.js';
 
 export async function handleNewHighlight(payload) {
   const result = await validateHighlight(payload);
@@ -34,6 +35,9 @@ export async function setHighlighterActive(active) {
     activeCourse,
     activeTopic: active ? activeTopic : null
   });
+
+  // The "Exit Lazy Notes" item only exists while the highlighter is on.
+  await refreshCourseContextMenuItems();
 }
 
 export async function handleToggleTrigger() {

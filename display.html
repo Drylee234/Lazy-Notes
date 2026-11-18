@@ -30,6 +30,11 @@
         <option value="date">Newest first</option>
       </select>
     </div>
+    <div class="export-row">
+      <span class="export-label">Export</span>
+      <button class="export-btn" data-format="md">Markdown</button>
+      <button class="export-btn" data-format="html">HTML</button>
+    </div>
   </header>
 
   <main id="highlight-list"></main>
@@ -38,6 +43,7 @@
 <div id="meta-panel" class="mp-hidden"></div>
 
 <script src="utils.js"></script>
+<script src="exporter.js"></script>
 <script src="viewer.js"></script>
 </body>
 </html>

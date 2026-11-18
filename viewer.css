@@ -190,3 +190,76 @@ body {
 }
 .mp-row-label { color: var(--dim); flex-shrink: 0; }
 .mp-row-value { color: var(--sec); }
+
+/* Export */
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.export-label {
+  font-size: 11px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 2px;
+}
+.export-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--sec);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.export-btn:hover { background: var(--hover); color: var(--pri); }
+.export-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Search */
+.search-row { margin-top: 16px; }
+#search-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--pri);
+  font-size: 14px;
+  font-family: inherit;
+}
+#search-input:focus { outline: none; border-color: var(--sec); }
+
+.search-summary {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: 12px;
+}
+.search-path {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+.search-sub {
+  font-size: 12px;
+  color: var(--sec);
+  margin-top: 4px;
+}
+mark {
+  background: rgba(255, 204, 0, 0.45);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Note opened from a search result */
+.highlight-card.focused {
+  border-color: var(--sec);
+  animation: ln-flash 1.6s ease-out;
+}
+@keyframes ln-flash {
+  from { box-shadow: 0 0 0 4px rgba(255, 204, 0, 0.55); }
+  to   { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+}

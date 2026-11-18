@@ -7,6 +7,7 @@ import {
   handleCourseSelection,
   handleTopicSelection
 } from './bg_courses.js';
+import { sendShowCreateCourse } from './bg_sidepanel.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -50,9 +51,6 @@ chrome.commands.onCommand.addListener((command) => {
     handleToggleTrigger();
   }
   if (command === "create-course") {
-    chrome.runtime.sendMessage(
-      { type: "SHOW_CREATE_COURSE" },
-      () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
-    );
+    sendShowCreateCourse();
   }
 });

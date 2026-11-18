@@ -5,16 +5,34 @@ import { setHighlighterActive } from './bg_highlights.js';
 import { handleCourseSelection, handleTopicSelection } from './bg_courses.js';
 import { sendShowCreateCourse } from './bg_sidepanel.js';
 
+// Dynamic menu ids carry the names JSON-encoded after a "|" separator, so
+// they decode back exactly and can never collide (e.g. course "a-b" + topic
+// "c" vs course "a" + topic "b-c", which both produced "a-b-c" before and
+// made chrome.contextMenus.create throw on the duplicate id).
 function courseMenuId(courseName) {
-  return `lazy-notes-course-${courseName}`;
+  return `lazy-notes-course|${JSON.stringify(courseName)}`;
 }
 
 function topicMenuId(courseName, topicName) {
-  return `lazy-notes-topic-${courseName}-${topicName}`;
+  return `lazy-notes-topic|${JSON.stringify([courseName, topicName])}`;
 }
 
 function createTopicMenuId(courseName) {
-  return `lazy-notes-create-topic-${courseName}`;
+  return `lazy-notes-create-topic|${JSON.stringify(courseName)}`;
+}
+
+function topicSeparatorId(courseName) {
+  return `lazy-notes-topic-separator|${JSON.stringify(courseName)}`;
+}
+
+function decodeMenuId(id) {
+  const bar = id.indexOf("|");
+  if (bar < 0) return null;
+  try {
+    return { kind: id.slice(0, bar), value: JSON.parse(id.slice(bar + 1)) };
+  } catch (_) {
+    return null;
+  }
 }
 
 export function createStaticMenuItems(highlighterActive) {
@@ -84,7 +102,7 @@ export function createTopicMenuItems(courses) {
 
     if (topicNames.length > 0) {
       chrome.contextMenus.create({
-        id:       `lazy-notes-topic-separator-${courseName}`,
+        id:       topicSeparatorId(courseName),
         parentId: courseMenuId(courseName),
         type:     "separator"
       });
@@ -100,7 +118,18 @@ export function createTopicMenuItems(courses) {
   });
 }
 
-export async function refreshCourseContextMenuItems() {
+// Rebuilds are serialized: two overlapping removeAll/create passes would
+// otherwise interleave and fail with "duplicate id" errors.
+let menuRebuild = Promise.resolve();
+
+export function refreshCourseContextMenuItems() {
+  menuRebuild = menuRebuild.then(rebuildMenus).catch((err) => {
+    console.warn("LazyNotes [Background]: context menu rebuild failed ->", err);
+  });
+  return menuRebuild;
+}
+
+async function rebuildMenus() {
   const { highlighterActive = false } = await storageGet("highlighterActive");
   const courses = await getCourses();
 
@@ -124,8 +153,11 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return;
   }
 
-  if (typeof id === "string" && id.startsWith("lazy-notes-create-topic-")) {
-    const courseName = id.slice("lazy-notes-create-topic-".length);
+  const decoded = typeof id === "string" ? decodeMenuId(id) : null;
+  if (!decoded) return;
+
+  if (decoded.kind === "lazy-notes-create-topic") {
+    const courseName = decoded.value;
     await handleCourseSelection(courseName);
     chrome.runtime.sendMessage(
       { type: "SHOW_CREATE_TOPIC", courseName },
@@ -134,35 +166,15 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return;
   }
 
-  if (typeof id === "string" && id.startsWith("lazy-notes-topic-") && !id.startsWith("lazy-notes-topic-separator-")) {
-    // Course/topic names can contain hyphens, so resolve the click back to
-    // real names by matching against the ids we actually generated, rather
-    // than parsing the string.
-    const courses = await getCourses();
-    const match = findCourseTopicFromId(courses, id);
-    if (match) {
-      await handleTopicSelection(match.courseName, match.topicName);
-    }
+  if (decoded.kind === "lazy-notes-topic") {
+    const [courseName, topicName] = decoded.value;
+    await handleTopicSelection(courseName, topicName);
     return;
   }
 
-  if (typeof id === "string" && id.startsWith("lazy-notes-course-")) {
-    const courseName = id.slice("lazy-notes-course-".length);
-    await handleCourseSelection(courseName);
+  if (decoded.kind === "lazy-notes-course") {
+    await handleCourseSelection(decoded.value);
     return;
   }
 });
 
-// Menu IDs are built from raw names, which may contain hyphens themselves —
-// so resolve the click back to real course/topic names by matching against
-// the ids we actually generated, rather than parsing the string blindly.
-function findCourseTopicFromId(courses, id) {
-  for (const [courseName, course] of Object.entries(courses)) {
-    for (const topicName of Object.keys(course.topics || {})) {
-      if (topicMenuId(courseName, topicName) === id) {
-        return { courseName, topicName };
-      }
-    }
-  }
-  return null;
-}
