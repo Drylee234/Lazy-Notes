@@ -219,8 +219,13 @@ async function loadHomeTopics() {
     meta.className = "topic-meta";
     meta.textContent = `${topic.highlightCount} note${topic.highlightCount === 1 ? "" : "s"}`;
 
+    const right = document.createElement("span");
+    right.className = "topic-row-right";
+    right.appendChild(meta);
+    right.appendChild(makeTopicDeleteButton(homeSelectedCourse, topic));
+
     row.appendChild(name);
-    row.appendChild(meta);
+    row.appendChild(right);
 
     row.addEventListener("click", () => {
       chrome.runtime.sendMessage({
@@ -238,6 +243,57 @@ async function loadHomeTopics() {
   });
 
   updateFooterCount();
+}
+
+// "×" that needs a second click within 4s; the armed label says how many
+// notes go with the topic. The background clears the active topic and turns
+// the highlighter off if this was the topic being highlighted into.
+function makeTopicDeleteButton(courseName, topic) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "topic-delete-btn";
+  btn.textContent = "×";
+  btn.title = `Delete "${topic.name}"`;
+  btn.setAttribute("aria-label", `Delete topic ${topic.name}`);
+
+  let armed = false;
+  let timer = null;
+
+  const disarm = () => {
+    armed = false;
+    clearTimeout(timer);
+    btn.classList.remove("armed");
+    btn.textContent = "×";
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();  // don't select the topic
+
+    if (!armed) {
+      armed = true;
+      btn.classList.add("armed");
+      const n = topic.highlightCount;
+      btn.textContent = n ? `Delete ${n} note${n === 1 ? "" : "s"}?` : "Delete?";
+      timer = setTimeout(disarm, 4000);
+      return;
+    }
+
+    disarm();
+    btn.disabled = true;
+    chrome.runtime.sendMessage(
+      { type: "DELETE_TOPIC", courseName, topicName: topic.name },
+      (reply) => {
+        if (chrome.runtime.lastError || !reply?.ok) {
+          btn.disabled = false;
+          alert(`Couldn't delete: ${reply?.reason || chrome.runtime.lastError?.message || "unknown error"}`);
+        }
+        // On success the storage listener redraws the list.
+      }
+    );
+  });
+
+  btn.addEventListener("blur", disarm);
+  return btn;
 }
 
 function renderHomeTopicActiveState() {

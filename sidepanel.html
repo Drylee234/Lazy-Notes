@@ -13,6 +13,7 @@
     --sec:      #555555;
     --dim:      #999999;
     --hover:    #f0f0f0;
+    --danger:   #c0392b;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -23,6 +24,7 @@
       --sec:     #888888;
       --dim:     #444444;
       --hover:   #1e1e1e;
+      --danger:  #e5534b;
     }
   }
 
@@ -174,6 +176,32 @@
   }
   .topic-name { font-size: 13px; color: var(--pri); }
   .topic-meta { font-size: 11px; color: var(--dim); }
+
+  .topic-row-right { display: flex; align-items: center; gap: 6px; }
+  .topic-delete-btn {
+    font-size: 13px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+    opacity: 0;
+    font-family: inherit;
+  }
+  .topic-row:hover .topic-delete-btn,
+  .topic-delete-btn:focus-visible,
+  .topic-delete-btn.armed { opacity: 1; }
+  .topic-delete-btn:hover { color: var(--danger); border-color: var(--border); }
+  .topic-delete-btn.armed {
+    font-size: 11px;
+    color: #fff;
+    background: var(--danger);
+    border-color: var(--danger);
+  }
+  .topic-delete-btn:disabled { opacity: 0.4; cursor: default; }
+  @media (hover: none) { .topic-delete-btn { opacity: 1; } }
 
   /* Last highlights */
   #last-highlights { display: flex; flex-direction: column; gap: 6px; }
