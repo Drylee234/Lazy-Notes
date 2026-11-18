@@ -17,7 +17,35 @@ export function broadcastToAllTabs(message) {
     tabs.forEach((tab) => {
       if (tab.id == null) return;
       chrome.tabs.sendMessage(tab.id, message, () => {
-        if (chrome.runtime.lastError) { /* no content script on this tab */ }
+        // No content script: the tab was open before the extension was
+        // installed/reloaded. Inject it — on start it reads the current
+        // state from storage, so the message doesn't need resending.
+        if (isMissingContentScript()) injectContentScript(tab.id);
+      });
+    });
+  });
+}
+
+// lastError is also set when the content script simply doesn't reply, so only
+// "nobody is listening" means the script is missing.
+function isMissingContentScript() {
+  const msg = chrome.runtime.lastError?.message || "";
+  return msg.includes("Receiving end does not exist");
+}
+
+function injectContentScript(tabId) {
+  chrome.scripting
+    .executeScript({ target: { tabId }, files: ["content.js"] })
+    .catch(() => { /* restricted page (e.g. Chrome Web Store) */ });
+}
+
+// Give every already-open tab the content script, skipping tabs that have it.
+export function ensureContentScripts() {
+  chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.id == null || tab.discarded) return;
+      chrome.tabs.sendMessage(tab.id, { type: "LAZY_NOTES_PING" }, () => {
+        if (isMissingContentScript()) injectContentScript(tab.id);
       });
     });
   });

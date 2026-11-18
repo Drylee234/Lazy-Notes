@@ -99,7 +99,7 @@ async function clearActiveIfDeleted(courseName, topicName) {
   const topicGone  = !courseGone && activeTopic === topicName;
   if (!courseGone && !topicGone) return;
 
-  if (highlighterActive) await setHighlighterActive(false);  // also clears activeTopic
+  if (highlighterActive) await setHighlighterActive(false);
 
   await storageSet(courseGone
     ? { activeCourse: null, activeTopic: null }

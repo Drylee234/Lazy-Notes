@@ -19,10 +19,9 @@ export async function handleNewHighlight(payload) {
 }
 
 export async function setHighlighterActive(active) {
-  const items = { highlighterActive: active };
-  if (!active) items.activeTopic = null;
-
-  await storageSet(items);
+  // Turning off keeps the selected topic, so the toggle button and
+  // Alt+Shift+H can switch it straight back on.
+  await storageSet({ highlighterActive: active });
 
   const { activeCourse = null, activeTopic = null } = await storageGet([
     "activeCourse",
