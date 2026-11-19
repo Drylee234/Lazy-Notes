@@ -52,7 +52,9 @@ const hlStatus     = $("hl-status");
 let pdfDoc     = null;
 let pages      = [];        // [{ num, el, baseViewport, rendered, renderTask }]
 let scale      = 1;
-let fitWidth   = true;      // follow the window width until the user zooms
+let fitMode    = "width";   // "width" | "page" | null — follow the window until the user zooms
+let rotation   = 0;         // extra rotation the user applied: 0 / 90 / 180 / 270
+let fileName   = "document.pdf";
 let observer   = null;
 let currentPage = 1;
 
@@ -158,11 +160,13 @@ async function openFromUrl(url) {
   }
 
   globalThis.LazyNotesReader.source = { kind: "url", url, name: fileNameFromUrl(url) };
+  fileName = fileNameFromUrl(url);
   await loadDocument(data, fileNameFromUrl(url));
 }
 
 async function openLocalRecord(record) {
   globalThis.LazyNotesReader.source = { kind: "local", id: record.id, name: record.name };
+  fileName = record.name;
   await touchLocalFile(record);
   await loadDocument(await record.data.arrayBuffer(), record.name);
 }
@@ -204,10 +208,27 @@ async function loadDocument(data, name) {
 
   startScreen.hidden = true;
   pageControls.hidden = false;
+  $("doc-actions").hidden = false;
+  $("open-in-chrome").hidden = R.source?.kind !== "url";
+  sidebarBtn.disabled = false;
   hideMessage();
+
+  rotation = 0;
+  pageTextCache.clear();
+  closeFind();
+  thumbsEl.innerHTML = "";
 
   await loadDocNotes();
   await buildPages();
+  updateFitButton();
+
+  // Contents tab first when the PDF has one, like Chrome.
+  const hasOutline = await buildOutline();
+  showSidebarTab(hasOutline ? "outline" : "thumbs");
+  let open = false;
+  try { open = localStorage.getItem("ln-sidebar") === "1"; } catch (_) {}
+  if (open && window.innerWidth > 720) setSidebar(true);
+
   goToPage(initialPageFromHash(), false);
 }
 
@@ -222,7 +243,7 @@ async function buildPages() {
 
   for (let num = 1; num <= pdfDoc.numPages; num++) {
     const page = await pdfDoc.getPage(num);
-    const baseViewport = page.getViewport({ scale: 1 });
+    const baseViewport = page.getViewport({ scale: 1, rotation: (page.rotate + rotation) % 360 });
 
     const el = document.createElement("div");
     el.className = "page";
@@ -233,7 +254,7 @@ async function buildPages() {
   }
 
   pageCountEl.textContent = `of ${pdfDoc.numPages}`;
-  if (fitWidth) scale = fitScale();
+  if (fitMode) scale = fitScale(fitMode);
   layoutPages();
 
   observer = new IntersectionObserver(onIntersect, {
@@ -243,11 +264,27 @@ async function buildPages() {
   pages.forEach((p) => observer.observe(p.el));
 }
 
-function fitScale() {
-  const widest = Math.max(...pages.map((p) => p.baseViewport.width));
-  // Comfortable reading width: fill narrow windows, cap wide ones.
-  const avail  = Math.min(window.innerWidth - 32, 920);
-  return clampScale(avail / widest);
+// Page viewport at a scale, including the user's rotation on top of the
+// page's own.
+function viewportFor(p, s) {
+  return p.page.getViewport({ scale: s, rotation: (p.page.rotate + rotation) % 360 });
+}
+
+function availableWidth() {
+  return window.innerWidth - viewerEl.getBoundingClientRect().left - 32;
+}
+
+// "width": fill the width (capped for comfortable reading).
+// "page":  whole page visible at once.
+function fitScale(mode = "width") {
+  const widest  = Math.max(...pages.map((p) => p.baseViewport.width));
+  const tallest = Math.max(...pages.map((p) => p.baseViewport.height));
+  const availW  = mode === "width" ? Math.min(availableWidth(), 920) : availableWidth();
+  if (mode === "page") {
+    const availH = window.innerHeight - toolbarHeight() - 2 * PAGE_GAP;
+    return clampScale(Math.min(availW / widest, availH / tallest));
+  }
+  return clampScale(availW / widest);
 }
 
 function clampScale(s) {
@@ -276,7 +313,7 @@ async function renderPage(p) {
   if (p.rendered) return;
   p.rendered = true;
 
-  const viewport = p.page.getViewport({ scale });
+  const viewport = viewportFor(p, scale);
   const dpr = window.devicePixelRatio || 1;
 
   const canvas = document.createElement("canvas");
@@ -307,6 +344,7 @@ async function renderPage(p) {
     await textLayer.render();
     p.textReady = true;
     drawHighlights(p);
+    drawFindMarks(p);
   } catch (err) {
     if (err?.name !== "RenderingCancelledException") {
       console.warn("LazyNotes: page render failed", p.num, err);
@@ -314,21 +352,13 @@ async function renderPage(p) {
   }
 }
 
-// Re-render everything at a new scale, keeping the same spot on screen.
-function setScale(newScale, { fit = false } = {}) {
-  newScale = clampScale(newScale);
-  fitWidth = fit;
-  if (!pdfDoc || Math.abs(newScale - scale) < 0.001) {
-    zoomLabel.textContent = `${Math.round(scale * 100)}%`;
-    return;
-  }
-
-  // Remember how far into the current page we are.
+// Throw away rendered pages and lay out again, keeping the same spot of the
+// current page on screen. Used by zoom and rotate.
+function rerenderAll() {
   const cur = pages[currentPage - 1];
   const rect = cur.el.getBoundingClientRect();
-  const offsetRatio = (-rect.top + toolbarHeight()) / rect.height;
+  const offsetRatio = Math.max(0, (-rect.top + toolbarHeight()) / rect.height);
 
-  scale = newScale;
   pages.forEach((p) => {
     p.renderTask?.cancel();
     p.renderTask = null;
@@ -346,6 +376,41 @@ function setScale(newScale, { fit = false } = {}) {
     const r = p.el.getBoundingClientRect();
     if (r.bottom > -800 && r.top < window.innerHeight + 800) renderPage(p);
   });
+}
+
+function setScale(newScale, { fit = null } = {}) {
+  newScale = clampScale(newScale);
+  fitMode = fit;
+  updateFitButton();
+  if (!pdfDoc || Math.abs(newScale - scale) < 0.001) {
+    zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+    return;
+  }
+  scale = newScale;
+  rerenderAll();
+}
+
+function rotate(delta) {
+  if (!pdfDoc) return;
+  rotation = (rotation + delta + 360) % 360;
+  pages.forEach((p) => { p.baseViewport = viewportFor(p, 1); });
+  if (fitMode) scale = fitScale(fitMode);
+  rerenderAll();
+  resetThumbnails();
+}
+
+// One button: fits the page if we're fitting width, and the other way round.
+const FIT_ICONS = {
+  page:  '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="1.75" width="8.5" height="12.5" rx="1"/><path d="M6 5h4M6 8h4M6 11h2.5" stroke-linecap="round"/></svg>',
+  width: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.75 8h12.5M4 5.5L1.75 8 4 10.5M12 5.5L14.25 8 12 10.5"/></svg>'
+};
+
+function updateFitButton() {
+  const next = fitMode === "page" ? "width" : "page";
+  const btn = $("zoom-fit");
+  btn.innerHTML = FIT_ICONS[next];
+  btn.title = next === "page" ? "Fit to page (Ctrl 0)" : "Fit to width (Ctrl 0)";
+  btn.setAttribute("aria-label", btn.title);
 }
 
 function toolbarHeight() {
@@ -438,31 +503,36 @@ function nthIndexOf(hay, needle, n) {
 }
 
 // Merge a range's client rects into one box per line, relative to the page.
+// On pages turned 90°/270° lines run vertically, so merge along y instead.
 function lineBoxes(range, pageRect) {
+  const vertical = rotation % 180 !== 0;
+  // Work in "line space": x along the line, y across lines.
+  const toLine   = (r) => vertical
+    ? { a: r.top, b: r.bottom, c: r.left, d: r.right }
+    : { a: r.left, b: r.right, c: r.top, d: r.bottom };
+
   const rects = [...range.getClientRects()]
     .filter((r) => r.width > 0.5 && r.height > 0.5)
-    .sort((a, b) => a.top - b.top || a.left - b.left);
+    .map(toLine)
+    .sort((x, y) => x.c - y.c || x.a - y.a);
 
   const lines = [];
   rects.forEach((r) => {
-    const line = lines.find((l) => Math.abs(l.top - r.top) < Math.min(l.height, r.height) * 0.5);
+    const thick = r.d - r.c;
+    const line = lines.find((l) => Math.abs(l.c - r.c) < Math.min(l.d - l.c, thick) * 0.5);
     if (line) {
-      const right = Math.max(line.left + line.width, r.right);
-      line.left = Math.min(line.left, r.left);
-      line.width = right - line.left;
-      line.top = Math.min(line.top, r.top);
-      line.height = Math.max(line.height, r.height);
+      line.a = Math.min(line.a, r.a);
+      line.b = Math.max(line.b, r.b);
+      line.c = Math.min(line.c, r.c);
+      line.d = Math.max(line.d, r.d);
     } else {
-      lines.push({ left: r.left, top: r.top, width: r.width, height: r.height });
+      lines.push({ ...r });
     }
   });
 
-  return lines.map((l) => ({
-    left: l.left - pageRect.left,
-    top: l.top - pageRect.top,
-    width: l.width,
-    height: l.height
-  }));
+  return lines.map((l) => vertical
+    ? { left: l.c - pageRect.left, top: l.a - pageRect.top, width: l.d - l.c, height: l.b - l.a }
+    : { left: l.a - pageRect.left, top: l.c - pageRect.top, width: l.b - l.a, height: l.d - l.c });
 }
 
 function drawHighlights(p) {
@@ -529,8 +599,10 @@ function goToPage(num, smooth = true) {
 }
 
 function setCurrentPage(num) {
+  const changed = num !== currentPage;
   currentPage = num;
   if (document.activeElement !== pageInput) pageInput.value = String(num);
+  if (changed) markCurrentThumb();
 }
 
 // Current page = the one covering the middle of the screen.
@@ -554,7 +626,7 @@ window.addEventListener("scroll", () => {
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (fitWidth && pdfDoc) setScale(fitScale(), { fit: true }); }, 150);
+  resizeTimer = setTimeout(() => { if (fitMode && pdfDoc) setScale(fitScale(fitMode), { fit: fitMode }); }, 150);
 });
 
 pageInput.addEventListener("change", () => {
@@ -568,24 +640,412 @@ $("prev-page").addEventListener("click", () => goToPage(currentPage - 1));
 $("next-page").addEventListener("click", () => goToPage(currentPage + 1));
 $("zoom-in").addEventListener("click",  () => setScale(scale * 1.2));
 $("zoom-out").addEventListener("click", () => setScale(scale / 1.2));
-$("zoom-fit").addEventListener("click", () => setScale(fitScale(), { fit: true }));
+$("zoom-fit").addEventListener("click", () => {
+  const next = fitMode === "page" ? "width" : "page";
+  setScale(fitScale(next), { fit: next });
+});
+$("rotate-cw").addEventListener("click",  () => rotate(90));
+$("rotate-ccw").addEventListener("click", () => rotate(-90));
 
-// Keyboard: ←/→ pages, Ctrl/Cmd +/−/0 zoom. Leave keys alone while typing or
-// while the save popup is open.
+// Keyboard — Ctrl/Cmd: F find, P print, +/−/0 zoom, [ ] rotate.
+// ←/→ turn pages. Page-turning keys are left alone while typing or while
+// the save popup is open.
 document.addEventListener("keydown", (e) => {
   if (!pdfDoc) return;
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (mod && e.key.toLowerCase() === "f") { e.preventDefault(); openFind(); return; }
+  if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); printDocument(); return; }
+
   const t = e.target;
   if (t.closest?.(".lazy-notes-popup") || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
   if (document.querySelector(".lazy-notes-popup")?.style.display === "block") return;
 
-  if (e.ctrlKey || e.metaKey) {
+  if (mod) {
     if (e.key === "=" || e.key === "+") { e.preventDefault(); setScale(scale * 1.2); }
     if (e.key === "-")                  { e.preventDefault(); setScale(scale / 1.2); }
-    if (e.key === "0")                  { e.preventDefault(); setScale(fitScale(), { fit: true }); }
+    if (e.key === "0")                  { e.preventDefault(); setScale(fitScale("width"), { fit: "width" }); }
+    if (e.key === "]")                  { e.preventDefault(); rotate(90); }
+    if (e.key === "[")                  { e.preventDefault(); rotate(-90); }
     return;
   }
   if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(currentPage + 1); }
   if (e.key === "ArrowLeft"  || e.key === "PageUp")   { e.preventDefault(); goToPage(currentPage - 1); }
+});
+
+// ---------------------------------------------------------------------------
+// Sidebar — page thumbnails and the PDF's own table of contents
+// ---------------------------------------------------------------------------
+
+const sidebarEl  = $("sidebar");
+const sidebarBtn = $("sidebar-btn");
+const thumbsEl   = $("thumbs");
+const outlineEl  = $("outline");
+const THUMB_WIDTH = 120;
+let thumbObserver = null;
+
+function sidebarOpen() {
+  return !sidebarEl.hidden;
+}
+
+function setSidebar(open) {
+  sidebarEl.hidden = !open;
+  document.body.classList.toggle("with-sidebar", open);
+  sidebarBtn.setAttribute("aria-pressed", String(open));
+  try { localStorage.setItem("ln-sidebar", open ? "1" : "0"); } catch (_) {}
+  if (open) {
+    buildThumbnails();
+    markCurrentThumb();
+  }
+  if (pdfDoc && fitMode) setScale(fitScale(fitMode), { fit: fitMode });
+}
+
+sidebarBtn.addEventListener("click", () => setSidebar(!sidebarOpen()));
+
+document.querySelectorAll(".sb-tab").forEach((tab) => {
+  tab.addEventListener("click", () => showSidebarTab(tab.dataset.tab));
+});
+
+function showSidebarTab(name) {
+  document.querySelectorAll(".sb-tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+  thumbsEl.hidden  = name !== "thumbs";
+  outlineEl.hidden = name !== "outline";
+}
+
+function resetThumbnails() {
+  thumbObserver?.disconnect();
+  thumbObserver = null;
+  thumbsEl.innerHTML = "";
+  if (sidebarOpen()) buildThumbnails();
+}
+
+function buildThumbnails() {
+  if (!pdfDoc || thumbsEl.childElementCount) return;
+
+  thumbObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) renderThumb(entry.target);
+    });
+  }, { root: thumbsEl, rootMargin: "300px 0px" });
+
+  pages.forEach((p) => {
+    const vp = p.baseViewport;
+    const btn = document.createElement("button");
+    btn.className = "thumb";
+    btn.dataset.page = String(p.num);
+    btn.title = `Page ${p.num}`;
+
+    const box = document.createElement("div");
+    box.className = "thumb-img";
+    box.style.width  = `${THUMB_WIDTH}px`;
+    box.style.height = `${Math.round(THUMB_WIDTH * vp.height / vp.width)}px`;
+
+    const label = document.createElement("span");
+    label.className = "thumb-num";
+    label.textContent = String(p.num);
+
+    btn.append(box, label);
+    btn.addEventListener("click", () => goToPage(p.num));
+    thumbsEl.appendChild(btn);
+    thumbObserver.observe(btn);
+  });
+}
+
+async function renderThumb(btn) {
+  if (btn.dataset.done) return;
+  btn.dataset.done = "1";
+  const p = pages[Number(btn.dataset.page) - 1];
+  const dpr = window.devicePixelRatio || 1;
+  const vp = viewportFor(p, THUMB_WIDTH / p.baseViewport.width);
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = Math.floor(vp.width * dpr);
+  canvas.height = Math.floor(vp.height * dpr);
+  btn.querySelector(".thumb-img").appendChild(canvas);
+
+  try {
+    await p.page.render({
+      canvasContext: canvas.getContext("2d"),
+      viewport: vp,
+      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null
+    }).promise;
+  } catch (_) { /* cancelled / failed thumbnail: leave it blank */ }
+}
+
+function markCurrentThumb() {
+  if (!sidebarOpen()) return;
+  thumbsEl.querySelectorAll(".thumb.current").forEach((t) => t.classList.remove("current"));
+  const cur = thumbsEl.querySelector(`.thumb[data-page="${currentPage}"]`);
+  if (!cur) return;
+  cur.classList.add("current");
+  const r = cur.getBoundingClientRect(), box = thumbsEl.getBoundingClientRect();
+  if (r.top < box.top || r.bottom > box.bottom) cur.scrollIntoView({ block: "nearest" });
+}
+
+// Table of contents
+async function buildOutline() {
+  outlineEl.innerHTML = "";
+  let outline = null;
+  try { outline = await pdfDoc.getOutline(); } catch (_) {}
+
+  if (!outline?.length) {
+    const empty = document.createElement("p");
+    empty.className = "sb-empty";
+    empty.textContent = "This PDF has no table of contents.";
+    outlineEl.appendChild(empty);
+    return false;
+  }
+
+  const build = (items, depth) => {
+    const list = document.createElement("ul");
+    list.className = "ol-list";
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.className = "ol-item";
+      btn.style.paddingLeft = `${10 + depth * 12}px`;
+      btn.textContent = item.title || "Untitled";
+      btn.title = item.title || "";
+      btn.addEventListener("click", () => goToDest(item.dest));
+      li.appendChild(btn);
+      if (item.items?.length) li.appendChild(build(item.items, depth + 1));
+      list.appendChild(li);
+    });
+    return list;
+  };
+  outlineEl.appendChild(build(outline, 0));
+  return true;
+}
+
+async function goToDest(dest) {
+  try {
+    const explicit = typeof dest === "string" ? await pdfDoc.getDestination(dest) : dest;
+    if (!explicit) return;
+    const ref = explicit[0];
+    const index = typeof ref === "number" ? ref : await pdfDoc.getPageIndex(ref);
+    goToPage(index + 1);
+  } catch (err) {
+    console.warn("LazyNotes: couldn't follow outline link", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Find in document
+// ---------------------------------------------------------------------------
+// Searches every page's text, not just the rendered ones. Matching ignores
+// case and whitespace (PDF text is line fragments), and works in the same
+// "squashed" text the highlight code uses, so a match maps straight onto
+// the text layer.
+
+const findBar   = $("find-bar");
+const findInput = $("find-input");
+const findCount = $("find-count");
+const pageTextCache = new Map();   // page num -> Promise<squashed lowercase text>
+let findMatches = [];              // [{ page, start, length }]
+let findIndex = -1;
+let findTimer = null;
+
+function pageText(num) {
+  if (!pageTextCache.has(num)) {
+    pageTextCache.set(num, pages[num - 1].page.getTextContent().then((tc) =>
+      R.squash(tc.items.map((it) => it.str ?? "").join("")).toLowerCase()
+    ));
+  }
+  return pageTextCache.get(num);
+}
+
+function openFind() {
+  findBar.hidden = false;
+  findInput.focus();
+  findInput.select();
+}
+
+function closeFind() {
+  findBar.hidden = true;
+  findMatches = [];
+  findIndex = -1;
+  findCount.textContent = "";
+  pages.forEach(drawFindMarks);
+}
+
+async function runFind() {
+  const query = R.squash(findInput.value).toLowerCase();
+  findMatches = [];
+  findIndex = -1;
+
+  if (query) {
+    for (const p of pages) {
+      const text = await pageText(p.num);
+      for (let i = text.indexOf(query); i !== -1; i = text.indexOf(query, i + 1)) {
+        findMatches.push({ page: p.num, start: i, length: query.length });
+      }
+    }
+    // Start from the first match at or after the current page.
+    findIndex = findMatches.findIndex((m) => m.page >= currentPage);
+    if (findIndex === -1 && findMatches.length) findIndex = 0;
+  }
+
+  updateFindCount();
+  pages.forEach(drawFindMarks);
+  if (findIndex >= 0) revealMatch();
+}
+
+function updateFindCount() {
+  if (!findInput.value.trim()) { findCount.textContent = ""; return; }
+  findCount.textContent = findMatches.length
+    ? `${findIndex + 1} of ${findMatches.length}`
+    : "No matches";
+  findCount.classList.toggle("none", findMatches.length === 0);
+}
+
+function stepFind(delta) {
+  if (!findMatches.length) return;
+  const prevPage = findMatches[findIndex]?.page;
+  findIndex = (findIndex + delta + findMatches.length) % findMatches.length;
+  updateFindCount();
+  if (prevPage) drawFindMarks(pages[prevPage - 1]);
+  drawFindMarks(pages[findMatches[findIndex].page - 1]);
+  revealMatch();
+}
+
+// Scroll the current match into view; its page may not be rendered yet, in
+// which case drawFindMarks scrolls once the text layer is ready.
+let pendingReveal = false;
+function revealMatch() {
+  const m = findMatches[findIndex];
+  if (!m) return;
+  const p = pages[m.page - 1];
+  const mark = p.el.querySelector(".find-mark.current");
+  if (mark) {
+    pendingReveal = false;
+    const r = mark.getBoundingClientRect();
+    const top = toolbarHeight() + findBar.offsetHeight;
+    if (r.top < top + 20 || r.bottom > window.innerHeight - 20) {
+      window.scrollBy({ top: r.top - (window.innerHeight / 3) });
+    }
+    setCurrentPage(m.page);
+  } else {
+    pendingReveal = true;
+    goToPage(m.page, false);
+    renderPage(p);
+  }
+}
+
+function drawFindMarks(p) {
+  if (!p) return;
+  p.el.querySelector(".find-layer")?.remove();
+  if (!p.textReady) return;
+  const matches = findMatches.filter((m) => m.page === p.num);
+  if (!matches.length) return;
+
+  const textLayerEl = p.el.querySelector(".textLayer");
+  const { chars } = R.indexTextLayer(textLayerEl);
+  const pageRect = p.el.getBoundingClientRect();
+  const layer = document.createElement("div");
+  layer.className = "find-layer";
+  const current = findMatches[findIndex];
+
+  matches.forEach((m) => {
+    const start = chars[m.start], end = chars[m.start + m.length - 1];
+    if (!start || !end) return;
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset + 1);
+    lineBoxes(range, pageRect).forEach((b) => {
+      const mark = document.createElement("div");
+      mark.className = "find-mark" + (m === current ? " current" : "");
+      Object.assign(mark.style, {
+        left: `${b.left - 1}px`, top: `${b.top - 1}px`,
+        width: `${b.width + 2}px`, height: `${b.height + 2}px`
+      });
+      layer.appendChild(mark);
+    });
+  });
+
+  p.el.insertBefore(layer, textLayerEl);
+  if (pendingReveal && current?.page === p.num) revealMatch();
+}
+
+findInput.addEventListener("input", () => {
+  clearTimeout(findTimer);
+  findTimer = setTimeout(runFind, 150);
+});
+findInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+  if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+});
+$("find-btn").addEventListener("click", () => (findBar.hidden ? openFind() : closeFind()));
+$("find-next").addEventListener("click", () => stepFind(1));
+$("find-prev").addEventListener("click", () => stepFind(-1));
+$("find-close").addEventListener("click", closeFind);
+
+// ---------------------------------------------------------------------------
+// Download / print / more menu
+// ---------------------------------------------------------------------------
+
+async function documentBlobUrl() {
+  const data = await pdfDoc.getData();
+  return URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+}
+
+$("download-btn").addEventListener("click", async () => {
+  if (!pdfDoc) return;
+  const url = await documentBlobUrl();
+  chrome.downloads.download({ url, filename: fileName.replace(/[\\/:*?"<>|]/g, "_") }, () => {
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  });
+});
+
+// Print the original PDF (not the page on screen, which only has the pages
+// rendered so far) through Chrome's own PDF printing in a hidden frame.
+async function printDocument() {
+  if (!pdfDoc) return;
+  showMessage("Preparing to print…");
+  const url = await documentBlobUrl();
+  const frame = document.createElement("iframe");
+  frame.className = "print-frame";
+  frame.src = url;
+  frame.addEventListener("load", () => {
+    hideMessage();
+    try {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    } catch (_) {
+      window.open(url, "_blank");   // fall back to Chrome's viewer in a new tab
+    }
+    setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 60000);
+  }, { once: true });
+  document.body.appendChild(frame);
+}
+$("print-btn").addEventListener("click", printDocument);
+
+const moreBtn  = $("more-btn");
+const moreMenu = $("more-menu");
+function setMenu(open) {
+  moreMenu.hidden = !open;
+  moreBtn.setAttribute("aria-expanded", String(open));
+}
+moreBtn.addEventListener("click", (e) => { e.stopPropagation(); setMenu(moreMenu.hidden); });
+document.addEventListener("click", (e) => {
+  if (!moreMenu.hidden && !moreMenu.contains(e.target)) setMenu(false);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+
+// Open the same PDF in Chrome's viewer. Tell the background not to offer
+// Lazy Notes for it, since you just chose to leave.
+$("open-in-chrome").addEventListener("click", async () => {
+  const src = R.source;
+  if (src?.kind !== "url") return;
+  await chrome.runtime.sendMessage({ type: "PDF_SKIP_PROMPT", url: src.url });
+  location.href = src.url;
+});
+
+const promptSetting = $("pdf-prompt-setting");
+chrome.storage.local.get("pdfPrompt").then(({ pdfPrompt = true }) => {
+  promptSetting.checked = pdfPrompt;
+});
+promptSetting.addEventListener("change", () => {
+  chrome.storage.local.set({ pdfPrompt: promptSetting.checked });
 });
 
 // ---------------------------------------------------------------------------

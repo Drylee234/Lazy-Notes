@@ -11,6 +11,7 @@ import {
   handleDeleteHighlight
 } from './bg_courses.js';
 import { requestSidePanel } from './bg_sidepanel.js';
+import { skipPromptFor } from './bg_pdf_prompt.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -65,6 +66,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, reason: String(err) }));
     return true;  // keep the channel open for the async reply
+  }
+
+  // The reader is about to hand a PDF back to Chrome's viewer: don't offer
+  // to bring it straight back.
+  if (message.type === "PDF_SKIP_PROMPT") {
+    skipPromptFor(message.url).then(() => sendResponse({ ok: true }));
+    return true;
   }
 
   switch (message.type) {

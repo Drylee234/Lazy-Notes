@@ -13,6 +13,8 @@
     "downloads",
     "activeTab",
     "scripting",
+    "notifications",
+    "webRequest",
     "commands"
   ],
 

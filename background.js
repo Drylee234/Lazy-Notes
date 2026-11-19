@@ -7,6 +7,7 @@ import './bg_courses.js';
 import './bg_context_menus.js';
 import './bg_messaging.js';
 import './bg_sidepanel.js';
+import './bg_pdf_prompt.js';
 
 import { refreshCourseContextMenuItems } from './bg_context_menus.js';
 import { ensureContentScripts } from './bg_messaging.js';

@@ -11,30 +11,68 @@
 
 <header id="toolbar">
   <div class="tb-left">
+    <button id="sidebar-btn" class="tb-btn icon" title="Pages and contents" aria-label="Toggle sidebar" aria-pressed="false" disabled><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"/><path d="M5.75 2.75v10.5"/></svg></button>
     <a class="tb-logo" href="courses.html" title="All notes"><img src="icons/logo.svg" alt="Lazy Notes" width="22" height="22" /></a>
     <button id="open-btn" class="tb-btn" title="Open a PDF">Open</button>
     <span id="doc-title" class="doc-title">PDF Reader</span>
   </div>
 
   <div class="tb-center" id="page-controls" hidden>
-    <button id="prev-page" class="tb-btn icon" title="Previous page" aria-label="Previous page">‹</button>
+    <button id="prev-page" class="tb-btn icon" title="Previous page (←)" aria-label="Previous page"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8 10 12.5"/></svg></button>
     <input id="page-input" type="text" inputmode="numeric" aria-label="Page number" />
     <span id="page-count" class="tb-dim"></span>
-    <button id="next-page" class="tb-btn icon" title="Next page" aria-label="Next page">›</button>
+    <button id="next-page" class="tb-btn icon" title="Next page (→)" aria-label="Next page"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg></button>
 
     <span class="tb-sep"></span>
 
-    <button id="zoom-out" class="tb-btn icon" title="Zoom out" aria-label="Zoom out">−</button>
-    <button id="zoom-fit" class="tb-btn" title="Fit to width">Fit</button>
-    <button id="zoom-in" class="tb-btn icon" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-out" class="tb-btn icon" title="Zoom out (Ctrl −)" aria-label="Zoom out"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8h9"/></svg></button>
     <span id="zoom-label" class="tb-dim"></span>
+    <button id="zoom-in" class="tb-btn icon" title="Zoom in (Ctrl +)" aria-label="Zoom in"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9"/></svg></button>
+    <button id="zoom-fit" class="tb-btn icon" title="Fit to page" aria-label="Fit to page"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.75 8h12.5M4 5.5L1.75 8 4 10.5M12 5.5L14.25 8 12 10.5"/></svg></button>
+
+    <span class="tb-sep"></span>
+
+    <button id="rotate-ccw" class="tb-btn icon" title="Rotate counterclockwise (Ctrl [)" aria-label="Rotate counterclockwise"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5v3.5h3.5"/><path d="M2.9 7A5.25 5.25 0 1 1 4.2 11.6"/></svg></button>
+    <button id="rotate-cw" class="tb-btn icon" title="Rotate clockwise (Ctrl ])" aria-label="Rotate clockwise"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5v3.5H10"/><path d="M13.1 7A5.25 5.25 0 1 0 11.8 11.6"/></svg></button>
   </div>
 
   <div class="tb-right">
+    <div class="doc-actions" id="doc-actions" hidden>
+      <button id="find-btn" class="tb-btn icon" title="Find (Ctrl F)" aria-label="Find in document"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg></button>
+      <button id="download-btn" class="tb-btn icon" title="Download" aria-label="Download"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8.5M4.5 7L8 10.5 11.5 7M2.5 13.5h11"/></svg></button>
+      <button id="print-btn" class="tb-btn icon" title="Print (Ctrl P)" aria-label="Print"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V2.5h7V6"/><rect x="2" y="6" width="12" height="5.5" rx="1"/><path d="M4.5 9.5h7v4h-7z"/></svg></button>
+    </div>
+    <div class="menu-wrap">
+      <button id="more-btn" class="tb-btn icon" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></button>
+      <div id="more-menu" class="menu" role="menu" hidden>
+        <button id="open-in-chrome" class="menu-item" role="menuitem" hidden>Open in Chrome's viewer</button>
+        <label class="menu-item menu-check">
+          <input id="pdf-prompt-setting" type="checkbox" />
+          <span>When I open a PDF in Chrome, offer to open it here</span>
+        </label>
+      </div>
+    </div>
     <button id="hl-toggle" class="tb-btn hl-toggle" type="button" aria-pressed="true" hidden></button>
     <button id="hl-status" class="hl-status" title="Open the Lazy Notes side panel"></button>
   </div>
 </header>
+
+<div id="find-bar" hidden>
+  <input id="find-input" type="search" placeholder="Find in document" autocomplete="off" aria-label="Find in document" />
+  <span id="find-count" class="tb-dim"></span>
+  <button id="find-prev" class="tb-btn icon" title="Previous match (Shift Enter)" aria-label="Previous match"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10L8 5.5 12.5 10"/></svg></button>
+  <button id="find-next" class="tb-btn icon" title="Next match (Enter)" aria-label="Next match"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6L8 10.5 12.5 6"/></svg></button>
+  <button id="find-close" class="tb-btn icon" title="Close (Esc)" aria-label="Close find"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+</div>
+
+<aside id="sidebar" hidden>
+  <div class="sb-tabs" role="tablist">
+    <button class="sb-tab active" data-tab="thumbs" role="tab">Pages</button>
+    <button class="sb-tab" data-tab="outline" role="tab">Contents</button>
+  </div>
+  <div id="thumbs" class="sb-panel"></div>
+  <div id="outline" class="sb-panel" hidden></div>
+</aside>
 
 <main id="viewer"></main>
 
