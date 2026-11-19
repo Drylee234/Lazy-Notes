@@ -8,6 +8,7 @@ import { validateCourse, validateTopic } from './bg_validators.js';
 import { refreshCourseContextMenuItems } from './bg_context_menus.js';
 import { broadcastToAllTabs } from './bg_messaging.js';
 import { setHighlighterActive } from './bg_highlights.js';
+import { requestSidePanel } from './bg_sidepanel.js';
 
 export async function handleCreateCourse(message) {
   const { name, level, semester, details } = message;
@@ -34,11 +35,9 @@ export async function handleCreateCourse(message) {
     activeTopic:  null
   });
 
-  // Immediately prompt the user to create a topic for the new course.
-  chrome.runtime.sendMessage(
-    { type: "SHOW_CREATE_TOPIC", courseName: name },
-    () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
-  );
+  // Immediately prompt the user to create a topic for the new course. The
+  // panel is open (the course form lives there), so no need to open it.
+  await requestSidePanel({ type: "SHOW_CREATE_TOPIC", courseName: name }, null);
 }
 
 export async function handleCreateTopic(message) {
@@ -51,12 +50,15 @@ export async function handleCreateTopic(message) {
   }
 
   await createTopic(courseName, name);
-  await refreshCourseContextMenuItems();
 
   chrome.runtime.sendMessage(
     { type: "TOPIC_CREATED", courseName, topicName: name },
     () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
   );
+
+  // A new topic is where you're about to take notes: select it and switch
+  // the highlighter on, same as clicking it. (Also rebuilds the menu.)
+  await handleTopicSelection(courseName, name);
 }
 
 export async function handleCourseSelection(courseName) {
@@ -99,7 +101,7 @@ async function clearActiveIfDeleted(courseName, topicName) {
   const topicGone  = !courseGone && activeTopic === topicName;
   if (!courseGone && !topicGone) return;
 
-  if (highlighterActive) await setHighlighterActive(false);  // also clears activeTopic
+  if (highlighterActive) await setHighlighterActive(false);
 
   await storageSet(courseGone
     ? { activeCourse: null, activeTopic: null }

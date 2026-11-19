@@ -9,13 +9,18 @@ import './bg_messaging.js';
 import './bg_sidepanel.js';
 
 import { refreshCourseContextMenuItems } from './bg_context_menus.js';
+import { ensureContentScripts } from './bg_messaging.js';
+import { restoreBadge } from './bg_highlights.js';
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 chrome.runtime.onInstalled.addListener(() => {
   refreshCourseContextMenuItems();
+  ensureContentScripts();  // tabs opened before install/reload
+  restoreBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   refreshCourseContextMenuItems();
+  restoreBadge();
 });
