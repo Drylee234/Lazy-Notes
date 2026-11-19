@@ -68,6 +68,15 @@ export function createStaticMenuItems(highlighterActive) {
     });
   }
 
+  // Only on links that point at a PDF.
+  createMenuItem({
+    id:       "lazy-notes-open-pdf-link",
+    parentId: "lazy-notes-root",
+    title:    "Open PDF in Lazy Notes reader",
+    contexts: ["link"],
+    targetUrlPatterns: ["*://*/*.pdf", "*://*/*.PDF", "*://*/*.pdf?*", "*://*/*.pdf#*"]
+  });
+
   createMenuItem({
     id:       "lazy-notes-create-course",
     parentId: "lazy-notes-root",
@@ -169,6 +178,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const courseName = decoded.value;
     requestSidePanel({ type: "SHOW_CREATE_TOPIC", courseName }, tab);
     await handleCourseSelection(courseName);
+    return;
+  }
+
+  if (id === "lazy-notes-open-pdf-link" && info.linkUrl) {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`pdfreader.html?url=${encodeURIComponent(info.linkUrl)}`),
+      index: tab ? tab.index + 1 : undefined,
+      openerTabId: tab?.id
+    });
     return;
   }
 

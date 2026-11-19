@@ -840,6 +840,43 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 });
 
 // ---------------------------------------------------------------------------
+// PDF tabs — Chrome's built-in PDF viewer doesn't let extensions in, so when
+// the active tab is a PDF offer to reopen it in the Lazy Notes reader.
+// ---------------------------------------------------------------------------
+
+const pdfBanner     = document.getElementById("pdf-banner");
+const pdfBannerOpen = document.getElementById("pdf-banner-open");
+let pdfTab = null;
+
+function looksLikePdf(url) {
+  if (!url || !/^(https?|file):/.test(url)) return false;
+  try {
+    return /\.pdf$/i.test(new URL(url).pathname);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function updatePdfBanner() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  pdfTab = tab && looksLikePdf(tab.url) ? tab : null;
+  pdfBanner.hidden = !pdfTab;
+}
+
+pdfBannerOpen.addEventListener("click", () => {
+  if (!pdfTab) return;
+  chrome.tabs.update(pdfTab.id, {
+    url: chrome.runtime.getURL(`pdfreader.html?url=${encodeURIComponent(pdfTab.url)}`)
+  });
+});
+
+chrome.tabs.onActivated.addListener(updatePdfBanner);
+chrome.tabs.onUpdated.addListener((_id, info, tab) => {
+  if (tab.active && (info.url || info.status === "complete")) updatePdfBanner();
+});
+updatePdfBanner();
+
+// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 

@@ -1,0 +1,54 @@
+/* Lazy Notes — shared design tokens for every extension page
+   (side panel, notes viewer, PDF reader). Change colours here, not per page. */
+
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --bg:            #ffffff;   /* cards, toolbars, inputs */
+  --canvas:        #f4f4f6;   /* page background behind cards / PDF pages */
+  --surface:       #f7f7f8;   /* buttons, rows */
+  --hover:         #efeff2;
+  --border:        #e3e3e8;
+  --border-strong: #c9c9d1;
+
+  --pri:  #16161a;
+  --sec:  #55555f;
+  --dim:  #8e8e99;
+
+  --accent:      #4f46e5;     /* same indigo as the in-page save popup */
+  --accent-hover:#4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.08);
+  --on-accent:   #ffffff;
+  --danger:      #c0392b;
+
+  --radius:    10px;
+  --radius-sm: 6px;
+  --shadow:    0 4px 20px rgba(0, 0, 0, 0.10);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #18181b;
+    --canvas:        #0f0f11;
+    --surface:       #1f1f23;
+    --hover:         #27272c;
+    --border:        #2c2c32;
+    --border-strong: #3d3d45;
+
+    --pri:  #ececf0;
+    --sec:  #a1a1aa;
+    --dim:  #71717a;
+
+    --accent:      #818cf8;
+    --accent-hover:#a5b4fc;
+    --accent-soft: rgba(129, 140, 248, 0.12);
+    --on-accent:   #111114;
+    --danger:      #ef6461;
+
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+
+    color-scheme: dark;
+  }
+}

@@ -841,18 +841,25 @@
 
     const includeContext = contextRequiredCategories.includes(selectedCategory);
 
+    // An extension page that loads this script (the PDF reader) can set
+    // globalThis.LazyNotesHost to supply a better source link and context.
+    // Real content scripts run in an isolated world, so web pages can't.
+    const host = globalThis.LazyNotesHost;
+    const context = !includeContext ? null
+      : host?.contextFor ? host.contextFor(currentParagraphElement)
+      : currentParagraphElement?.textContent ?? null;
+
     const payload = {
       type:       "NEW_HIGHLIGHT",
       id:         crypto.randomUUID(),
       text:       currentSelectedText,
-      context:    includeContext && currentParagraphElement
-                    ? currentParagraphElement.textContent
-                    : null,
+      context,
       category:   selectedCategory,
       course:     selectedCourse,
       topic:      selectedTopic,
       annotation: selectedAnnotation,
-      sourceUrl:  window.location.href
+      sourceUrl:  host?.sourceUrl ? host.sourceUrl(currentParagraphElement) : window.location.href,
+      sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null
     };
 
     try {
@@ -909,6 +916,20 @@
     if (areaName !== "local") return;
     if (changes.lazynotes) {
       courseTree = changes.lazynotes.newValue?.courses || {};
+    }
+
+    // Storage is the source of truth for on/off: extension pages (the PDF
+    // reader) never get the background's tab broadcasts, and this also covers
+    // a broadcast that was missed.
+    if (changes.activeCourse) currentCourse = changes.activeCourse.newValue ?? null;
+    if (changes.activeTopic) {
+      currentTopic  = changes.activeTopic.newValue ?? null;
+      lastUsedTopic = currentTopic;
+    }
+    if (changes.highlighterActive) {
+      highlighterActive = changes.highlighterActive.newValue ?? false;
+      if (highlighterActive) activateHighlighter();
+      else deactivateHighlighter();
     }
   });
 

@@ -16,6 +16,7 @@
 //           highlights: {
 //             "<uuid>": {
 //               text, category, annotation, context, sourceUrl,
+//               sourceTitle (page title, or "file.pdf, p. 4"),
 //               timestamp, edited
 //             }
 //           }
@@ -177,6 +178,7 @@ export async function insertHighlight(id, payload, courseName, topicName) {
     annotation: payload.annotation ?? null,
     context:    payload.context ?? null,
     sourceUrl:  payload.sourceUrl,
+    sourceTitle: payload.sourceTitle ?? null,
     timestamp:  new Date().toISOString(),
     edited:     null
   };

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lazy Notes — PDF Reader</title>
+<link rel="stylesheet" href="pdfreader.css" />
+</head>
+<body>
+
+<header id="toolbar">
+  <div class="tb-left">
+    <button id="open-btn" class="tb-btn" title="Open a PDF">Open</button>
+    <span id="doc-title" class="doc-title">PDF Reader</span>
+  </div>
+
+  <div class="tb-center" id="page-controls" hidden>
+    <button id="prev-page" class="tb-btn icon" title="Previous page" aria-label="Previous page">‹</button>
+    <input id="page-input" type="text" inputmode="numeric" aria-label="Page number" />
+    <span id="page-count" class="tb-dim"></span>
+    <button id="next-page" class="tb-btn icon" title="Next page" aria-label="Next page">›</button>
+
+    <span class="tb-sep"></span>
+
+    <button id="zoom-out" class="tb-btn icon" title="Zoom out" aria-label="Zoom out">−</button>
+    <button id="zoom-fit" class="tb-btn" title="Fit to width">Fit</button>
+    <button id="zoom-in" class="tb-btn icon" title="Zoom in" aria-label="Zoom in">+</button>
+    <span id="zoom-label" class="tb-dim"></span>
+  </div>
+
+  <div class="tb-right">
+    <button id="hl-status" class="hl-status" title="Open the Lazy Notes side panel"></button>
+  </div>
+</header>
+
+<main id="viewer"></main>
+
+<section id="start-screen" hidden>
+  <div class="start-card">
+    <h1>Read a PDF</h1>
+    <p class="start-sub">Select text on any page to save it as a note, the same way you do on websites.</p>
+
+    <label id="drop-zone" for="file-input">
+      <strong>Choose a PDF</strong>
+      <span>or drop one here</span>
+    </label>
+    <input id="file-input" type="file" accept="application/pdf,.pdf" hidden />
+
+    <form id="url-form" class="url-form">
+      <input id="url-input" type="url" placeholder="…or paste a link to a PDF" />
+      <button type="submit" class="tb-btn">Open</button>
+    </form>
+
+    <div id="recent" hidden>
+      <div class="recent-label">Recent files</div>
+      <div id="recent-list"></div>
+    </div>
+  </div>
+</section>
+
+<div id="message" hidden></div>
+
+<script src="pdfreader-host.js"></script>
+<script src="content.js"></script>
+<script type="module" src="pdfreader.js"></script>
+</body>
+</html>

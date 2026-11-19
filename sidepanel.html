@@ -507,6 +507,13 @@
   </div>
 </div>
 
+<!-- Shown when the active tab is a PDF: Chrome's PDF viewer blocks
+     extensions, so offer to reopen it in the Lazy Notes reader. -->
+<div id="pdf-banner" hidden>
+  <span>This tab is a PDF. Open it in the reader to take notes.</span>
+  <button id="pdf-banner-open" type="button">Open in reader</button>
+</div>
+
 <!-- ── Body ── -->
 <div id="body">
 
@@ -546,12 +553,10 @@
       <button id="open-create-topic" class="action-btn">Create Topic</button>
     </div>
 
-    <!-- Viewer link — midpage anchor -->
-    <div class="section" style="text-align:center;">
-      <a id="open-viewer-link" href="courses.html" target="_blank" class="action-btn viewer-link-btn"
-         style="display:inline-block;text-decoration:none;">
-        Open Full Notes Viewer ↗
-      </a>
+    <!-- Other pages -->
+    <div class="section link-row">
+      <a id="open-viewer-link" href="courses.html" target="_blank" class="action-btn">All notes ↗</a>
+      <a id="open-pdf-reader" href="pdfreader.html" target="_blank" class="action-btn">PDF reader ↗</a>
     </div>
 
   </div>
