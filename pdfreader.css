@@ -28,6 +28,9 @@ body {
 .tb-right  { justify-content: flex-end; }
 .tb-center[hidden] { display: flex; visibility: hidden; }  /* keep its grid slot */
 
+.tb-logo { display: flex; flex-shrink: 0; margin-right: 4px; }
+.tb-logo img { display: block; }
+
 .doc-title {
   font-weight: 600;
   white-space: nowrap;

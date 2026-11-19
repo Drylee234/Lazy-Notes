@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 16px version of logo.svg: pixel-aligned, highlight without the inner line -->
+  <rect width="16" height="16" rx="3.5" fill="#4f46e5" shape-rendering="geometricPrecision"/>
+  <rect x="3" y="3" width="10" height="2" fill="#ffffff"/>
+  <rect x="2" y="7" width="12" height="3" fill="#fde047"/>
+  <rect x="3" y="12" width="6" height="2" fill="#ffffff"/>
+</svg>
