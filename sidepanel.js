@@ -23,6 +23,7 @@ let pendingTopicCourse = null;
 // ---------------------------------------------------------------------------
 
 const toggleBtn         = document.getElementById("toggle-btn");
+const startHint         = document.getElementById("start-hint");
 const viewTabs          = document.querySelectorAll(".view-tab");
 const homeView          = document.getElementById("home-view");
 const studyView         = document.getElementById("study-view");
@@ -104,6 +105,10 @@ async function init() {
   await loadHomeTopics();
   await loadStudyTopics();
   updateFooterCount();
+
+  // Opened by a context-menu / shortcut request?
+  const { panelRequest } = await storageGet("panelRequest");
+  await handlePanelRequest(panelRequest);
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +161,7 @@ function renderStudyCourseSelect() {
 
 function updateFooterCount() {
   updateExportBtn();
+  updateStartHint();
   if (homeView.classList.contains("visible")) {
     if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
       noteCount.textContent = "0 topics";
@@ -462,6 +468,30 @@ function updateToggleBtnGuard() {
   const canEnable = isActive || (activeCourse && activeTopic);
   toggleBtn.disabled = !canEnable;
   toggleBtn.title = canEnable ? "" : "Select a course and topic first";
+  updateStartHint();
+}
+
+// Say on screen what's needed before the highlighter can start — the
+// disabled button's tooltip alone was too easy to miss.
+function updateStartHint() {
+  if (!startHint) return;
+  const isActive = toggleBtn.classList.contains("active");
+  let text = "";
+
+  if (!isActive && !(activeCourse && activeTopic)) {
+    if (Object.keys(courseTree).length === 0) {
+      text = "Create a course to get started.";
+    } else if (!homeSelectedCourse) {
+      text = "Pick a course, then click a topic to start highlighting.";
+    } else if (Object.keys(courseTree[homeSelectedCourse]?.topics || {}).length === 0) {
+      text = "Create a topic, then click it to start highlighting.";
+    } else {
+      text = "Click a topic to start highlighting.";
+    }
+  }
+
+  startHint.textContent = text;
+  startHint.hidden = !text;
 }
 
 toggleBtn.addEventListener("click", () => {
@@ -692,29 +722,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
     return;
   }
   
-  if (message.type === "SHOW_CREATE_COURSE") {
-    openCourseModal(message.defaults || {});
-    return;
-  }
-
-  if (message.type === "SHOW_CREATE_TOPIC") {
-    const { courseName } = message;
-
-    await refreshCourseTree();
-    homeSelectedCourse = courseName;
-    renderHomeCourseSelect();
-    updateCreateTopicBtn();
-    await loadHomeTopics();
-
-    viewTabs.forEach((t) => t.classList.remove("active"));
-    document.querySelector('[data-view="home"]').classList.add("active");
-    homeView.classList.add("visible");
-    studyView.classList.remove("visible");
-
-    openTopicModal(courseName);
-    return;
-  }
-
   if (message.type === "TOPIC_CREATED") {
     const { courseName } = message;
 
@@ -741,6 +748,54 @@ chrome.runtime.onMessage.addListener(async (message) => {
     return;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Requests from the background ("panelRequest" in storage)
+// ---------------------------------------------------------------------------
+// The background leaves these in storage (rather than messaging) so they
+// survive the panel being closed: it opens the panel and we pick the request
+// up on start, or straight away if we're already open.
+
+let myWindowId = null;
+const windowIdReady = new Promise((resolve) => {
+  chrome.windows.getCurrent((w) => { myWindowId = w?.id ?? null; resolve(); });
+});
+
+async function handlePanelRequest(request) {
+  if (!request) return;
+  await windowIdReady;
+
+  if (request.windowId != null && request.windowId !== myWindowId) return;  // another window's panel
+  chrome.storage.local.remove("panelRequest");
+  if (Date.now() - request.at > 60000) return;  // stale, e.g. panel never opened
+
+  if (request.type === "SHOW_CREATE_COURSE") {
+    closeTopicModal();
+    await openCourseModalWithDefaults();
+    return;
+  }
+
+  if (request.type === "SHOW_CREATE_TOPIC") {
+    await showCreateTopic(request.courseName);
+  }
+}
+
+async function showCreateTopic(courseName) {
+  await refreshCourseTree();
+  homeSelectedCourse = courseName;
+  renderHomeCourseSelect();
+  updateCreateTopicBtn();
+  await loadHomeTopics();
+
+  viewTabs.forEach((t) => t.classList.remove("active"));
+  document.querySelector('[data-view="home"]').classList.add("active");
+  homeView.classList.add("visible");
+  studyView.classList.remove("visible");
+  updateFooterCount();
+
+  closeCourseModal();
+  openTopicModal(courseName);
+}
 
 // ---------------------------------------------------------------------------
 // Storage change — direct listener on the lazynotes key
@@ -777,6 +832,10 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   if (changes.highlighterActive) {
     setToggleBtn(changes.highlighterActive.newValue ?? false);
+  }
+
+  if (changes.panelRequest?.newValue) {
+    await handlePanelRequest(changes.panelRequest.newValue);
   }
 });
 

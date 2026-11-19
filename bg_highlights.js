@@ -19,6 +19,8 @@ export async function handleNewHighlight(payload) {
 }
 
 export async function setHighlighterActive(active) {
+  updateBadge(active);
+
   // Turning off keeps the selected topic, so the toggle button and
   // Alt+Shift+H can switch it straight back on.
   await storageSet({ highlighterActive: active });
@@ -50,4 +52,16 @@ export async function handleToggleTrigger() {
   }
 
   await setHighlighterActive(!highlighterActive);
+}
+
+// "ON" on the toolbar icon, so it's visible at a glance whether selecting
+// text will open the save popup.
+export function updateBadge(active) {
+  chrome.action.setBadgeText({ text: active ? "ON" : "" });
+  if (active) chrome.action.setBadgeBackgroundColor({ color: "#4f46e5" });
+}
+
+export async function restoreBadge() {
+  const { highlighterActive = false } = await storageGet("highlighterActive");
+  updateBadge(highlighterActive);
 }

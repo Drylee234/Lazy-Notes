@@ -10,7 +10,7 @@ import {
   handleDeleteTopic,
   handleDeleteHighlight
 } from './bg_courses.js';
-import { sendShowCreateCourse } from './bg_sidepanel.js';
+import { requestSidePanel } from './bg_sidepanel.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -92,11 +92,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // Keyboard shortcuts (commands) route to the same handlers.
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "toggle-highlighter") {
     handleToggleTrigger();
   }
   if (command === "create-course") {
-    sendShowCreateCourse();
+    requestSidePanel({ type: "SHOW_CREATE_COURSE" }, tab);
   }
 });

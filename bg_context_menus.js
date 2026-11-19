@@ -3,7 +3,7 @@
 import { getCourses, storageGet } from './bg_storage.js';
 import { setHighlighterActive } from './bg_highlights.js';
 import { handleCourseSelection, handleTopicSelection } from './bg_courses.js';
-import { sendShowCreateCourse } from './bg_sidepanel.js';
+import { requestSidePanel } from './bg_sidepanel.js';
 
 // Dynamic menu ids carry the names JSON-encoded after a "|" separator, so
 // they decode back exactly and can never collide (e.g. course "a-b" + topic
@@ -35,33 +35,46 @@ function decodeMenuId(id) {
   }
 }
 
+// Default is "page" only, which hides the menu when right-clicking selected
+// text, a link, an input or an image. Every item needs it: a child whose
+// contexts don't match is hidden even if its parent shows.
+const MENU_CONTEXTS = ["page", "selection", "link", "editable", "image"];
+
+function createMenuItem(props) {
+  chrome.contextMenus.create({ contexts: MENU_CONTEXTS, ...props }, () => {
+    if (chrome.runtime.lastError) {
+      console.warn("LazyNotes [Background]: menu item failed ->", chrome.runtime.lastError.message);
+    }
+  });
+}
+
 export function createStaticMenuItems(highlighterActive) {
-  chrome.contextMenus.create({
+  createMenuItem({
     id:    "lazy-notes-root",
     title: "Lazy Notes"
   });
 
   if (highlighterActive) {
-    chrome.contextMenus.create({
+    createMenuItem({
       id:       "lazy-notes-exit",
       parentId: "lazy-notes-root",
       title:    "Exit Lazy Notes"
     });
 
-    chrome.contextMenus.create({
+    createMenuItem({
       id:       "lazy-notes-exit-separator",
       parentId: "lazy-notes-root",
       type:     "separator"
     });
   }
 
-  chrome.contextMenus.create({
+  createMenuItem({
     id:       "lazy-notes-create-course",
     parentId: "lazy-notes-root",
     title:    "Create Course"
   });
 
-  chrome.contextMenus.create({
+  createMenuItem({
     id:       "lazy-notes-course-list-separator",
     parentId: "lazy-notes-root",
     type:     "separator"
@@ -72,7 +85,7 @@ export function createCourseMenuItems(courses) {
   const names = Object.keys(courses);
 
   if (names.length === 0) {
-    chrome.contextMenus.create({
+    createMenuItem({
       id:       "lazy-notes-no-courses",
       parentId: "lazy-notes-root",
       title:    "No available course",
@@ -82,7 +95,7 @@ export function createCourseMenuItems(courses) {
   }
 
   names.forEach((courseName) => {
-    chrome.contextMenus.create({
+    createMenuItem({
       id:       courseMenuId(courseName),
       parentId: "lazy-notes-root",
       title:    courseName
@@ -92,7 +105,7 @@ export function createCourseMenuItems(courses) {
 
 export function createTopicMenuItems(courses) {
   Object.entries(courses).forEach(([courseName, course]) => {
-    chrome.contextMenus.create({
+    createMenuItem({
       id:       createTopicMenuId(courseName),
       parentId: courseMenuId(courseName),
       title:    "Create Topic"
@@ -101,14 +114,14 @@ export function createTopicMenuItems(courses) {
     const topicNames = Object.keys(course.topics || {});
 
     if (topicNames.length > 0) {
-      chrome.contextMenus.create({
+      createMenuItem({
         id:       topicSeparatorId(courseName),
         parentId: courseMenuId(courseName),
         type:     "separator"
       });
 
       topicNames.forEach((topicName) => {
-        chrome.contextMenus.create({
+        createMenuItem({
           id:       topicMenuId(courseName, topicName),
           parentId: courseMenuId(courseName),
           title:    topicName
@@ -140,31 +153,31 @@ async function rebuildMenus() {
   createTopicMenuItems(courses);
 }
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const id = info.menuItemId;
+
+  // Panel requests go first and synchronously: opening the side panel is
+  // only allowed while the click still counts as a user gesture.
+  if (id === "lazy-notes-create-course") {
+    requestSidePanel({ type: "SHOW_CREATE_COURSE" }, tab);
+    return;
+  }
+
+  const decoded = typeof id === "string" ? decodeMenuId(id) : null;
+
+  if (decoded?.kind === "lazy-notes-create-topic") {
+    const courseName = decoded.value;
+    requestSidePanel({ type: "SHOW_CREATE_TOPIC", courseName }, tab);
+    await handleCourseSelection(courseName);
+    return;
+  }
 
   if (id === "lazy-notes-exit") {
     await setHighlighterActive(false);
     return;
   }
 
-  if (id === "lazy-notes-create-course") {
-    sendShowCreateCourse();
-    return;
-  }
-
-  const decoded = typeof id === "string" ? decodeMenuId(id) : null;
   if (!decoded) return;
-
-  if (decoded.kind === "lazy-notes-create-topic") {
-    const courseName = decoded.value;
-    await handleCourseSelection(courseName);
-    chrome.runtime.sendMessage(
-      { type: "SHOW_CREATE_TOPIC", courseName },
-      () => { if (chrome.runtime.lastError) { /* side panel not open */ } }
-    );
-    return;
-  }
 
   if (decoded.kind === "lazy-notes-topic") {
     const [courseName, topicName] = decoded.value;
@@ -177,4 +190,3 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return;
   }
 });
-
