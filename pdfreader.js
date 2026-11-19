@@ -206,6 +206,7 @@ async function loadDocument(data, name) {
   pageControls.hidden = false;
   hideMessage();
 
+  await loadDocNotes();
   await buildPages();
   goToPage(initialPageFromHash(), false);
 }
@@ -304,6 +305,8 @@ async function renderPage(p) {
       viewport
     });
     await textLayer.render();
+    p.textReady = true;
+    drawHighlights(p);
   } catch (err) {
     if (err?.name !== "RenderingCancelledException") {
       console.warn("LazyNotes: page render failed", p.num, err);
@@ -330,6 +333,7 @@ function setScale(newScale, { fit = false } = {}) {
     p.renderTask?.cancel();
     p.renderTask = null;
     p.rendered = false;
+    p.textReady = false;
     p.el.replaceChildren();
   });
   layoutPages();
@@ -347,6 +351,167 @@ function setScale(newScale, { fit = false } = {}) {
 function toolbarHeight() {
   return $("toolbar").offsetHeight;
 }
+
+// ---------------------------------------------------------------------------
+// Saved highlights — notes taken from this PDF, painted back onto the pages
+// ---------------------------------------------------------------------------
+// A note belongs to this document if its sourceUrl points at the same PDF
+// (or, for a local file, the same ?local= id). Its page comes from
+// note.anchor.page or the #page=N in the link; its spot on the page is found
+// by searching that page's text, using anchor.occurrence when a phrase
+// appears more than once.
+
+const R = globalThis.LazyNotesReader;
+let docNotes = [];                 // [{ id, text, page, occurrence, category }]
+let showHighlights = true;
+try { showHighlights = localStorage.getItem("ln-show-highlights") !== "0"; } catch (_) {}
+
+const hlToggle = $("hl-toggle");
+
+function noteBelongsHere(note, src) {
+  if (!note.sourceUrl || !src) return false;
+  if (src.kind === "url") return note.sourceUrl.split("#")[0] === src.url.split("#")[0];
+  try {
+    const u = new URL(note.sourceUrl);
+    return u.pathname.endsWith("/pdfreader.html") && u.searchParams.get("local") === src.id;
+  } catch (_) {
+    return false;
+  }
+}
+
+function pageFromNote(note) {
+  if (note.anchor?.page) return note.anchor.page;
+  const m = String(note.sourceUrl).match(/#page=(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+async function loadDocNotes() {
+  const { lazynotes } = await chrome.storage.local.get("lazynotes");
+  setDocNotes(lazynotes?.courses ?? {});
+}
+
+function setDocNotes(courses) {
+  const src = R.source;
+  const found = [];
+  Object.values(courses).forEach((course) =>
+    Object.values(course.topics || {}).forEach((topic) =>
+      Object.entries(topic.highlights || {}).forEach(([id, n]) => {
+        if (!noteBelongsHere(n, src)) return;
+        const page = pageFromNote(n);
+        if (!page) return;
+        found.push({
+          id,
+          text: n.text,
+          page,
+          occurrence: n.anchor?.occurrence ?? 0,
+          category: n.category
+        });
+      })
+    )
+  );
+  docNotes = found;
+  updateHighlightToggle();
+}
+
+function updateHighlightToggle() {
+  hlToggle.hidden = docNotes.length === 0;
+  hlToggle.textContent = `${docNotes.length} highlight${docNotes.length === 1 ? "" : "s"}`;
+  hlToggle.setAttribute("aria-pressed", String(showHighlights));
+  hlToggle.classList.toggle("off", !showHighlights);
+  hlToggle.title = showHighlights ? "Hide saved highlights" : "Show saved highlights";
+}
+
+hlToggle.addEventListener("click", () => {
+  showHighlights = !showHighlights;
+  try { localStorage.setItem("ln-show-highlights", showHighlights ? "1" : "0"); } catch (_) {}
+  updateHighlightToggle();
+  pages.forEach(drawHighlights);
+});
+
+// Find the n-th match of `needle` in `hay`; fall back to the first match if
+// there are fewer (e.g. the text layer split differently this time).
+function nthIndexOf(hay, needle, n) {
+  let i = hay.indexOf(needle);
+  const first = i;
+  for (let k = 0; k < n && i !== -1; k++) i = hay.indexOf(needle, i + 1);
+  return i !== -1 ? i : first;
+}
+
+// Merge a range's client rects into one box per line, relative to the page.
+function lineBoxes(range, pageRect) {
+  const rects = [...range.getClientRects()]
+    .filter((r) => r.width > 0.5 && r.height > 0.5)
+    .sort((a, b) => a.top - b.top || a.left - b.left);
+
+  const lines = [];
+  rects.forEach((r) => {
+    const line = lines.find((l) => Math.abs(l.top - r.top) < Math.min(l.height, r.height) * 0.5);
+    if (line) {
+      const right = Math.max(line.left + line.width, r.right);
+      line.left = Math.min(line.left, r.left);
+      line.width = right - line.left;
+      line.top = Math.min(line.top, r.top);
+      line.height = Math.max(line.height, r.height);
+    } else {
+      lines.push({ left: r.left, top: r.top, width: r.width, height: r.height });
+    }
+  });
+
+  return lines.map((l) => ({
+    left: l.left - pageRect.left,
+    top: l.top - pageRect.top,
+    width: l.width,
+    height: l.height
+  }));
+}
+
+function drawHighlights(p) {
+  p.el.querySelector(".hl-layer")?.remove();
+  if (!p.textReady || !showHighlights) return;
+
+  const notes = docNotes.filter((n) => n.page === p.num);
+  if (notes.length === 0) return;
+
+  const textLayerEl = p.el.querySelector(".textLayer");
+  const { text, chars } = R.indexTextLayer(textLayerEl);
+  const pageRect = p.el.getBoundingClientRect();
+
+  const layer = document.createElement("div");
+  layer.className = "hl-layer";
+
+  notes.forEach((n) => {
+    const needle = R.squash(n.text);
+    if (!needle) return;
+    const at = nthIndexOf(text, needle, n.occurrence);
+    if (at === -1) return;  // text changed since (edited note) — nothing to draw
+
+    const start = chars[at];
+    const end   = chars[at + needle.length - 1];
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset + 1);
+
+    lineBoxes(range, pageRect).forEach((b) => {
+      const mark = document.createElement("div");
+      mark.className = `hl-mark hl-mark--${(n.category || "").replace(/\s+/g, "-")}`;
+      mark.dataset.noteId = n.id;
+      mark.style.left   = `${b.left - 1}px`;
+      mark.style.top    = `${b.top}px`;
+      mark.style.width  = `${b.width + 2}px`;
+      mark.style.height = `${b.height}px`;
+      layer.appendChild(mark);
+    });
+  });
+
+  // Under the text layer so selecting text still works.
+  p.el.insertBefore(layer, textLayerEl);
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes.lazynotes || !pdfDoc) return;
+  setDocNotes(changes.lazynotes.newValue?.courses ?? {});
+  pages.forEach(drawHighlights);
+});
 
 // ---------------------------------------------------------------------------
 // Navigation

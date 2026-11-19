@@ -45,6 +45,7 @@
 
   let currentParagraphElement = null;
   let currentSelectedText     = "";
+  let currentRange            = null;   // copy of the selection, for hosts that anchor notes
 
   // DOM refs
   let popupContainer    = null;
@@ -776,6 +777,7 @@
     window.getSelection()?.removeAllRanges();
     currentParagraphElement = null;
     currentSelectedText     = "";
+    currentRange            = null;
   }
 
   function isEventInsidePopup(event) {
@@ -805,6 +807,7 @@
     if (text.length === 0) return;
 
     const range = selection.getRangeAt(0);
+    currentRange = range.cloneRange();
     const rect  = range.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return;
 
@@ -859,7 +862,8 @@
       topic:      selectedTopic,
       annotation: selectedAnnotation,
       sourceUrl:  host?.sourceUrl ? host.sourceUrl(currentParagraphElement) : window.location.href,
-      sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null
+      sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null,
+      anchor:     host?.anchorFor ? host.anchorFor(currentRange) : null
     };
 
     try {

@@ -113,6 +113,45 @@ body {
 }
 .page canvas { display: block; }
 
+/* ── Saved highlights ── */
+.hl-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;   /* clicks and selection go to the text layer */
+  z-index: 0;
+  /* On the layer, not the marks: the layer is its own stacking context, so
+     marks blended inside it would multiply against nothing. Multiplying
+     the whole layer with the page keeps the printed text dark. */
+  mix-blend-mode: multiply;
+}
+.hl-mark {
+  position: absolute;
+  border-radius: 2px;
+  background: #fde047;
+}
+
+.hl-toggle {
+  position: relative;
+  padding-left: 24px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.hl-toggle[hidden] { display: none; }
+.hl-toggle::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 2px;
+  background: #fde047;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.hl-toggle.off { color: var(--dim); }
+.hl-toggle.off::before { background: transparent; border-color: var(--border-strong); }
+
 /* ── Start screen ── */
 #start-screen {
   display: flex;

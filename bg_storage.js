@@ -17,6 +17,7 @@
 //             "<uuid>": {
 //               text, category, annotation, context, sourceUrl,
 //               sourceTitle (page title, or "file.pdf, p. 4"),
+//               anchor ({ page, occurrence } for PDF notes, else null),
 //               timestamp, edited
 //             }
 //           }
@@ -179,6 +180,7 @@ export async function insertHighlight(id, payload, courseName, topicName) {
     context:    payload.context ?? null,
     sourceUrl:  payload.sourceUrl,
     sourceTitle: payload.sourceTitle ?? null,
+    anchor:     payload.anchor ?? null,
     timestamp:  new Date().toISOString(),
     edited:     null
   };
