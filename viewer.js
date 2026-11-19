@@ -102,6 +102,29 @@ function countNotes(course) {
     .reduce((sum, t) => sum + Object.keys(t.highlights || {}).length, 0);
 }
 
+// Breadcrumb in the top bar: [{ label, href? }]; the last item is the page.
+function setCrumbs(items) {
+  const nav = document.getElementById("crumbs");
+  if (!nav) return;
+  nav.innerHTML = "";
+  items.forEach((item, i) => {
+    if (i > 0) {
+      const sep = document.createElement("span");
+      sep.className = "sep";
+      sep.textContent = "/";
+      nav.appendChild(sep);
+    }
+    const el = document.createElement(item.href ? "a" : "span");
+    el.textContent = item.label;
+    el.title = item.label;
+    if (item.href) el.href = item.href;
+    nav.appendChild(el);
+  });
+}
+
+const coursesHref = () => "courses.html";
+const topicsHref  = (course) => `topics.html?course=${encodeURIComponent(course)}`;
+
 // ---------------------------------------------------------------------------
 // Page 1 — courses.html
 // ---------------------------------------------------------------------------
@@ -111,6 +134,7 @@ async function renderCourses() {
   const resultsEl = document.getElementById("search-results");
   const searchEl  = document.getElementById("search-input");
 
+  setCrumbs([{ label: "Courses" }]);
   let courses = await getCourseTree();
 
   function drawCourses() {
@@ -118,9 +142,14 @@ async function renderCourses() {
     const names = Object.keys(courses);
 
     if (names.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">No courses yet.</div>';
+      listEl.innerHTML =
+        '<div class="empty-state">No courses yet. Create one from the Lazy Notes side panel.</div>';
       return;
     }
+
+    const card = document.createElement("div");
+    card.className = "list-card";
+    listEl.appendChild(card);
 
     names.forEach((name) => {
       const course = courses[name];
@@ -134,10 +163,10 @@ async function renderCourses() {
       title.className = "list-row-title";
       title.textContent = name;
       const meta = document.createElement("div");
-      meta.className = "list-row-meta";
-      meta.textContent = [course.level, course.semester].filter(Boolean).join(" · ") || "—";
+      meta.className = "list-row-sub";
+      meta.textContent = [course.level, course.semester].filter(Boolean).join(" · ");
       left.appendChild(title);
-      left.appendChild(meta);
+      if (meta.textContent) left.appendChild(meta);
 
       const right = document.createElement("div");
       right.className = "list-row-right";
@@ -155,10 +184,10 @@ async function renderCourses() {
       row.appendChild(right);
 
       row.addEventListener("click", () => {
-        window.location.href = `topics.html?course=${encodeURIComponent(name)}`;
+        window.location.href = topicsHref(name);
       });
 
-      listEl.appendChild(row);
+      card.appendChild(row);
     });
   }
 
@@ -180,45 +209,47 @@ async function renderCourses() {
       : `${results.length} note${results.length === 1 ? " matches" : "s match"} "${query}"`;
     resultsEl.appendChild(summary);
 
-    results.forEach((r) => {
-      const card = document.createElement("div");
-      card.className = "highlight-card";
+    if (results.length === 0) return;
+    const list = document.createElement("div");
+    list.className = "list-card";
+    resultsEl.appendChild(list);
 
-      const tag = document.createElement("div");
-      tag.className = "highlight-category-tag";
-      tag.textContent = r.note.category;
+    results.forEach((r) => {
+      const item = document.createElement("div");
+      item.className = "result";
 
       const line = document.createElement("div");
-      line.className = "highlight-line";
+      line.className = "result-text";
       appendWithMarks(line, r.note.text, query);
-
-      card.appendChild(tag);
-      card.appendChild(line);
+      item.appendChild(line);
 
       // Show the annotation/context when that's where the match was.
       if (!matches(r.note.text, query)) {
         const extra = [r.note.annotation, r.note.context].find((t) => matches(t, query));
         if (extra) {
           const sub = document.createElement("div");
-          sub.className = "search-sub";
+          sub.className = "result-sub";
           appendWithMarks(sub, snippet(extra, query), query);
-          card.appendChild(sub);
+          item.appendChild(sub);
         }
       }
 
       const path = document.createElement("div");
-      path.className = "search-path";
-      path.textContent = `${r.courseName} › ${r.topicName}`;
-      card.appendChild(path);
+      path.className = "result-path";
+      const cat = document.createElement("span");
+      cat.className = "note-cat";
+      cat.textContent = CATEGORY_LABELS[r.note.category] || r.note.category;
+      path.append(cat, `${r.courseName} / ${r.topicName}`);
+      item.appendChild(path);
 
-      card.addEventListener("click", () => {
+      item.addEventListener("click", () => {
         window.location.href =
           `display.html?course=${encodeURIComponent(r.courseName)}` +
           `&topic=${encodeURIComponent(r.topicName)}` +
           `&focus=${encodeURIComponent(r.note.id)}`;
       });
 
-      resultsEl.appendChild(card);
+      list.appendChild(item);
     });
   }
 
@@ -323,6 +354,8 @@ async function renderTopics() {
   const courseName = params.get("course");
 
   document.getElementById("course-heading").textContent = courseName || "Unknown course";
+  document.title = `${courseName} — Lazy Notes`;
+  setCrumbs([{ label: "Courses", href: coursesHref() }, { label: courseName || "Unknown course" }]);
 
   let course = (await getCourseTree())[courseName];
   const listEl = document.getElementById("topic-list");
@@ -335,6 +368,9 @@ async function renderTopics() {
 
   function draw() {
     document.querySelectorAll(".export-btn").forEach((b) => { b.disabled = !course; });
+    document.getElementById("course-meta").textContent = course
+      ? [course.level, course.semester, course.details].filter(Boolean).join(" · ")
+      : "";
 
     listEl.innerHTML = "";
 
@@ -350,11 +386,14 @@ async function renderTopics() {
     }));
 
     if (topics.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">No topics for this course yet.</div>';
+      listEl.innerHTML = '<div class="empty-state">No topics yet. Add one from the side panel.</div>';
       return;
     }
 
     const sorted = sortTopics(topics, sortSel.value);
+    const card = document.createElement("div");
+    card.className = "list-card";
+    listEl.appendChild(card);
 
     sorted.forEach((topic) => {
       const row = document.createElement("div");
@@ -383,7 +422,7 @@ async function renderTopics() {
           `display.html?course=${encodeURIComponent(courseName)}&topic=${encodeURIComponent(topic.name)}`;
       });
 
-      listEl.appendChild(row);
+      card.appendChild(row);
     });
   }
 
@@ -407,15 +446,17 @@ async function renderDisplay() {
   const topicName  = params.get("topic");
 
   document.getElementById("topic-heading").textContent = topicName || "Unknown topic";
-  document.getElementById("back-link").href =
-    `topics.html?course=${encodeURIComponent(courseName || "")}`;
+  document.title = `${topicName} — Lazy Notes`;
+  setCrumbs([
+    { label: "Courses", href: coursesHref() },
+    { label: courseName || "Unknown course", href: topicsHref(courseName || "") },
+    { label: topicName || "Unknown topic" }
+  ]);
 
   const categoryFilter = document.getElementById("category-filter");
   const sortSel         = document.getElementById("highlight-sort");
   const listEl           = document.getElementById("highlight-list");
-  const metaPanel        = document.getElementById("meta-panel");
 
-  let metaTimeout = null;
   let editingNoteId = null;  // id of the note currently open in the edit form, or null
   let focusId = params.get("focus");  // note to scroll to when arriving from search
 
@@ -423,55 +464,6 @@ async function renderDisplay() {
     const course = (await getCourseTree())[courseName];
     return course?.topics?.[topicName] ? { courseName, course, topicName } : null;
   });
-
-  function showMeta(event, note) {
-    clearTimeout(metaTimeout);
-    metaTimeout = setTimeout(() => {
-      metaPanel.innerHTML = "";
-      const rows = [{ label: "Category:", value: note.category }];
-
-      if (note.sourceUrl) {
-        try {
-          const u = new URL(note.sourceUrl);
-          rows.push({ label: "Source:", value: u.hostname + u.pathname });
-        } catch (_) {
-          rows.push({ label: "Source:", value: note.sourceUrl });
-        }
-      }
-
-      if (note.timestamp) {
-        rows.push({ label: "Saved:", value: new Date(note.timestamp).toLocaleString() });
-      }
-      if (note.edited) {
-        rows.push({ label: "Edited:", value: new Date(note.edited).toLocaleString() });
-      }
-      if (note.context)    rows.push({ label: "Context:",    value: note.context });
-      if (note.annotation) rows.push({ label: "Annotation:", value: note.annotation });
-
-      rows.forEach(({ label, value }) => {
-        const row = document.createElement("div");
-        row.className = "mp-row";
-        const l = document.createElement("span");
-        l.className = "mp-row-label";
-        l.textContent = label;
-        const v = document.createElement("span");
-        v.className = "mp-row-value";
-        v.textContent = value;
-        row.appendChild(l);
-        row.appendChild(v);
-        metaPanel.appendChild(row);
-      });
-
-      metaPanel.style.top  = `${event.clientY + 12}px`;
-      metaPanel.style.left = `${event.clientX + 12}px`;
-      metaPanel.classList.remove("mp-hidden");
-    }, 250);
-  }
-
-  function hideMeta() {
-    clearTimeout(metaTimeout);
-    metaPanel.classList.add("mp-hidden");
-  }
 
   async function draw() {
     if (editingNoteId !== null) return;  // don't wipe an open edit form
@@ -494,36 +486,20 @@ async function renderDisplay() {
     notes = sortHighlights(notes, sortSel.value);
 
     if (notes.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">No notes match this filter.</div>';
+      listEl.innerHTML = categoryFilter.value
+        ? '<div class="empty-state">No notes of this kind.</div>'
+        : '<div class="empty-state">No notes yet. Turn the highlighter on and select text on a page.</div>';
       return;
     }
 
     notes.forEach((note) => {
-      const card = document.createElement("div");
-      card.className = "highlight-card";
-      card.dataset.id = note.id;
-
-      const tag = document.createElement("div");
-      tag.className = "highlight-category-tag";
-      tag.textContent = note.category;
-
-      const line = document.createElement("div");
-      line.className = "highlight-line";
-      line.textContent = note.text;
-
-      card.appendChild(tag);
-      card.appendChild(line);
-
-      card.addEventListener("mouseenter", (e) => showMeta(e, note));
-      card.addEventListener("mouseleave", hideMeta);
-
-      card.addEventListener("click", () => {
-        if (card.dataset.editing === "true") return;
-        hideMeta();
-        expandToEdit(card, note);
+      const el = renderNote(note);
+      const edit = () => { if (editingNoteId === null) expandToEdit(el, note); };
+      el.addEventListener("click", edit);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target === el) { e.preventDefault(); edit(); }
       });
-
-      listEl.appendChild(card);
+      listEl.appendChild(el);
     });
 
     if (focusId) {
@@ -537,9 +513,13 @@ async function renderDisplay() {
   }
 
   function expandToEdit(card, note) {
-    card.dataset.editing = "true";
     editingNoteId = note.id;
-    card.innerHTML = "";
+
+    const field = (labelText, control) => {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+      form.append(label, control);
+    };
 
     const textArea = document.createElement("textarea");
     textArea.value = note.text;
@@ -549,28 +529,28 @@ async function renderDisplay() {
     CATEGORIES.forEach((c) => {
       const opt = document.createElement("option");
       opt.value = c;
-      opt.textContent = c;
+      opt.textContent = CATEGORY_LABELS[c] || c;
       if (c === note.category) opt.selected = true;
       categorySel.appendChild(opt);
     });
 
-    const contextArea = document.createElement("textarea");
-    contextArea.placeholder = "Context (optional)";
-    contextArea.value = note.context || "";
-    contextArea.rows = 2;
-
     const annotationArea = document.createElement("textarea");
-    annotationArea.placeholder = "Annotation (optional)";
+    annotationArea.placeholder = "Your own note about this (optional)";
     annotationArea.value = note.annotation || "";
     annotationArea.rows = 2;
 
+    const contextArea = document.createElement("textarea");
+    contextArea.placeholder = "Surrounding text (optional)";
+    contextArea.value = note.context || "";
+    contextArea.rows = 2;
+
     const form = document.createElement("div");
     form.className = "edit-form";
-    form.appendChild(textArea);
-    form.appendChild(categorySel);
-    form.appendChild(contextArea);
-    form.appendChild(annotationArea);
-
+    form.addEventListener("click", (e) => e.stopPropagation());
+    field("Text", textArea);
+    field("Type", categorySel);
+    field("Annotation", annotationArea);
+    field("Context", contextArea);
     const footer = document.createElement("div");
     footer.className = "edit-form-footer";
 
@@ -579,7 +559,6 @@ async function renderDisplay() {
     cancelBtn.textContent = "Cancel";
     cancelBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      card.dataset.editing = "false";
       editingNoteId = null;
       draw();
     });
@@ -595,7 +574,6 @@ async function renderDisplay() {
         context:    contextArea.value || null,
         annotation: annotationArea.value || null
       });
-      card.dataset.editing = "false";
       editingNoteId = null;
       draw();
     });
@@ -617,7 +595,14 @@ async function renderDisplay() {
     footer.appendChild(saveBtn);
     form.appendChild(footer);
 
-    card.appendChild(form);
+    // Esc cancels, Ctrl/Cmd+Enter saves.
+    form.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); cancelBtn.click(); }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBtn.click(); }
+    });
+
+    card.replaceWith(form);
+    textArea.focus();
   }
 
   categoryFilter.addEventListener("change", draw);

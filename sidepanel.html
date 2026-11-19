@@ -4,508 +4,26 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lazy Notes</title>
-<style>
-  :root {
-    --bg:       #ffffff;
-    --surface:  #f5f5f5;
-    --border:   #e0e0e0;
-    --pri:      #111111;
-    --sec:      #555555;
-    --dim:      #999999;
-    --hover:    #f0f0f0;
-    --danger:   #c0392b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:      #111111;
-      --surface: #1a1a1a;
-      --border:  #2a2a2a;
-      --pri:     #ebebeb;
-      --sec:     #888888;
-      --dim:     #444444;
-      --hover:   #1e1e1e;
-      --danger:  #e5534b;
-    }
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    width: 360px;
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--pri);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Header ── */
-  #header {
-    padding: 14px 16px 0;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  #brand-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  #brand {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--sec);
-  }
-
-  #toggle-btn {
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--sec);
-    cursor: pointer;
-  }
-  #toggle-btn.active {
-    color: var(--pri);
-    border-color: var(--sec);
-  }
-
-  /* ── View tabs ── */
-  #view-tabs {
-    display: flex;
-    gap: 0;
-  }
-
-  .view-tab {
-    flex: 1;
-    font-size: 11px;
-    padding: 7px 0;
-    border: none;
-    background: transparent;
-    color: var(--dim);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  .view-tab.active {
-    color: var(--pri);
-    border-bottom-color: var(--pri);
-  }
-
-  /* ── Shared scrollable body ── */
-  #body {
-    flex: 1;
-    overflow-y: auto;
-  }
-
-  /* ── Section ── */
-  .section {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .section-label {
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--dim);
-    margin-bottom: 10px;
-  }
-
-  /* ── Course dropdown (shared by home + study) ── */
-  .course-select-wrap {
-    position: relative;
-  }
-
-  .course-select {
-    width: 100%;
-    padding: 7px 10px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--pri);
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    outline: none;
-  }
-  .course-select:focus { border-color: var(--sec); }
-
-  .course-select-arrow {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: var(--dim);
-    pointer-events: none;
-  }
-
-  /* ── HOME VIEW ── */
-  #home-view { display: none; }
-  #home-view.visible { display: block; }
-
-  /* Topic list in home view */
-  #home-topic-list { display: flex; flex-direction: column; gap: 4px; }
-
-  .topic-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 7px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    border: 1px solid transparent;
-  }
-  .topic-row:hover { background: var(--hover); }
-  .topic-row.active {
-    border-color: var(--border);
-    background: var(--surface);
-  }
-  .topic-name { font-size: 13px; color: var(--pri); }
-  .topic-meta { font-size: 11px; color: var(--dim); }
-
-  #start-hint {
-    font-size: 12px;
-    color: var(--sec);
-    background: var(--surface);
-    border: 1px dashed var(--border);
-    border-radius: 5px;
-    padding: 6px 10px;
-    margin-bottom: 6px;
-  }
-  #start-hint[hidden] { display: none; }
-
-  .topic-row-right { display: flex; align-items: center; gap: 6px; }
-  .topic-delete-btn {
-    font-size: 13px;
-    line-height: 1;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--dim);
-    cursor: pointer;
-    opacity: 0;
-    font-family: inherit;
-  }
-  .topic-row:hover .topic-delete-btn,
-  .topic-delete-btn:focus-visible,
-  .topic-delete-btn.armed { opacity: 1; }
-  .topic-delete-btn:hover { color: var(--danger); border-color: var(--border); }
-  .topic-delete-btn.armed {
-    font-size: 11px;
-    color: #fff;
-    background: var(--danger);
-    border-color: var(--danger);
-  }
-  .topic-delete-btn:disabled { opacity: 0.4; cursor: default; }
-  @media (hover: none) { .topic-delete-btn { opacity: 1; } }
-
-  /* Last highlights */
-  #last-highlights { display: flex; flex-direction: column; gap: 6px; }
-
-  .last-highlight {
-    padding: 8px 10px;
-    background: var(--surface);
-    border-radius: 5px;
-    font-size: 12px;
-    color: var(--sec);
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .last-highlight .lh-course {
-    font-size: 10px;
-    color: var(--dim);
-    margin-bottom: 3px;
-    letter-spacing: 0.04em;
-  }
-
-  /* Action buttons */
-  .action-btn {
-    width: 100%;
-    padding: 7px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--sec);
-    font-size: 12px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    text-align: center;
-  }
-  .action-btn:hover { background: var(--hover); color: var(--pri); }
-
-  .action-btn + .action-btn { margin-top: 6px; }
-
-  /* ── STUDY VIEW ── */
-  #study-view { display: none; }
-  #study-view.visible { display: block; }
-
-  /* Course selector row at top of study */
-  #study-course-row {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  /* Topic tab strip */
-  #topic-tabs {
-    display: flex;
-    gap: 4px;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex-shrink: 0;
-  }
-  #topic-tabs::-webkit-scrollbar { display: none; }
-
-  .topic-tab {
-    flex-shrink: 0;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--dim);
-    cursor: pointer;
-  }
-  .topic-tab.active {
-    color: var(--pri);
-    border-color: var(--border);
-    background: var(--surface);
-  }
-
-  /* Note lines */
-  #note-list { padding: 4px 0; }
-
-  .note-line {
-    padding: 7px 16px;
-    color: var(--pri);
-    font-size: 13px;
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: default;
-    transition: background 0.1s;
-  }
-  .note-line:hover { background: var(--hover); }
-
-  #empty-study {
-    padding: 48px 16px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--dim);
-  }
-
-  /* ── Floating meta panel ── */
-  #meta-panel {
-    position: fixed;
-    width: 280px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-    z-index: 1000;
-    display: none;
-    pointer-events: auto;
-  }
-  @media (prefers-color-scheme: dark) {
-    #meta-panel { box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
-  }
-  #meta-panel.visible { display: block; }
-
-  .mp-row {
-    display: flex;
-    gap: 6px;
-    font-size: 12px;
-    line-height: 1.6;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-  .mp-row-label {
-    color: var(--dim);
-    flex-shrink: 0;
-  }
-  .mp-row-value {
-    color: var(--sec);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mp-status-saved   { color: #2e8b57; }
-  .mp-status-pending { color: #b8860b; }
-  .mp-status-failed  { color: #c0392b; }
-
-  /* ── Footer ── */
-  #footer {
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
-    padding: 8px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  #note-count { font-size: 11px; color: var(--dim); }
-
-  #export-btn {
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--sec);
-    cursor: pointer;
-  }
-  #export-btn:disabled { opacity: 0.4; cursor: default; }
-
-  /* ── Modal shared styles ── */
-  .ln-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.28);
-  }
-  .ln-modal.visible { display: flex; }
-
-  @media (prefers-color-scheme: dark) {
-    .ln-modal { background: rgba(0, 0, 0, 0.55); }
-  }
-
-  .ln-dialog {
-    width: min(320px, 100%);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
-  }
-
-  .ln-dialog-header {
-    padding: 14px 16px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .ln-dialog-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--pri);
-  }
-
-  .ln-dialog-subtitle {
-    margin-top: 2px;
-    font-size: 11px;
-    color: var(--dim);
-  }
-
-  .ln-dialog-body {
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .ln-dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 7px;
-    padding: 10px 16px;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Field rows inside modals */
-  .field-row { display: flex; flex-direction: column; gap: 3px; }
-  .field-row label {
-    font-size: 10px;
-    color: var(--dim);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .field-row input,
-  .field-row select,
-  .field-row textarea {
-    padding: 6px 8px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--pri);
-    font-size: 13px;
-    font-family: inherit;
-    outline: none;
-  }
-  .field-row input:focus,
-  .field-row select:focus,
-  .field-row textarea:focus { border-color: var(--sec); }
-
-  .field-row textarea {
-    resize: vertical;
-    min-height: 56px;
-  }
-
-  .row-pair { display: flex; gap: 8px; }
-  .row-pair .field-row { flex: 1; }
-
-  /* Modal buttons */
-  .ln-btn-cancel,
-  .ln-btn-submit {
-    padding: 6px 12px;
-    border-radius: 5px;
-    font-size: 11px;
-    cursor: pointer;
-  }
-
-  .ln-btn-cancel {
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--sec);
-  }
-  .ln-btn-cancel:hover { background: var(--hover); }
-
-  .ln-btn-submit {
-    border: 1px solid var(--pri);
-    background: var(--pri);
-    color: var(--bg);
-  }
-  .ln-btn-submit:hover { opacity: 0.88; }
-</style>
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="notes.css" />
+<link rel="stylesheet" href="sidepanel.css" />
 </head>
 <body>
 
 <!-- ── Header ── -->
-<div id="header">
+<header id="header">
   <div id="brand-row">
     <span id="brand">Lazy Notes</span>
-    <button id="toggle-btn">Highlighter off</button>
+    <button id="toggle-btn" type="button" aria-pressed="false">
+      <span class="switch" aria-hidden="true"></span>
+      <span id="toggle-label">Highlighter off</span>
+    </button>
   </div>
-  <div id="view-tabs">
-    <button class="view-tab active" data-view="home">Home</button>
-    <button class="view-tab" data-view="study">Study</button>
-  </div>
-</div>
+  <nav id="view-tabs" role="tablist">
+    <button class="view-tab active" data-view="home" role="tab">Topics</button>
+    <button class="view-tab" data-view="study" role="tab">Study</button>
+  </nav>
+</header>
 
 <!-- Shown when the active tab is a PDF: Chrome's PDF viewer blocks
      extensions, so offer to reopen it in the Lazy Notes reader. -->
@@ -515,97 +33,68 @@
 </div>
 
 <!-- ── Body ── -->
-<div id="body">
+<main id="body">
 
   <!-- HOME VIEW -->
-  <div id="home-view" class="visible">
+  <section id="home-view" class="visible">
 
-    <!-- Course + sort in one card -->
-    <div class="section">
-      <div class="section-label">Course</div>
-      <div class="course-select-wrap">
-        <select id="home-course-select" class="course-select">
-          <option value="">— select a course —</option>
-        </select>
-        <span class="course-select-arrow">▾</span>
-      </div>
+    <label class="field-label" for="home-course-select">Course</label>
+    <select id="home-course-select" class="select">
+      <option value="">Select a course</option>
+    </select>
 
-      <div class="section-label" style="margin-top:10px;">Sort Topics By</div>
-      <div class="course-select-wrap">
-        <select id="home-topic-sort" class="course-select">
-          <option value="chronological">Chronological</option>
-          <option value="name">Name (A–Z)</option>
-          <option value="highlights">Note Count</option>
-        </select>
-        <span class="course-select-arrow">▾</span>
-      </div>
+    <div class="list-head">
+      <span class="field-label">Topics</span>
+      <select id="home-topic-sort" class="select select--quiet" aria-label="Sort topics">
+        <option value="chronological">Oldest first</option>
+        <option value="name">A–Z</option>
+        <option value="highlights">Most notes</option>
+      </select>
     </div>
 
-    <!-- Topics for selected course -->
-    <div class="section">
-      <div class="section-label">Topics</div>
-      <div id="start-hint" hidden></div>
-      <div id="home-topic-list"></div>
-    </div>
+    <div id="start-hint" hidden></div>
+    <div id="home-topic-list"></div>
 
-    <!-- Actions -->
-    <div class="section">
-      <button id="open-create-topic" class="action-btn">Create Topic</button>
-    </div>
+    <button id="open-create-topic" class="add-btn" type="button">+ New topic</button>
 
-    <!-- Other pages -->
-    <div class="section link-row">
-      <a id="open-viewer-link" href="courses.html" target="_blank" class="action-btn">All notes ↗</a>
-      <a id="open-pdf-reader" href="pdfreader.html" target="_blank" class="action-btn">PDF reader ↗</a>
-    </div>
-
-  </div>
+  </section>
 
   <!-- STUDY VIEW -->
-  <div id="study-view">
+  <section id="study-view">
 
-    <!-- Course dropdown -->
-    <div id="study-course-row">
-      <div class="course-select-wrap">
-        <select id="study-course-select" class="course-select">
-          <option value="">— select a course —</option>
-        </select>
-        <span class="course-select-arrow">▾</span>
-      </div>
-    </div>
+    <select id="study-course-select" class="select" aria-label="Course">
+      <option value="">Select a course</option>
+    </select>
+    <select id="study-topic-select" class="select" aria-label="Topic" hidden></select>
 
-    <!-- Topic tab strip -->
-    <div id="topic-tabs"></div>
-
-    <!-- Notes -->
     <div id="note-list"></div>
-    <div id="empty-study">No notes for this topic yet.</div>
+    <div id="empty-study" class="empty">No notes for this topic yet.</div>
 
-  </div>
+  </section>
 
-</div>
+</main>
 
 <!-- ── Footer ── -->
-<div id="footer">
+<footer id="footer">
   <span id="note-count"></span>
-  <button id="export-btn">Export</button>
-</div>
-
-<!-- ── Floating meta panel ── -->
-<div id="meta-panel"></div>
+  <div class="footer-actions">
+    <a id="open-viewer-link" href="courses.html" target="_blank" class="footer-link" title="Browse, search and edit all notes">All notes</a>
+    <a id="open-pdf-reader" href="pdfreader.html" target="_blank" class="footer-link" title="Read and take notes from PDFs">PDF reader</a>
+    <button id="export-btn" type="button">Export</button>
+  </div>
+</footer>
 
 <!-- ── Create Course modal ── -->
 <div id="create-course-modal" class="ln-modal" aria-hidden="true">
   <div class="ln-dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title">
     <div class="ln-dialog-header">
-      <div class="ln-dialog-title" id="cc-title">Create Course</div>
-      <div class="ln-dialog-subtitle">Add a course to Lazy Notes.</div>
+      <div class="ln-dialog-title" id="cc-title">New course</div>
     </div>
 
     <div class="ln-dialog-body">
       <div class="field-row">
         <label for="cc-name">Name</label>
-        <input type="text" id="cc-name" placeholder="e.g. Biology 101" />
+        <input type="text" id="cc-name" placeholder="e.g. BIO 101" />
       </div>
 
       <div class="row-pair">
@@ -633,14 +122,14 @@
       </div>
 
       <div class="field-row">
-        <label for="cc-details">Details <span style="color:var(--dim);font-size:9px;text-transform:none">(optional)</span></label>
-        <textarea id="cc-details" placeholder="e.g. lecturer, room, any notes..."></textarea>
+        <label for="cc-details">Details <span class="optional">optional</span></label>
+        <textarea id="cc-details" placeholder="Lecturer, room, anything else"></textarea>
       </div>
     </div>
 
     <div class="ln-dialog-footer">
       <button id="cc-cancel" class="ln-btn-cancel" type="button">Cancel</button>
-      <button id="cc-submit" class="ln-btn-submit" type="button">Create</button>
+      <button id="cc-submit" class="ln-btn-submit" type="button">Create course</button>
     </div>
   </div>
 </div>
@@ -649,27 +138,27 @@
 <div id="create-topic-modal" class="ln-modal" aria-hidden="true">
   <div class="ln-dialog" role="dialog" aria-modal="true" aria-labelledby="ct-title">
     <div class="ln-dialog-header">
-      <div class="ln-dialog-title" id="ct-title">Create Topic</div>
+      <div class="ln-dialog-title" id="ct-title">New topic</div>
       <div class="ln-dialog-subtitle" id="ct-subtitle">Add a topic to the selected course.</div>
     </div>
 
     <div class="ln-dialog-body">
       <div class="field-row">
         <label for="ct-name">Name</label>
-        <input type="text" id="ct-name" placeholder="e.g. Week 3 — Cell Division" />
+        <input type="text" id="ct-name" placeholder="e.g. Week 3 — Cell division" />
       </div>
-
     </div>
 
     <div class="ln-dialog-footer">
       <button id="ct-cancel" class="ln-btn-cancel" type="button">Cancel</button>
-      <button id="ct-submit" class="ln-btn-submit" type="button">Create</button>
+      <button id="ct-submit" class="ln-btn-submit" type="button">Create &amp; start</button>
     </div>
   </div>
 </div>
 
 <script src="utils.js"></script>
 <script src="exporter.js"></script>
+<script src="notes-render.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

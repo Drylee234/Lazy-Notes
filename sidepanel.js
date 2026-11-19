@@ -36,7 +36,7 @@ const openCreateTopic   = document.getElementById("open-create-topic");
 
 // Study
 const studyCourseSelect = document.getElementById("study-course-select");
-const topicTabs         = document.getElementById("topic-tabs");
+const studyTopicSelect  = document.getElementById("study-topic-select");
 const noteList          = document.getElementById("note-list");
 const emptyStudy        = document.getElementById("empty-study");
 
@@ -44,8 +44,6 @@ const emptyStudy        = document.getElementById("empty-study");
 const noteCount         = document.getElementById("note-count");
 const exportBtn         = document.getElementById("export-btn");
 
-// Meta panel
-const metaPanel         = document.getElementById("meta-panel");
 
 // Create Course modal
 const createCourseModal = document.getElementById("create-course-modal");
@@ -84,18 +82,6 @@ async function init() {
   homeSelectedCourse  = activeCourse;
   studySelectedCourse = activeCourse;
 
-  // Append context to chronological sorting options in the dropdown
-  if (homeTopicSortSel) {
-    Array.from(homeTopicSortSel.options).forEach(opt => {
-      if (opt.value === 'chronological' && !opt.text.includes('(')) {
-         opt.text += ' (Oldest First)';
-      }
-      if (opt.value === 'reverse-chronological' && !opt.text.includes('(')) {
-         opt.text += ' (Latest First)';
-      }
-    });
-  }
-
   renderHomeCourseSelect();
   renderStudyCourseSelect();
 
@@ -131,7 +117,7 @@ async function refreshCourseTree() {
 // ---------------------------------------------------------------------------
 
 function populateCourseSelect(selectEl, selectedName) {
-  selectEl.innerHTML = '<option value="">— select a course —</option>';
+  selectEl.innerHTML = '<option value="">Select a course</option>';
 
   Object.entries(courseTree).forEach(([name]) => {
     const opt = document.createElement("option");
@@ -201,8 +187,8 @@ async function loadHomeTopics() {
 
   if (topics.length === 0) {
     const empty = document.createElement("div");
-    empty.style.cssText = "font-size:12px;color:var(--dim);padding:4px 0;";
-    empty.textContent = "No topics yet — create one below.";
+    empty.className = "topic-empty";
+    empty.textContent = "No topics yet.";
     homeTopicList.appendChild(empty);
     updateFooterCount();
     return;
@@ -338,19 +324,23 @@ homeTopicSortSel.addEventListener("change", async () => {
 // ---------------------------------------------------------------------------
 
 async function loadStudyTopics() {
-  topicTabs.innerHTML = "";
+  studyTopicSelect.innerHTML = "";
+  studyTopicSelect.hidden = true;
   noteList.innerHTML  = "";
   emptyStudy.style.display = "none";
 
   if (!studySelectedCourse || !courseTree[studySelectedCourse]) {
     emptyStudy.style.display = "block";
-    emptyStudy.textContent   = "Select a course to view notes.";
+    emptyStudy.textContent   = "Pick a course to read its notes.";
     updateFooterCount();
     return;
   }
 
   const topicsDict = courseTree[studySelectedCourse].topics || {};
-  const topicNames = Object.keys(topicsDict);
+  const topicNames = sortTopics(
+    Object.entries(topicsDict).map(([name, t]) => ({ name, created: t.created })),
+    "chronological"
+  ).map((t) => t.name);
 
   if (topicNames.length === 0) {
     emptyStudy.style.display = "block";
@@ -359,29 +349,29 @@ async function loadStudyTopics() {
     return;
   }
 
-  studySelectedTopic = topicNames.includes(studySelectedTopic)
-    ? studySelectedTopic
-    : topicNames[0];
+  // Default to the topic being highlighted into, if it's in this course.
+  if (!topicNames.includes(studySelectedTopic)) {
+    studySelectedTopic = studySelectedCourse === activeCourse && topicNames.includes(activeTopic)
+      ? activeTopic
+      : topicNames[0];
+  }
 
   topicNames.forEach((name) => {
-    const tab = document.createElement("button");
-    tab.className = "topic-tab";
-    if (name === studySelectedTopic) tab.classList.add("active");
-    tab.textContent = name;
-
-    tab.addEventListener("click", async () => {
-      studySelectedTopic = name;
-      topicTabs.querySelectorAll(".topic-tab").forEach((t) =>
-        t.classList.toggle("active", t === tab)
-      );
-      await loadNotes();
-    });
-
-    topicTabs.appendChild(tab);
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    if (name === studySelectedTopic) opt.selected = true;
+    studyTopicSelect.appendChild(opt);
   });
+  studyTopicSelect.hidden = false;
 
   await loadNotes();
 }
+
+studyTopicSelect.addEventListener("change", async () => {
+  studySelectedTopic = studyTopicSelect.value;
+  await loadNotes();
+});
 
 studyCourseSelect.addEventListener("change", async () => {
   if (studyCourseSelect.value === "__create_course__") {
@@ -421,14 +411,7 @@ async function loadNotes() {
   }
 
   sorted.forEach((note) => {
-    const line = document.createElement("div");
-    line.className = "note-line";
-    line.textContent = note.text;
-
-    line.addEventListener("mouseenter", (e) => showMeta(e, note));
-    line.addEventListener("mouseleave", hideMeta);
-
-    noteList.appendChild(line);
+    noteList.appendChild(renderNote(note, { compact: true }));
   });
 
   updateFooterCount();
@@ -457,7 +440,8 @@ viewTabs.forEach((tab) => {
 // ---------------------------------------------------------------------------
 
 function setToggleBtn(active) {
-  toggleBtn.textContent = active ? "Highlighter on" : "Highlighter off";
+  document.getElementById("toggle-label").textContent = active ? "Highlighter on" : "Highlighter off";
+  toggleBtn.setAttribute("aria-pressed", String(active));
   toggleBtn.classList.toggle("active", active);
   updateToggleBtnGuard();
 }
@@ -625,83 +609,6 @@ exportBtn.addEventListener("click", () => {
   if (!target) return;
   exportNotes({ format: "md", ...target });
 });
-
-// ---------------------------------------------------------------------------
-// Meta panel
-// ---------------------------------------------------------------------------
-
-let metaTimeout = null;
-
-function showMeta(event, note) {
-  clearTimeout(metaTimeout);
-  metaTimeout = setTimeout(() => {
-    metaPanel.innerHTML = "";
-
-    const rows = [];
-
-    rows.push({ label: "Category:", value: note.category });
-
-    if (note.sourceUrl) {
-      try {
-        const url = new URL(note.sourceUrl);
-        rows.push({ label: "Source:", value: url.hostname + url.pathname });
-      } catch (_) {
-        rows.push({ label: "Source:", value: note.sourceUrl });
-      }
-    }
-
-    if (note.timestamp) {
-      const d = new Date(note.timestamp);
-      rows.push({
-        label: "Saved:",
-        value: d.toLocaleString(undefined, {
-          month: "short", day: "numeric",
-          hour: "2-digit", minute: "2-digit"
-        })
-      });
-    }
-
-    if (note.edited) {
-      const d = new Date(note.edited);
-      rows.push({
-        label: "Edited:",
-        value: d.toLocaleString(undefined, {
-          month: "short", day: "numeric",
-          hour: "2-digit", minute: "2-digit"
-        })
-      });
-    }
-
-    if (note.context)    rows.push({ label: "Context:",    value: note.context });
-    if (note.annotation) rows.push({ label: "Annotation:", value: note.annotation });
-
-    rows.forEach(({ label, value }) => {
-      const row = document.createElement("div");
-      row.className = "mp-row";
-
-      const lbl = document.createElement("span");
-      lbl.className   = "mp-row-label";
-      lbl.textContent = label;
-
-      const val = document.createElement("span");
-      val.className   = "mp-row-value";
-      val.textContent = value;
-
-      row.appendChild(lbl);
-      row.appendChild(val);
-      metaPanel.appendChild(row);
-    });
-
-    metaPanel.style.top  = `${event.clientY + 8}px`;
-    metaPanel.style.left = `${event.clientX + 8}px`;
-    metaPanel.classList.add("visible");
-  }, 300);
-}
-
-function hideMeta() {
-  clearTimeout(metaTimeout);
-  metaPanel.classList.remove("visible");
-}
 
 // ---------------------------------------------------------------------------
 // Messages from background

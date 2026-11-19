@@ -4,46 +4,56 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lazy Notes — Notes</title>
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="notes.css" />
 <link rel="stylesheet" href="viewer.css" />
 </head>
 <body data-page="display">
 
+<header class="topbar">
+  <a class="brand" href="courses.html">Lazy Notes</a>
+  <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+  <a class="topbar-link" href="pdfreader.html">PDF reader</a>
+</header>
+
 <div id="app">
-  <header id="page-header">
-    <a id="back-link" href="#">&larr; Topics</a>
+  <div class="page-head">
     <h1 id="topic-heading"></h1>
-    <div class="filter-row">
-      <label for="category-filter">Category</label>
-      <select id="category-filter">
-        <option value="">All</option>
-        <option value="header">header</option>
-        <option value="definition">definition</option>
-        <option value="formula">formula</option>
-        <option value="list head">list head</option>
-        <option value="list point">list point</option>
-        <option value="summary">summary</option>
-      </select>
-
-      <label for="highlight-sort">Sort by</label>
-      <select id="highlight-sort">
-        <option value="chronological">Chronological</option>
-        <option value="date">Newest first</option>
-      </select>
+    <div class="toolbar">
+      <label class="tool">
+        <span>Show</span>
+        <select id="category-filter" class="select">
+          <option value="">All notes</option>
+          <option value="header">Headers</option>
+          <option value="definition">Definitions</option>
+          <option value="formula">Formulas</option>
+          <option value="list head">List heads</option>
+          <option value="list point">List points</option>
+          <option value="summary">Summaries</option>
+        </select>
+      </label>
+      <label class="tool">
+        <span>Order</span>
+        <select id="highlight-sort" class="select">
+          <option value="chronological">As taken</option>
+          <option value="date">Newest first</option>
+        </select>
+      </label>
+      <div class="btn-group" role="group" aria-label="Export">
+        <span class="btn-group-label">Export</span>
+        <button class="export-btn" data-format="md">Markdown</button>
+        <button class="export-btn" data-format="html">HTML</button>
+      </div>
     </div>
-    <div class="export-row">
-      <span class="export-label">Export</span>
-      <button class="export-btn" data-format="md">Markdown</button>
-      <button class="export-btn" data-format="html">HTML</button>
-    </div>
-  </header>
+    <p class="hint">Click a note to edit it.</p>
+  </div>
 
-  <main id="highlight-list"></main>
+  <main id="highlight-list" class="note-sheet"></main>
 </div>
-
-<div id="meta-panel" class="mp-hidden"></div>
 
 <script src="utils.js"></script>
 <script src="exporter.js"></script>
+<script src="notes-render.js"></script>
 <script src="viewer.js"></script>
 </body>
 </html>

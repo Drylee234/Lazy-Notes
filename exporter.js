@@ -76,10 +76,31 @@ function mdNotes(notes, depth) {
   return out.join("\n");
 }
 
+// Unique sources in the order first used: [{ url, title, linkable }].
+// Notes from local PDFs point at the extension's own reader page, which
+// means nothing outside this browser, so those are listed by name only.
+function collectSources(notes) {
+  const seen = new Map();
+  notes.forEach((n) => {
+    if (!n.sourceUrl) return;
+    const key = n.sourceUrl.split("#")[0];
+    if (seen.has(key)) return;
+    const linkable = /^(https?|file):/.test(n.sourceUrl);
+    // "lecture3.pdf, p. 2" -> "lecture3.pdf": one entry per document.
+    const title = (n.sourceTitle || "").replace(/, p\. \d+$/, "") || null;
+    seen.set(key, { url: key, title, linkable });
+  });
+  return [...seen.values()];
+}
+
 function mdSources(notes) {
-  const urls = [...new Set(notes.map((n) => n.sourceUrl).filter(Boolean))];
-  if (urls.length === 0) return "";
-  return "\n\n---\n\n**Sources**\n\n" + urls.map((u) => `- <${u}>`).join("\n");
+  const sources = collectSources(notes);
+  if (sources.length === 0) return "";
+  const lines = sources.map(({ url, title, linkable }) => {
+    if (!linkable) return `- ${mdInline(title || "Local file")}`;
+    return title ? `- [${mdInline(title)}](<${url}>)` : `- <${url}>`;
+  });
+  return "\n\n---\n\n**Sources**\n\n" + lines.join("\n");
 }
 
 function topicToMarkdown(courseName, topicName, topic) {
@@ -151,11 +172,12 @@ function htmlNotes(notes, depth) {
 }
 
 function htmlSources(notes) {
-  const urls = [...new Set(notes.map((n) => n.sourceUrl).filter(Boolean))];
-  if (urls.length === 0) return "";
-  const items = urls
-    .map((u) => `<li><a href="${escHtml(u)}">${escHtml(u)}</a></li>`)
-    .join("\n");
+  const sources = collectSources(notes);
+  if (sources.length === 0) return "";
+  const items = sources.map(({ url, title, linkable }) => {
+    if (!linkable) return `<li>${escHtml(title || "Local file")}</li>`;
+    return `<li><a href="${escHtml(url)}">${escHtml(title || url)}</a></li>`;
+  }).join("\n");
   return `<footer><h2>Sources</h2><ul>${items}</ul></footer>`;
 }
 
