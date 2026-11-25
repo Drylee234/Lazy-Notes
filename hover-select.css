@@ -2,6 +2,7 @@
    The button copies .select in sidepanel.css. Colours come from theme.css. */
 
 .hs { position: relative; }
+.hs--open { z-index: 100; }   /* the open list sits above everything after it */
 .hs[hidden] { display: none; }
 .hs + .hs { margin-top: 6px; }
 
@@ -87,9 +88,10 @@
   border-radius: var(--radius);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
   outline: none;
-  animation: hs-in 0.12s ease-out;
+  animation: hs-in 0.1s ease-out;
+  isolation: isolate;
 }
-@keyframes hs-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes hs-in { from { transform: translateY(-3px); } }  /* slide only: never see-through */
 .hs-list[hidden] { display: none; }
 .hs-list:focus-visible { border-color: var(--accent); }
 
