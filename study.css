@@ -7,8 +7,9 @@
   --marker: rgba(253, 224, 71, 0.55);
 }
 @media (prefers-color-scheme: dark) {
-  :root { --marker: rgba(253, 224, 71, 0.2); }
+  :root:not([data-theme="light"]) { --marker: rgba(253, 224, 71, 0.2); }
 }
+:root[data-theme="dark"] { --marker: rgba(253, 224, 71, 0.2); }
 
 /* ── Page head: the topic as the page's title ── */
 #page-head { margin: 18px 0 6px; }

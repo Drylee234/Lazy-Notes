@@ -123,10 +123,15 @@ function placeholderOf(shape) {
   return ph ? { type: ph.getAttribute("type") || "obj", idx: ph.getAttribute("idx") } : null;
 }
 
+// Where a shape sits on the slide, in EMU: { x, y, w, h } (w/h 0 if unknown).
 function offsetOf(shape) {
   const holder = kid(shape, "spPr") || kid(shape, "grpSpPr") || shape;  // graphicFrame: p:xfrm directly
-  const off = path(holder, "xfrm", "off");
-  return off ? { x: Number(off.getAttribute("x")), y: Number(off.getAttribute("y")) } : null;
+  const xfrm = kid(holder, "xfrm");
+  const off = kid(xfrm, "off");
+  if (!off) return null;
+  const ext = kid(xfrm, "ext");
+  return { x: Number(off.getAttribute("x")), y: Number(off.getAttribute("y")),
+           w: Number(ext?.getAttribute("cx") || 0), h: Number(ext?.getAttribute("cy") || 0) };
 }
 
 // The placeholders of a layout or master: [{ type, idx, off }]
@@ -211,7 +216,8 @@ function paragraphsOf(txBody, { bulleted = false } = {}) {
       counters[level] = null;     // a plain paragraph ends a numbered run
       if (kid(pPr, "buChar") || (bulleted && !kid(pPr, "buNone"))) marker = BULLETS[level % BULLETS.length];
     }
-    out.push({ text, level, marker, runs });
+    const algn = pPr?.getAttribute("algn");
+    out.push({ text, level, marker, runs, align: algn === "ctr" ? "center" : algn === "r" ? "right" : algn === "just" ? "justify" : null });
   });
   return out;
 }
@@ -231,10 +237,21 @@ function runStyle(rPr) {
   return style;
 }
 
-// A slide's own solid background colour ("#rrggbb"), if it sets one.
+// A slide's (or layout's / master's) own solid background colour
+// ("#rrggbb"), if it sets one.
 function slideBackground(root) {
   const val = path(root, "cSld", "bg", "bgPr", "solidFill", "srgbClr")?.getAttribute("val");
   return val ? `#${val}` : null;
+}
+
+// How a text box lays out: vertical anchor and PowerPoint's shrink-to-fit.
+function bodyLayout(txBody) {
+  const bodyPr = kid(txBody, "bodyPr");
+  const fit = kid(bodyPr, "normAutofit");
+  return {
+    anchor: bodyPr?.getAttribute("anchor") || null,                  // t | ctr | b
+    scale:  fit?.getAttribute("fontScale") ? Number(fit.getAttribute("fontScale")) / 100000 : 1
+  };
 }
 
 const plainText = (txBody) => paragraphsOf(txBody).map((p) => p.text).join("\n");
@@ -271,7 +288,11 @@ async function collect(tree, ctx) {
     const ph = placeholderOf(el);
     if (ph && SKIP_TYPES.has(ph.type)) continue;
     const pos = offsetOf(el) ?? (ph ? inheritedOffset(ph, ctx.layout, ctx.master) : null);
-    const add = (block) => found.push({ block, pos, order: order++, isTitle: block.kind === "title" });
+    const add = (block) => {
+      if (block.box === undefined) block.box = pos && pos.w && pos.h ? pos : null;
+      block.z = ctx.z++;   // file order = drawing order (later is on top)
+      found.push({ block, pos: block.box ?? pos, order: order++, isTitle: block.kind === "title" });
+    };
 
     switch (el.localName) {
       case "sp": {
@@ -283,15 +304,18 @@ async function collect(tree, ctx) {
         }
         const body = kid(el, "txBody");
         if (!body) break;
+        const layout = bodyLayout(body);
         if (ph && TITLE_TYPES.has(ph.type)) {
-          const text = plainText(body);
-          if (text.trim()) add({ kind: "title", text });
+          const paras = paragraphsOf(body);
+          const text = paras.map((q) => q.text).join("\n");
+          if (text.trim()) add({ kind: "title", text, paras, ...layout, size: ph.type === "ctrTitle" ? 44 : 36, center: ph.type === "ctrTitle", anchor: layout.anchor || (ph.type === "ctrTitle" ? "b" : "ctr") });
         } else if (ph?.type === "subTitle") {
-          const text = plainText(body);
-          if (text.trim()) add({ kind: "subtitle", text });
+          const paras = paragraphsOf(body);
+          const text = paras.map((q) => q.text).join("\n");
+          if (text.trim()) add({ kind: "subtitle", text, paras, ...layout, size: 24, center: true });
         } else {
           const paras = paragraphsOf(body, { bulleted: !!ph && ["obj", "body"].includes(ph.type) });
-          if (paras.length) add({ kind: "text", paras });
+          if (paras.length) add({ kind: "text", paras, ...layout, size: ph ? 24 : 18 });
         }
         break;
       }
@@ -315,8 +339,18 @@ async function collect(tree, ctx) {
         break;
       }
       case "grpSp": {
-        // A group's parts stay together, in their own reading order.
-        (await collectSorted(el, ctx)).forEach((part) => add(part.block));
+        // A group's parts stay together, in their own reading order. Their
+        // positions are in the group's own coordinates: map them onto the slide.
+        const xfrm = path(el, "grpSpPr", "xfrm");
+        const num = (e, a) => Number(kid(xfrm, e)?.getAttribute(a) || 0);
+        const [ox, oy, ow, oh] = [num("off", "x"), num("off", "y"), num("ext", "cx"), num("ext", "cy")];
+        const [cx, cy, cw, ch] = [num("chOff", "x"), num("chOff", "y"), num("chExt", "cx") || ow, num("chExt", "cy") || oh];
+        const sx = cw ? ow / cw : 1, sy = ch ? oh / ch : 1;
+        (await collectSorted(el, ctx)).forEach((part) => {
+          const b = part.block;
+          if (b.box) b.box = { x: ox + (b.box.x - cx) * sx, y: oy + (b.box.y - cy) * sy, w: b.box.w * sx, h: b.box.h * sy };
+          add(b);
+        });
         break;
       }
     }
@@ -359,9 +393,12 @@ export async function readPptx(buffer) {
     if (!layoutPart) return { layout: [], master: [] };
     if (!layouts.has(layoutPart)) {
       const masterPart = relOfType(await readRels(zip, layoutPart), "/slideMaster");
+      const layoutRoot = await readXml(zip, layoutPart);
+      const masterRoot = masterPart ? await readXml(zip, masterPart) : null;
       layouts.set(layoutPart, {
-        layout: placeholderList(await readXml(zip, layoutPart)),
-        master: masterPart ? placeholderList(await readXml(zip, masterPart)) : []
+        layout: placeholderList(layoutRoot),
+        master: masterRoot ? placeholderList(masterRoot) : [],
+        background: slideBackground(layoutRoot) ?? (masterRoot && slideBackground(masterRoot))
       });
     }
     return layouts.get(layoutPart);
@@ -374,7 +411,7 @@ export async function readPptx(buffer) {
     if (!root) continue;
 
     const rels = await readRels(zip, part);
-    const ctx  = { zip, rels, ...(await layoutInfo(relOfType(rels, "/slideLayout"))) };
+    const ctx  = { zip, rels, z: 0, ...(await layoutInfo(relOfType(rels, "/slideLayout"))) };
     const blocks = (await collectSorted(path(root, "cSld", "spTree"), ctx)).map((it) => it.block);
 
     let notes = [];
@@ -390,12 +427,13 @@ export async function readPptx(buffer) {
       number: slides.length + 1,
       title:  blocks.find((b) => b.kind === "title")?.text.replace(/\s+/g, " ").trim() ?? "",
       hidden: root.getAttribute("show") === "0",
-      background: slideBackground(root),
+      background: slideBackground(root) ?? ctx.background ?? null,
       blocks,
       notes
     });
   }
 
   if (!slides.length) throw new Error("no slides found in this file");
-  return { slides };
+  const sz = kid(pres, "sldSz");
+  return { slides, width: Number(sz?.getAttribute("cx")) || 12192000, height: Number(sz?.getAttribute("cy")) || 6858000 };
 }

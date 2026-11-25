@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="notes.css" />
 <link rel="stylesheet" href="sidepanel.css" />
 <link rel="stylesheet" href="study.css" />
+<script src="theme.js"></script>
 </head>
 <body>
 
@@ -21,6 +22,18 @@
       <span class="switch" aria-hidden="true"></span>
       <span id="toggle-label">Highlighter off</span>
     </button>
+    <details id="settings">
+      <summary id="settings-btn" title="Settings" aria-label="Settings">⚙</summary>
+      <div id="settings-menu">
+        <div class="set-label">Look</div>
+        <div id="theme-seg" class="seg" role="radiogroup" aria-label="Look">
+          <button type="button" data-theme-choice="auto" role="radio">Auto</button>
+          <button type="button" data-theme-choice="light" role="radio">Light</button>
+          <button type="button" data-theme-choice="dark" role="radio">Dark</button>
+        </div>
+        <label class="set-check"><input type="checkbox" id="pptx-auto" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
+      </div>
+    </details>
   </div>
   <nav id="view-tabs" role="tablist">
     <button class="view-tab active" data-view="home" role="tab">Topics</button>

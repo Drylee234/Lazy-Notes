@@ -5,6 +5,10 @@
 #viewer { gap: 20px; padding-bottom: 40vh; }
 
 .slide {
+  /* Slides are always light, like PowerPoint, whatever the theme. */
+  --bg: #ffffff; --surface: #f7f7f8; --border: #e3e3e8; --border-strong: #c9c9d1;
+  --pri: #16161a; --sec: #55555f; --dim: #8e8e99; --accent: #4f46e5;
+  color: var(--pri);
   width: min(860px, 100%);
   box-sizing: border-box;
   padding: 18px 28px 22px;
@@ -105,6 +109,25 @@ body.notes-off .s-notes { display: none; }
    elements in the slide, so selecting text works exactly as before. */
 ::highlight(lazy-notes-saved) { background-color: rgba(253, 224, 71, 0.6); }
 
-@media (prefers-color-scheme: dark) {
-  ::highlight(lazy-notes-saved) { background-color: rgba(250, 204, 21, 0.3); }
+
+/* ── Slide view: shapes where they were on the slide ── */
+.slide--laid { width: min(1000px, 100%); padding: 10px 12px 14px; }
+.s-canvas {
+  position: relative;
+  container-type: inline-size;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  line-height: 1.2;
 }
+.s-shape { position: absolute; display: flex; flex-direction: column; box-sizing: border-box; padding: 0.4cqw 0.8cqw; }
+.s-shape--image { padding: 0; }
+.s-shape img { width: 100%; height: 100%; object-fit: fill; display: block; user-select: none; }
+.s-shape .s-text { margin: 0; }
+.s-shape .s-title { margin: 0; font-size: inherit; font-weight: 600; line-height: 1.1; }
+.s-shape .s-p { margin: 0 0 0.35em; padding-left: calc(var(--lvl, 0) * 1.2em); }
+.s-shape .s-p[data-marker] { padding-left: calc(var(--lvl, 0) * 1.2em + 1.1em); }
+.s-shape .s-p[data-marker]::before { left: calc(var(--lvl, 0) * 1.2em); width: 1em; color: inherit; }
+.s-shape .s-table { margin: 0; font-size: inherit; }
+.s-loose { margin-top: 14px; }
+

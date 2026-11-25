@@ -23,6 +23,7 @@ const slideControls = $("slide-controls");
 const slideInput    = $("slide-input");
 const slideCountEl  = $("slide-count");
 const notesToggle   = $("notes-toggle");
+const layoutToggle  = $("layout-toggle");
 const hlToggle      = $("hl-toggle");
 const hlStatus      = $("hl-status");
 const fileInput     = $("file-input");
@@ -112,7 +113,7 @@ async function openFromUrl(url) {
   showMessage("Loading…");
   let data;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`the server answered ${res.status}`);
     data = await res.arrayBuffer();
   } catch (err) {
@@ -165,6 +166,7 @@ async function loadDeck(data, name) {
   startScreen.hidden = true;
   slideControls.hidden = false;
   notesToggle.hidden = !deck.slides.some((s) => s.notes.length);
+  layoutToggle.hidden = false;
   hideMessage();
 
   renderDeck();
@@ -193,15 +195,39 @@ function renderDeck() {
 
     // Everything a note can be taken from sits in .slide-body (the host
     // bridge looks for it), the label stays outside.
-    // The slide's own background colour, with text that reads on it.
-    el.style.background = slide.background ?? "";
-    viewerEl.appendChild(el);
-    cardBackground = toHex(getComputedStyle(el).backgroundColor);
-    if (slide.background) el.style.color = luminance(cardBackground) > 0.4 ? "#16161a" : "#f4f4f6";
-
     const body = document.createElement("div");
     body.className = "slide-body";
-    slide.blocks.forEach((b) => body.appendChild(renderBlock(b)));
+
+    // Slides are always light (white unless the slide sets a colour), like
+    // PowerPoint, whatever the extension's theme.
+    cardBackground = slide.background ?? "#ffffff";
+    const ink = luminance(cardBackground) > 0.4 ? "#16161a" : "#f4f4f6";
+
+    if (layoutMode === "slide") {
+      el.classList.add("slide--laid");
+      const canvas = document.createElement("div");
+      canvas.className = "s-canvas";
+      canvas.style.aspectRatio = `${deck.width} / ${deck.height}`;
+      canvas.style.background = cardBackground;
+      canvas.style.color = ink;
+      const loose = [];
+      slide.blocks.forEach((b) => {
+        if (!b.box) { loose.push(b); return; }
+        canvas.appendChild(placeBlock(b));
+      });
+      body.appendChild(canvas);
+      // Anything without a known position goes under the slide.
+      if (loose.length) {
+        const rest = document.createElement("div");
+        rest.className = "s-loose";
+        loose.forEach((b) => rest.appendChild(renderBlock(b)));
+        body.appendChild(rest);
+      }
+    } else {
+      el.style.background = cardBackground;
+      el.style.color = ink;
+      slide.blocks.forEach((b) => body.appendChild(renderBlock(b)));
+    }
 
     if (!slide.blocks.length) {
       const empty = document.createElement("p");
@@ -227,6 +253,74 @@ function renderDeck() {
 
   slideCountEl.textContent = `of ${deck.slides.length}`;
 }
+
+// ---------------------------------------------------------------------------
+// Slide view: each shape where it was on the slide, sized like PowerPoint.
+// Positions are % of the slide; font sizes are in cqw (the canvas is a size
+// container), so the whole slide scales with the window.
+// ---------------------------------------------------------------------------
+
+let layoutMode = "slide";   // "slide" | "text"
+try { if (localStorage.getItem("ln-slide-layout") === "text") layoutMode = "text"; } catch (_) {}
+
+const ptToCqw = (pt) => `${((pt * 12700) / deck.width * 100).toFixed(3)}cqw`;
+
+function placeBlock(block) {
+  const { x, y, w, h } = block.box;
+  const wrap = document.createElement("div");
+  wrap.className = `s-shape s-shape--${block.kind}`;
+  Object.assign(wrap.style, {
+    left: `${(x / deck.width) * 100}%`,
+    top: `${(y / deck.height) * 100}%`,
+    width: `${(w / deck.width) * 100}%`,
+    height: `${(h / deck.height) * 100}%`,
+    zIndex: String(block.z ?? 0)
+  });
+
+  if (block.kind === "image") {
+    const img = document.createElement("img");
+    const url = URL.createObjectURL(block.blob);
+    imageUrls.push(url);
+    img.src = url;
+    img.alt = block.alt;
+    img.draggable = false;
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  const base = (block.size ?? 14) * (block.scale ?? 1);
+  wrap.style.fontSize = ptToCqw(base);
+  if (block.anchor === "ctr") wrap.style.justifyContent = "center";
+  if (block.anchor === "b") wrap.style.justifyContent = "flex-end";
+
+  if (block.kind === "table") {
+    wrap.appendChild(renderBlock(block));
+    return wrap;
+  }
+  const paras = block.paras ?? [{ text: block.text, level: 0, marker: null }];
+  const inner = renderParas(paras, { relativeTo: base / (block.scale ?? 1), laid: true });
+  if (block.kind === "title") inner.classList.add("s-title");
+  if (block.center && !paras.some((q) => q.align)) inner.style.textAlign = "center";
+  wrap.appendChild(inner);
+  return wrap;
+}
+
+layoutToggle.addEventListener("click", () => {
+  layoutMode = layoutMode === "slide" ? "text" : "slide";
+  try { localStorage.setItem("ln-slide-layout", layoutMode); } catch (_) {}
+  applyLayoutToggle();
+  if (!deck) return;
+  const current = currentSlide;
+  renderDeck();
+  paintHighlights();
+  goToSlide(current, false);
+});
+
+function applyLayoutToggle() {
+  layoutToggle.textContent = layoutMode === "slide" ? "Text view" : "Slide view";
+  layoutToggle.title = layoutMode === "slide" ? "Show the slides as plain text" : "Show the slides as laid out in PowerPoint";
+}
+applyLayoutToggle();
 
 // Text with line breaks kept as <br>.
 function withLines(el, text) {
@@ -262,7 +356,7 @@ function toHex(css) {
 
 let cardBackground = "#ffffff";   // the slide card being drawn
 
-function withRuns(el, runs) {
+function withRuns(el, runs, relativeTo = 18, laid = false) {
   runs.forEach((run) => {
     if (run.text === "\n") { el.appendChild(document.createElement("br")); return; }
     if (!run.b && !run.i && !run.u && !run.color && !run.size) {
@@ -273,18 +367,21 @@ function withRuns(el, runs) {
     if (run.b) span.style.fontWeight = "650";
     if (run.i) span.style.fontStyle = "italic";
     if (run.u) span.style.textDecoration = "underline";
-    if (run.color && contrast(run.color, cardBackground) >= 3) span.style.color = run.color;
-    if (run.size) span.style.fontSize = `${Math.min(1.6, Math.max(0.8, run.size / 18)).toFixed(2)}em`;
+    if (run.color && contrast(run.color, cardBackground) >= (laid ? 1.6 : 3)) span.style.color = run.color;
+    // Slide view: true size relative to the box; text view: within reason.
+    if (run.size) span.style.fontSize = laid ? `${(run.size / relativeTo).toFixed(3)}em`
+                                             : `${Math.min(1.6, Math.max(0.8, run.size / 18)).toFixed(2)}em`;
     el.appendChild(span);
   });
   return el;
 }
 
-function renderParas(paras) {
+function renderParas(paras, { relativeTo = 18, laid = false } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "s-text";
   paras.forEach((p) => {
-    const el = p.runs ? withRuns(document.createElement("p"), p.runs) : withLines(document.createElement("p"), p.text);
+    const el = p.runs ? withRuns(document.createElement("p"), p.runs, relativeTo, laid) : withLines(document.createElement("p"), p.text);
+    if (laid && p.align) el.style.textAlign = p.align;
     el.className = "s-p";
     el.style.setProperty("--lvl", String(p.level));
     if (p.marker) {

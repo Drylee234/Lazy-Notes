@@ -28,8 +28,10 @@
   color-scheme: light;
 }
 
+/* Dark: follows the computer unless the user picked Light or Dark in the
+   side panel (theme.js sets <html data-theme="light|dark">). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg:            #18181b;
     --canvas:        #0f0f11;
     --surface:       #1f1f23;
@@ -52,3 +54,25 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+    --bg:            #18181b;
+    --canvas:        #0f0f11;
+    --surface:       #1f1f23;
+    --hover:         #27272c;
+    --border:        #2c2c32;
+    --border-strong: #3d3d45;
+
+    --pri:  #ececf0;
+    --sec:  #a1a1aa;
+    --dim:  #71717a;
+
+    --accent:      #818cf8;
+    --accent-hover:#a5b4fc;
+    --accent-soft: rgba(129, 140, 248, 0.12);
+    --on-accent:   #111114;
+    --danger:      #ef6461;
+
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+
+    color-scheme: dark;
+  }

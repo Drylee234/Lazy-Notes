@@ -786,4 +786,27 @@ updatePdfBanner();
 // Boot
 // ---------------------------------------------------------------------------
 
+// Settings: look (Auto/Light/Dark, applied by theme.js) and auto-opening
+// .pptx downloads (bg_pptx.js).
+(function initSettings() {
+  const seg = document.getElementById("theme-seg");
+  const pptx = document.getElementById("pptx-auto");
+  const settings = document.getElementById("settings");
+  const mark = (t) => seg.querySelectorAll("button").forEach((b) =>
+    b.setAttribute("aria-checked", String(b.dataset.themeChoice === (t || "auto"))));
+  chrome.storage.local.get(["lnTheme", "pptxAutoOpen"], ({ lnTheme, pptxAutoOpen }) => {
+    mark(lnTheme);
+    pptx.checked = pptxAutoOpen !== false;
+  });
+  seg.addEventListener("click", (e) => {
+    const t = e.target.closest("button")?.dataset.themeChoice;
+    if (!t) return;
+    mark(t);
+    chrome.storage.local.set({ lnTheme: t });
+  });
+  pptx.addEventListener("change", () => chrome.storage.local.set({ pptxAutoOpen: pptx.checked }));
+  document.addEventListener("click", (e) => { if (!settings.contains(e.target)) settings.open = false; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") settings.open = false; });
+})();
+
 init();
