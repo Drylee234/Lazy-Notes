@@ -515,7 +515,7 @@ if (ccCancel) ccCancel.addEventListener("click", closeCourseModal);
 if (ccSubmit) {
   ccSubmit.addEventListener("click", () => {
     const name = ccName.value.trim();
-    if (!name) return;
+    if (!name) { ccName.focus(); return; }
 
     chrome.runtime.sendMessage({
       type:     "CREATE_COURSE",
@@ -561,7 +561,8 @@ ctCancel.addEventListener("click", closeTopicModal);
 
 ctSubmit.addEventListener("click", () => {
   const name = ctName.value.trim();
-  if (!name || !pendingTopicCourse) return;
+  if (!name) { ctName.focus(); return; }
+  if (!pendingTopicCourse) return;
 
   chrome.runtime.sendMessage({
     type:       "CREATE_TOPIC",
@@ -579,6 +580,27 @@ createCourseModal.addEventListener("click", (e) => {
 createTopicModal.addEventListener("click", (e) => {
   if (e.target === createTopicModal) closeTopicModal();
 });
+
+// Enter saves a form, Esc closes it. The Details box takes several lines,
+// so there Enter starts a new line and Ctrl/⌘+Enter saves. A focused
+// button keeps its own Enter (Cancel cancels).
+function saveOnEnter(modal, submitBtn, close) {
+  modal.addEventListener("keydown", (e) => {
+    if (e.isComposing) return;  // Enter that confirms an IME composition
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+      return;
+    }
+    if (e.key !== "Enter" || e.target.tagName === "BUTTON") return;
+    if (e.target.tagName === "TEXTAREA" && !(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    submitBtn.click();
+  });
+}
+
+saveOnEnter(createCourseModal, ccSubmit, closeCourseModal);
+saveOnEnter(createTopicModal, ctSubmit, closeTopicModal);
 
 // ---------------------------------------------------------------------------
 // Export — Study view exports the open topic, Home view the selected course.
