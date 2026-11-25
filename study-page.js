@@ -56,6 +56,7 @@ const StudyPage = (() => {
   let target        = null;    // { courseName, topicName } on the page, or null
   let requestRender = () => {};
   let editing       = null;    // { id, el, input, hint, where } while a typed note is open
+  let hlEditing     = null;    // { id } while a highlight's editor is open
   let renderSkipped = false;   // a redraw waited for an edit to close
   let scrollToId    = null;    // just saved: bring it into view on the next draw
 
@@ -86,12 +87,13 @@ const StudyPage = (() => {
   function render({ courseName, topicName, topic }) {
     const sameTopic = target?.courseName === courseName && target?.topicName === topicName;
     if (editing && !sameTopic) closeEditor({ redraw: false });
+    if (hlEditing && !sameTopic) closeHighlightEditor({ redraw: false });
 
     target = { courseName, topicName };
     setComposerEnabled(true);
 
     // Don't wipe a note that's being edited; draw again when it closes.
-    if (editing) {
+    if (editing || hlEditing) {
       renderSkipped = true;
       return;
     }
@@ -125,6 +127,7 @@ const StudyPage = (() => {
   // No topic open (no course picked, or a course without topics).
   function clear() {
     closeEditor({ redraw: false });
+    closeHighlightEditor({ redraw: false });
     closeCard();
     closeChoice();
     target = null;
@@ -146,6 +149,20 @@ const StudyPage = (() => {
       el.classList.add("dragging");
     });
     el.addEventListener("dragend", () => el.classList.remove("dragging"));
+
+    // Click to edit (only the text shows at first), × to delete.
+    el.appendChild(deleteButton(note, where, "highlight"));
+    el.title = "Click to edit";
+    const edit = () => openHighlightEditor(el, note, where);
+    el.addEventListener("click", (e) => {
+      if (!e.target.closest("button, a")) edit();
+    });
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target === el) {
+        e.preventDefault();
+        edit();
+      }
+    });
     return el;
   }
 
@@ -168,9 +185,9 @@ const StudyPage = (() => {
     return el;
   }
 
-  // "×", then "Delete?" for 4s: a typed note is your own writing, so make
-  // deleting it take a second click.
-  function deleteButton(note, where) {
+  // "×", then "Delete?" for 4s, so a stray click can't lose a note. kind is
+  // "typed" (your own writing) or "highlight".
+  function deleteButton(note, where, kind = "typed") {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "typed-delete";
@@ -195,8 +212,10 @@ const StudyPage = (() => {
       }
       disarm();
       btn.disabled = true;
-      const reply = await send({ type: "DELETE_TYPED_NOTE", id: note.id, ...where });
-      if (!reply?.ok && await typedNoteText(where, note.id) !== null) {
+      const typed = kind === "typed";
+      const reply = await send({ type: typed ? "DELETE_TYPED_NOTE" : "DELETE_HIGHLIGHT", id: note.id, ...where });
+      const stillThere = typed ? await typedNoteText(where, note.id) !== null : await highlightExists(where, note.id);
+      if (!reply?.ok && stillThere) {
         btn.disabled = false;
         showError(`Couldn't delete: ${reply?.reason || "unknown error"}`);
       }
@@ -220,6 +239,11 @@ const StudyPage = (() => {
         resolve({ ok: false, reason: String(err) });
       }
     });
+  }
+
+  async function highlightExists({ courseName, topicName }, id) {
+    const { lazynotes } = await chrome.storage.local.get("lazynotes");
+    return !!lazynotes?.courses?.[courseName]?.topics?.[topicName]?.highlights?.[id];
   }
 
   async function typedNoteText({ courseName, topicName }, id) {
@@ -344,6 +368,44 @@ const StudyPage = (() => {
       closeEditor();
     });
     wireTextDrop(input);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Editing a highlight in place (the shared editor, note-editor.js)
+  // ---------------------------------------------------------------------------
+
+  function openHighlightEditor(el, note, where) {
+    if (editing || hlEditing) return;
+
+    const form = noteEditor(note, {
+      onSave: async (fields) => {
+        if (!await saveHighlightEdit(note.id, where.courseName, where.topicName, fields)) {
+          showError("Couldn't save: that highlight was deleted.");
+        }
+        closeHighlightEditor();
+      },
+      onCancel: () => closeHighlightEditor(),
+      onDelete: async () => {
+        const reply = await send({ type: "DELETE_HIGHLIGHT", id: note.id, ...where });
+        if (!reply?.ok && await highlightExists(where, note.id)) {
+          showError(`Couldn't delete: ${reply?.reason || "unknown error"}`);
+          return false;
+        }
+        closeHighlightEditor();
+        return true;
+      }
+    });
+
+    hlEditing = { id: note.id };
+    el.replaceWith(form);
+    form.focusText();
+  }
+
+  function closeHighlightEditor({ redraw = true } = {}) {
+    if (!hlEditing) return;
+    hlEditing = null;
+    renderSkipped = false;
+    if (redraw) requestRender();
   }
 
   // redraw: false when the caller draws next anyway (another topic, or none).

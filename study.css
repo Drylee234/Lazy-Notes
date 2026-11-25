@@ -85,6 +85,7 @@
   opacity: 0;
 }
 .note--typed:hover .typed-delete,
+#note-list .note--page:hover > .typed-delete,
 .typed-delete:focus-visible,
 .typed-delete.armed { opacity: 1; }
 .typed-delete:hover { color: var(--danger); background: var(--bg); }
@@ -258,3 +259,7 @@ body:has(#study-view.visible) #study-dock { display: block; }
 .dock-choice button:hover { border-color: var(--border-strong); }
 #drop-choice-quote { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .note--typed .dock-choice { margin: 6px 0 0; }
+
+/* ── Highlights: click to edit, × to delete (like typed notes) ── */
+#note-list .note--page { padding-right: 26px; cursor: pointer; }
+#note-list .edit-form { margin: 6px -10px 8px -12px; }

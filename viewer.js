@@ -17,24 +17,6 @@ async function getCourseTree() {
   return lazynotes?.courses ?? {};
 }
 
-async function updateHighlightInStorage(id, courseName, topicName, fields) {
-  const { lazynotes } = await storageGet("lazynotes");
-  const data = lazynotes ?? { courses: {} };
-  const topic = data.courses?.[courseName]?.topics?.[topicName];
-  if (!topic || !topic.highlights || !topic.highlights[id]) return null;
-
-  topic.highlights[id] = {
-    ...topic.highlights[id],
-    ...fields,
-    edited: new Date().toISOString()
-  };
-
-  await storageSet({ lazynotes: data });
-  return topic.highlights[id];
-}
-
-const CATEGORIES = ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"];
-
 // ---------------------------------------------------------------------------
 // Delete helpers
 // ---------------------------------------------------------------------------
@@ -530,97 +512,29 @@ async function renderDisplay() {
     }
   }
 
+  // The shared editor (note-editor.js): only the text shows at first.
   function expandToEdit(card, note) {
     editingNoteId = note.id;
-
-    const field = (labelText, control) => {
-      const label = document.createElement("label");
-      label.textContent = labelText;
-      form.append(label, control);
+    const close = () => {
+      editingNoteId = null;
+      draw();
     };
 
-    const textArea = document.createElement("textarea");
-    textArea.value = note.text;
-    textArea.rows = 3;
-
-    const categorySel = document.createElement("select");
-    CATEGORIES.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = CATEGORY_LABELS[c] || c;
-      if (c === note.category) opt.selected = true;
-      categorySel.appendChild(opt);
-    });
-
-    const annotationArea = document.createElement("textarea");
-    annotationArea.placeholder = "Your own note about this (optional)";
-    annotationArea.value = note.annotation || "";
-    annotationArea.rows = 2;
-
-    const contextArea = document.createElement("textarea");
-    contextArea.placeholder = "Surrounding text (optional)";
-    contextArea.value = note.context || "";
-    contextArea.rows = 2;
-
-    const form = document.createElement("div");
-    form.className = "edit-form";
-    form.addEventListener("click", (e) => e.stopPropagation());
-    field("Text", textArea);
-    field("Type", categorySel);
-    field("Annotation", annotationArea);
-    field("Context", contextArea);
-    const footer = document.createElement("div");
-    footer.className = "edit-form-footer";
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.className = "edit-btn";
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      editingNoteId = null;
-      draw();
-    });
-
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "edit-btn primary";
-    saveBtn.textContent = "Save";
-    saveBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      await updateHighlightInStorage(note.id, courseName, topicName, {
-        text:       textArea.value,
-        category:   categorySel.value,
-        context:    contextArea.value || null,
-        annotation: annotationArea.value || null
-      });
-      editingNoteId = null;
-      draw();
-    });
-
-    const deleteBtn = makeDeleteButton("Delete note?", async () => {
-      const ok = await sendDelete({
-        type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName
-      });
-      if (ok) {
-        editingNoteId = null;
-        draw();
+    const form = noteEditor(note, {
+      onSave: async (fields) => {
+        await saveHighlightEdit(note.id, courseName, topicName, fields);
+        close();
+      },
+      onCancel: close,
+      onDelete: async () => {
+        const ok = await sendDelete({ type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName });
+        if (ok) close();
+        return ok;
       }
-      return ok;
-    });
-    deleteBtn.classList.add("push-left");
-
-    footer.appendChild(deleteBtn);
-    footer.appendChild(cancelBtn);
-    footer.appendChild(saveBtn);
-    form.appendChild(footer);
-
-    // Esc cancels, Ctrl/Cmd+Enter saves.
-    form.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { e.preventDefault(); cancelBtn.click(); }
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBtn.click(); }
     });
 
     card.replaceWith(form);
-    textArea.focus();
+    form.focusText();
   }
 
   categoryFilter.addEventListener("change", draw);
