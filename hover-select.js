@@ -26,9 +26,9 @@
 (() => {
   const HOVER_OPEN_MS  = 500;   // rest this long to open; passing over does nothing. Click opens at once.
   const HOVER_SWITCH_MS = 300;  // moving from one open list to the next
-  const HOVER_CLOSE_MS = 500;   // only for a pass-by: the mouse never went into the list
-  // Once the mouse has been in the list, it behaves like a normal menu: it
-  // stays open until you pick, click elsewhere, press Esc or open another.
+  const HOVER_CLOSE_MS = 400;   // a list opened by hover closes this long after the mouse leaves
+  // A list opened by a click stays open until you pick, click elsewhere,
+  // press Esc or open another.
   const CLICK_KEEPS_MS = 1000;  // a click this soon after a hover-open means "open"
 
   const instances = [];
@@ -285,7 +285,6 @@
     });
 
     let usedList = false;
-    list.addEventListener("pointerenter", () => { usedList = true; });
 
     // The item under the mouse is the active one.
     list.addEventListener("pointermove", (e) => {

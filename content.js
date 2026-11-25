@@ -470,7 +470,7 @@
 
   const HOVER_OPEN_MS  = 500;   // rest this long to open; passing over does nothing. Click opens at once.
   const HOVER_SWITCH_MS = 300;  // moving from one open list to the next
-  const HOVER_CLOSE_MS = 500;   // only for a pass-by; a list you've been in stays open
+  const HOVER_CLOSE_MS = 400;   // hover-opened lists close this long after the mouse leaves
 
   // Something just moved under a still mouse (the popup appeared, a list
   // closed after a pick): events at that same spot aren't hover. The first
@@ -499,6 +499,7 @@
   }
 
   function openMenu(menu, { byHover = false } = {}) {
+    if (byHover) delete menu.dataset.used; else menu.dataset.used = "1";
     allMenus().forEach((m) => m.classList.toggle("open", m === menu));
     menu.dataset.hoverOpenedAt = byHover ? String(performance.now()) : "";
   }
@@ -545,12 +546,11 @@
       openTimer = null;
       delete menu.dataset.shutUntilLeave;
       clearTimeout(closeTimer);
-      // Once the mouse has been in the list it stays open like a normal menu
-      // (pick, click elsewhere or Esc closes it); a pass-by closes quickly.
+      // Opened by hover: closes when the mouse leaves. Opened by a click
+      // (dataset.used): stays until a pick, a click elsewhere or Esc.
       if (menu.dataset.used) return;
       closeTimer = setTimeout(() => menu.classList.remove("open"), HOVER_CLOSE_MS);
     });
-    menu.addEventListener("pointerenter", () => { if (menu.classList.contains("open")) menu.dataset.used = "1"; });
   }
 
   // ---------------------------------------------------------------------------

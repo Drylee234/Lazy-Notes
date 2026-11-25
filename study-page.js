@@ -348,6 +348,15 @@ const StudyPage = (() => {
       autoGrow(input);
       prunePendingMoves(input);
     });
+    // Click anywhere else (not the dock's drop cards): same as Enter.
+    const outside = (e) => {
+      if (editing?.input !== input) { document.removeEventListener("pointerdown", outside, true); return; }
+      if (el.contains(e.target) || e.target.closest?.("#study-dock, .hs-list")) return;
+      document.removeEventListener("pointerdown", outside, true);
+      commit();
+    };
+    setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+
     input.addEventListener("keydown", async (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -356,7 +365,10 @@ const StudyPage = (() => {
       }
       if (!isSaveKey(e)) return;
       e.preventDefault();
+      commit();
+    });
 
+    async function commit() {
       const text = input.value.trim();
       // Emptying a note doesn't delete it (that's the × button): keep it.
       if (!text || text === note.text) {
@@ -366,7 +378,7 @@ const StudyPage = (() => {
       if (!await saveTypedNote({ id: note.id, ...where, text })) return;
       await finishMoves(input, text);
       closeEditor();
-    });
+    }
     wireTextDrop(input);
   }
 

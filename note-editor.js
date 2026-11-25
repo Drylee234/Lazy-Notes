@@ -96,6 +96,18 @@ function noteEditor(note, { onSave, onCancel, onDelete }) {
   footer.append(del, cancel, save);
   form.append(text, more, footer);
 
+  // Clicking anywhere else ends editing: saves if something changed,
+  // otherwise just closes. (Dropdown lists and the Study dock don't count.)
+  const snapshot = () => [text.value, type.value, annotation.value, context.value].join("\u0000");
+  const initial = snapshot();
+  const outside = (e) => {
+    if (!form.isConnected) { document.removeEventListener("pointerdown", outside, true); return; }
+    if (form.contains(e.target) || e.target.closest?.(".hs-list, #study-dock")) return;
+    document.removeEventListener("pointerdown", outside, true);
+    if (snapshot() !== initial && text.value.trim()) submit(); else onCancel();
+  };
+  setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+
   form.addEventListener("keydown", (e) => {
     if (e.isComposing) return;  // Enter that confirms an IME composition
     if (e.key === "Escape") {
