@@ -77,6 +77,16 @@ export function createStaticMenuItems(highlighterActive) {
     targetUrlPatterns: ["*://*/*.pdf", "*://*/*.PDF", "*://*/*.pdf?*", "*://*/*.pdf#*"]
   });
 
+  // Only on links that point at a PowerPoint (.pptx): Chrome would just
+  // download it.
+  createMenuItem({
+    id:       "lazy-notes-open-pptx-link",
+    parentId: "lazy-notes-root",
+    title:    "Open slides in Lazy Notes reader",
+    contexts: ["link"],
+    targetUrlPatterns: ["*://*/*.pptx", "*://*/*.PPTX", "*://*/*.pptx?*", "*://*/*.pptx#*"]
+  });
+
   createMenuItem({
     id:       "lazy-notes-create-course",
     parentId: "lazy-notes-root",
@@ -184,6 +194,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (id === "lazy-notes-open-pdf-link" && info.linkUrl) {
     chrome.tabs.create({
       url: chrome.runtime.getURL(`pdfreader.html?url=${encodeURIComponent(info.linkUrl)}`),
+      index: tab ? tab.index + 1 : undefined,
+      openerTabId: tab?.id
+    });
+    return;
+  }
+
+  if (id === "lazy-notes-open-pptx-link" && info.linkUrl) {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`pptxreader.html?url=${encodeURIComponent(info.linkUrl)}`),
       index: tab ? tab.index + 1 : undefined,
       openerTabId: tab?.id
     });
