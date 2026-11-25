@@ -57,6 +57,7 @@
   let topicBtnEl        = null;
   let topicMenuEl       = null;
   let categoryBtnEl     = null;
+  let whereEl           = null;
   let categoryMenuEl    = null;
   let annotationInputEl = null;
 
@@ -101,6 +102,11 @@
         transition: width 0.15s ease;
       }
 
+      .lazy-notes-where {
+        margin: 0 0 10px; font-size: 11.5px; color: #a1a1aa;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .lazy-notes-where.none { color: #ef6461; white-space: normal; }
       .lazy-notes-popup-row {
         margin-bottom: 8px;
         position: relative;
@@ -304,6 +310,14 @@
 
     row1.appendChild(courseBtn);
     row1.appendChild(courseMenu);
+    // Course and topic are picked in the side panel now (and each document
+    // remembers its own), so these rows are hidden, not removed: a single
+    // "Saving to …" line shows where the note goes instead.
+    row1.style.display = "none";
+    const where = document.createElement("div");
+    where.className = "lazy-notes-where";
+    container.appendChild(where);
+    whereEl = where;
     container.appendChild(row1);
 
     // ── ROW 2: Topic ──────────────────────────────────────────────────────────
@@ -329,6 +343,7 @@
 
     row2.appendChild(topicBtn);
     row2.appendChild(topicMenu);
+    row2.style.display = "none";
     container.appendChild(row2);
 
     // ── ROW 3: Category ───────────────────────────────────────────────────────
@@ -688,6 +703,12 @@
     }
 
     if (popupContainer) popupContainer.style.width = "280px";
+    if (whereEl) {
+      whereEl.textContent = selectedCourse && selectedTopic
+        ? `Saving to ${selectedCourse} › ${selectedTopic}`
+        : "Pick a course and topic in the Lazy Notes side panel first";
+      whereEl.classList.toggle("none", !(selectedCourse && selectedTopic));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -884,7 +905,7 @@
     positionPopup(rect);
     popupContainer.style.display = "block";
 
-    setTimeout(() => topicBtnEl?.focus(), 50);
+    setTimeout(() => categoryBtnEl?.focus(), 50);
   }
 
   function hidePopup() {
