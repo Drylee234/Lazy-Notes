@@ -39,7 +39,19 @@ const StudyPage = (() => {
   const emptyStudy   = $("empty-study");
 
   const composer       = $("composer");
-  const composerInput  = $("composer-input");
+  // The note box shows formatting as you type (rich-box.js); it still
+  // reads and writes plain text, so everything else is unchanged.
+  const composerInput  = (() => {
+    const old = $("composer-input");
+    const box = createRichBox({ placeholder: old.placeholder });
+    box.id = old.id;
+    box.setAttribute("aria-label", old.getAttribute("aria-label"));
+    old.replaceWith(box);
+    const bar = createFormatBar(box);
+    bar.id = "composer-bar";
+    box.closest("form").prepend(bar);
+    return box;
+  })();
   const composerSave   = $("composer-save");
   const composerError  = $("composer-error");
 
@@ -174,7 +186,7 @@ const StudyPage = (() => {
 
     const edit = () => openEditor(el, note, where);
     el.addEventListener("click", (e) => {
-      if (!e.target.closest("button, a, textarea")) edit();
+      if (!e.target.closest("button, a, textarea, .rich-box, .format-bar")) edit();
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target === el) {
@@ -279,6 +291,7 @@ const StudyPage = (() => {
   }
 
   function autoGrow(input) {
+    if (input.isRich) return;   // grows by itself (CSS caps its height)
     const MAX = 168;
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, MAX)}px`;
@@ -325,16 +338,18 @@ const StudyPage = (() => {
   function openEditor(el, note, where) {
     if (editing) return;
 
-    const input = document.createElement("textarea");
-    input.className = "typed-editor";
+    const input = createRichBox();
+    input.classList.add("typed-editor");
     input.value = note.text;
     input.setAttribute("aria-label", "Edit note");
+    const bar = createFormatBar(input);
 
     const hint = document.createElement("div");
     hint.className = "typed-editor-hint";
     hint.textContent = "Enter saves · Shift+Enter new line · Esc cancels";
 
     el.querySelector(".note-text").replaceWith(input);
+    input.before(bar);
     input.after(hint);
     el.classList.add("editing");
     el.removeAttribute("title");
@@ -342,7 +357,7 @@ const StudyPage = (() => {
 
     autoGrow(input);
     input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
+    input.caretToEnd();
 
     input.addEventListener("input", () => {
       autoGrow(input);
@@ -469,6 +484,7 @@ const StudyPage = (() => {
   // line of its own, so it never splits what you typed), when the browser
   // can tell; else after the line with the caret; else at the end.
   function dropOffset(input, e) {
+    if (input.isRich) return input.blockAt(e.clientX, e.clientY);   // a block element
     const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
     const at = pos && pos.offsetNode === input ? pos.offset
       : document.activeElement === input ? input.selectionStart
@@ -480,6 +496,7 @@ const StudyPage = (() => {
   // Put "> text" on its own line at `at`, caret on the line after it so you
   // can carry on typing. Returns the quote line.
   function insertQuote(input, at, rawText) {
+    if (input.isRich) return input.insertQuoteAt(at, rawText);
     const text = String(rawText ?? "").replace(/\s+/g, " ").trim();
     if (!text) return null;
 
@@ -610,7 +627,7 @@ const StudyPage = (() => {
     const dt = e.dataTransfer;
     return studyView.classList.contains("visible") && target &&
       hasText(dt) && !isHighlightDrag(dt) && ![...dt.types].includes(PANEL_TYPE) &&
-      !e.target.closest?.("textarea");
+      !e.target.closest?.("textarea, .rich-box");
   }
 
   scroller.addEventListener("dragover", (e) => {

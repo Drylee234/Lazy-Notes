@@ -101,6 +101,8 @@
 
 .typed-editor {
   display: block;
+  max-height: 260px;
+  overflow-y: auto !important;
   width: 100%;
   min-height: 34px;
   padding: 6px 8px;
@@ -153,18 +155,19 @@ body:has(#study-view.visible) #study-dock { display: block; }
 #composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 #composer:has(.drop-target) { border-style: dashed; border-color: var(--accent); background: var(--accent-soft); }
 
+#composer { flex-wrap: wrap; }
 #composer-input {
   flex: 1;
   min-width: 0;
   padding: 4px 0;
-  border: none;
-  background: transparent;
-  line-height: 1.45;
-  resize: none;
-  overflow-y: hidden;
+  max-height: 168px;
+  overflow-y: auto;
 }
 #composer-input:focus-visible { outline: none; }   /* the box shows focus */
-#composer-input:disabled { cursor: not-allowed; }
+#composer-input.is-disabled { cursor: not-allowed; }
+/* The bar shows while you're writing, so the idle box stays one quiet line. */
+#composer-bar { flex: 1 1 100%; margin: -1px 0 2px -4px; }
+#composer:not(:focus-within) #composer-bar { display: none; }
 
 #composer-save {
   flex-shrink: 0;
@@ -314,3 +317,32 @@ body:has(#study-view.visible) #study-dock { display: block; }
 }
 .dock-choice.floating { border-color: var(--accent); }
 @keyframes float-in { from { transform: translateY(-4px); } }
+
+
+/* ── The rich note box (rich-box.js): looks like the saved note ── */
+.rich-box { position: relative; outline: none; line-height: 1.5; overflow-wrap: anywhere; cursor: text; color: var(--pri); }
+.rich-box.is-empty::before { content: attr(data-placeholder); color: var(--dim); pointer-events: none; position: absolute; }
+.rich-box > * { margin: 0; }
+.rich-box p { margin: 0; }
+.rich-box h3, .rich-box h4, .rich-box h5 { margin: 2px 0; font-weight: 700; line-height: 1.3; }
+.rich-box h3 { font-size: 1.2em; }
+.rich-box h4 { font-size: 1.07em; }
+.rich-box h5 { font-size: 1em; color: var(--sec); }
+.rich-box ul, .rich-box ol { margin: 0; padding-left: 20px; }
+.rich-box ul ul, .rich-box ol ol, .rich-box ul ol, .rich-box ol ul { padding-left: 18px; }
+.rich-box li::marker { color: var(--accent); }
+.rich-box blockquote { margin: 2px 0; padding-left: 10px; border-left: 3px solid var(--border-strong); color: var(--sec); }
+.rich-box mark { background: var(--marker); color: inherit; border-radius: 2px; }
+.rich-box b, .rich-box strong { font-weight: 700; }
+.rich-box.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+.format-bar { display: flex; align-items: center; gap: 1px; padding: 2px 0; }
+.fb-btn {
+  min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--sec); font: inherit; font-size: 12px; cursor: pointer;
+}
+.fb-btn:hover { background: var(--hover); color: var(--pri); }
+.fb-btn.on { background: var(--accent-soft); color: var(--accent); }
+.fb-mark { padding: 0 3px; border-radius: 3px; background: rgba(253, 224, 71, 0.55); color: var(--pri); font-weight: 600; }
+.fb-sep { width: 1px; height: 14px; margin: 0 4px; background: var(--border); }
+.note--typed.editing .format-bar { margin-bottom: 4px; }

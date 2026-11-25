@@ -118,50 +118,93 @@
     return null;
   }
 
-  // ── Editing the box ──
-  function replace(field, start, end, text) {
+  // ── Editing the box: a textarea / input, or the rich note box
+  //    (contenteditable). For the rich box, positions are within the text
+  //    node holding the caret. ──
+  function view(field) {
+    if (!field.isContentEditable) {
+      return { text: field.value, caret: field.selectionStart, collapsed: field.selectionStart === field.selectionEnd, node: null };
+    }
+    const sel = getSelection();
+    if (!sel.rangeCount || !field.contains(sel.anchorNode)) return null;
+    let node = sel.anchorNode, off = sel.anchorOffset;
+    if (node.nodeType !== Node.TEXT_NODE) {
+      const prev = node.childNodes[off - 1];
+      if (!prev || prev.nodeType !== Node.TEXT_NODE) return { text: "", caret: 0, collapsed: sel.isCollapsed, node: null, empty: true };
+      node = prev;
+      off = prev.nodeValue.length;
+    }
+    return { text: node.nodeValue.replace(/ /g, " "), caret: off, collapsed: sel.isCollapsed, node };
+  }
+
+  // Replace text[start, end) with `text`; the caret ends after it plus `skip`
+  // characters (the space or punctuation just typed).
+  function replace(field, v, start, end, text, skip = 0) {
     field.focus();
+    if (v.node) {
+      const r = document.createRange();
+      r.setStart(v.node, start);
+      r.setEnd(v.node, end);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      document.execCommand("insertText", false, text);
+      if (skip) {
+        const n = sel.anchorNode, o = sel.anchorOffset;
+        if (n.nodeType === Node.TEXT_NODE && o + skip <= n.nodeValue.length) sel.collapse(n, o + skip);
+      }
+      return;
+    }
     field.setSelectionRange(start, end);
     // execCommand keeps the browser's own undo history and fires "input".
     if (!document.execCommand("insertText", false, text)) field.setRangeText(text, start, end, "end");
+    const c = start + text.length + skip;
+    field.setSelectionRange(c, c);
   }
 
   const sentenceStartAt = (text, i) => /(^|[.!?]\s+|\n\s*)$/.test(text.slice(0, i));
 
   // ── Autocorrect ──
-  let lastFix = null;   // { field, start, original, fixed, caret }
+  let lastFix = null;   // { field, original, fixed, sep }
 
   function onInput(e) {
     const field = e.target;
-    if (lastFix && lastFix.field === field && field.selectionStart !== lastFix.caret) lastFix = null;
+    lastFix = null;
     if (!autocorrect || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
-    const caret = field.selectionStart;
-    const before = field.value.slice(0, caret - 1);
+    const v = view(field);
+    if (!v || v.empty) return;
+    const caret = v.caret;
+    const before = v.text.slice(0, caret - 1);
     const m = before.match(WORD);
     if (!m) return;
     const word = m[0].replace(/'+$/, "");
     const start = caret - 1 - m[0].length;
+    // In the rich box a text node can start mid-sentence (after bold text):
+    // only treat it as a sentence start if it's also the start of its block.
+    const atStart = sentenceStartAt(v.text, start) && (!v.node || !v.node.previousSibling);
     if (ignore.has(word.toLowerCase()) && word !== "i") return;
-    let fixed = capsFix(word, sentenceStartAt(field.value, start));
+    let fixed = capsFix(word, atStart);
     if (!fixed) {
-      if (!checkable(word, sentenceStartAt(field.value, start)) || !misspelled(word)) return;
+      if (!checkable(word, atStart) || !misspelled(word)) return;
       fixed = clearFix(word);
     }
     if (!fixed || fixed === word) return;
-    replace(field, start, start + word.length, fixed);
-    const newCaret = caret + fixed.length - word.length;
-    field.setSelectionRange(newCaret, newCaret);
-    lastFix = { field, start, original: word, fixed, caret: newCaret };
+    replace(field, v, start, start + word.length, fixed, 1);
+    lastFix = { field, original: word, fixed, sep: e.data };
     showBar(field, { undo: lastFix });
   }
 
+  // Undo works while the caret is right after "<fixed><separator>".
   function undoFix() {
     const f = lastFix;
     lastFix = null;
-    if (f.field.value.slice(f.start, f.start + f.fixed.length) !== f.fixed) return false;
-    replace(f.field, f.start, f.start + f.fixed.length, f.original);
-    const caret = f.caret + f.original.length - f.fixed.length;
-    f.field.setSelectionRange(caret, caret);
+    if (!f) return false;
+    const v = view(f.field);
+    if (!v || !v.collapsed) return false;
+    const end = v.caret - f.sep.length;
+    const start = end - f.fixed.length;
+    if (start < 0 || v.text.slice(start, end) !== f.fixed || v.text.slice(end, v.caret) !== f.sep.replace(/ /g, " ")) return false;
+    replace(f.field, v, start, end, f.original, f.sep.length);
     remember(f.original);
     hideBar();
     return true;
@@ -170,7 +213,7 @@
   function onKeydown(e) {
     if (!lastFix || lastFix.field !== e.target) return;
     const undoKey = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z";
-    if ((e.key === "Backspace" || undoKey) && e.target.selectionStart === lastFix.caret && e.target.selectionEnd === lastFix.caret) {
+    if (e.key === "Backspace" || undoKey) {
       if (undoFix()) e.preventDefault();
     } else if (!["Shift", "Control", "Meta", "Alt"].includes(e.key)) {
       lastFix = null;
@@ -244,7 +287,8 @@
       w.textContent = word;
       bar.append(w);
       sugg.forEach((s) => bar.append(button(s, "fix", () => {
-        replace(field, start, start + word.length, s);
+        const v = view(field);
+        if (v && v.text.slice(start, start + word.length) === word) replace(field, v, start, start + word.length, s);
         hideBar();
       })));
       bar.append(button("Add to dictionary", "quiet", () => { remember(word); hideBar(); }));
@@ -254,17 +298,18 @@
 
   // The caret sits on (or just after) a misspelled word: offer fixes.
   function checkCaret(field) {
-    if (!speller || document.activeElement !== field || field.selectionStart !== field.selectionEnd) {
+    const cur = speller && document.activeElement === field ? view(field) : null;
+    if (!cur || !cur.collapsed || cur.empty) {
       if (!lastFix) hideBar();
       return;
     }
-    const v = field.value, c = field.selectionStart;
+    const v = cur.text, c = cur.caret;
     let s = c, e = c;
     while (s > 0 && /[A-Za-z']/.test(v[s - 1])) s--;
     while (e < v.length && /[A-Za-z']/.test(v[e])) e++;
     const word = v.slice(s, e).replace(/^'+|'+$/g, "");
     // Still typing this word (caret at its end, nothing after): wait.
-    const typing = c === e && e === v.length;
+    const typing = c === e && e === v.length && (!cur.node || !cur.node.nextSibling);
     if (!word || typing || !checkable(word, sentenceStartAt(v, s)) || !misspelled(word)) {
       if (!lastFix) hideBar();
       return;
@@ -273,7 +318,8 @@
   }
 
   // ── Wiring: every textarea and text input on the page, as it's used ──
-  const isField = (el) => el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && (el.type === "text" || el.type === "search")));
+  const isField = (el) => el && (el.tagName === "TEXTAREA" || el.classList?.contains("rich-box") ||
+    (el.tagName === "INPUT" && (el.type === "text" || el.type === "search")));
 
   document.addEventListener("focusin", (e) => {
     if (!isField(e.target)) return;
