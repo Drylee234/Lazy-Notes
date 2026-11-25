@@ -27,15 +27,29 @@
   const HOVER_OPEN_MS  = 150;
   const HOVER_CLOSE_MS = 250;
   const CLICK_KEEPS_MS = 1000;  // a click this soon after a hover-open means "open"
-  const STILL_MS       = 500;
 
   const instances = [];
-  let hoverPausedUntil = 0;
 
   // Something just moved under a still mouse (a list closed, the panel
-  // opened): only a real move onto a dropdown should open one.
+  // opened): pointer events at that same spot aren't hover; the first real
+  // move is. Until the page has seen the mouse at all, its first position is
+  // taken as the resting spot (the panel may have opened under it).
+  let lastPointer  = null;
+  let stillMouseAt = "first";
+
+  document.addEventListener("pointermove", (e) => {
+    lastPointer = { x: e.clientX, y: e.clientY };
+    if (stillMouseAt === "first") stillMouseAt = lastPointer;
+  }, true);
+
   function pauseHoverOpen() {
-    hoverPausedUntil = performance.now() + STILL_MS;
+    stillMouseAt = lastPointer ?? "first";
+  }
+
+  function isStillMouse(e) {
+    if (stillMouseAt === "first") stillMouseAt = { x: e.clientX, y: e.clientY };
+    return Math.abs(e.clientX - stillMouseAt.x) < 1 &&
+           Math.abs(e.clientY - stillMouseAt.y) < 1;
   }
 
   const isAction = (option) => option.value.startsWith("__");
@@ -105,6 +119,7 @@
     let hoverOpenedAt = 0;
     let openTimer = null;
     let closeTimer = null;
+    let shutUntilLeave = false;  // closed on purpose with the mouse on it
 
     // ── Drawing ───────────────────────────────────────────────────────────
 
@@ -186,6 +201,7 @@
     function openList({ byHover = false, focusList = false } = {}) {
       clearTimeout(openTimer);
       clearTimeout(closeTimer);
+      openTimer = null;
       instances.forEach((other) => { if (other !== inst) other.close({ quiet: true }); });
 
       if (!open) {
@@ -206,6 +222,7 @@
     function closeList({ quiet = false, focusButton = false } = {}) {
       clearTimeout(openTimer);
       clearTimeout(closeTimer);
+      openTimer = null;
       if (!open) return;
       open = false;
       list.hidden = true;
@@ -232,26 +249,35 @@
 
     // ── Mouse ─────────────────────────────────────────────────────────────
 
-    wrap.addEventListener("pointerenter", (e) => {
+    // pointermove as well as pointerenter: the mouse may already be inside
+    // when it starts to count (resting here after the list above closed).
+    const intent = (e) => {
       if (e.pointerType !== "mouse" || button.disabled) return;
       clearTimeout(closeTimer);
-      clearTimeout(openTimer);
-      if (open || performance.now() < hoverPausedUntil) return;
+      if (open || openTimer || shutUntilLeave || isStillMouse(e)) return;
 
       const otherOpen = instances.some((other) => other !== inst && other.isOpen());
       openTimer = setTimeout(() => openList({ byHover: true }), otherOpen ? 0 : HOVER_OPEN_MS);
-    });
+    };
+    wrap.addEventListener("pointerenter", intent);
+    wrap.addEventListener("pointermove", intent);
 
     wrap.addEventListener("pointerleave", (e) => {
       if (e.pointerType !== "mouse") return;
       clearTimeout(openTimer);
       clearTimeout(closeTimer);
+      openTimer = null;
+      shutUntilLeave = false;
       if (open) closeTimer = setTimeout(() => closeList({ quiet: true }), HOVER_CLOSE_MS);
     });
 
     button.addEventListener("click", () => {
-      if (open && performance.now() - hoverOpenedAt > CLICK_KEEPS_MS) closeList({ quiet: true });
-      else openList();
+      if (open && performance.now() - hoverOpenedAt > CLICK_KEEPS_MS) {
+        closeList({ quiet: true });
+        shutUntilLeave = wrap.matches(":hover");  // or the next nudge reopens it
+      } else {
+        openList();
+      }
     });
 
     // The item under the mouse is the active one.
@@ -307,6 +333,7 @@
           e.preventDefault();
           e.stopPropagation();
           closeList({ focusButton: true });
+          shutUntilLeave = wrap.matches(":hover");
           break;
         case "Tab":
           closeList({ quiet: true });  // and let Tab move focus on
