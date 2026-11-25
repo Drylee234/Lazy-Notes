@@ -21,6 +21,24 @@
 .note--list-head { margin-top: 8px; }
 .note--list-head .note-text { font-weight: 600; }
 
+/* A heading inside a header's section: smaller than a header. */
+.note--sub-topic { margin-top: 10px; }
+.note--sub-topic .note-text { font-size: 1.1em; font-weight: 620; line-height: 1.35; }
+
+/* "Note:" is for something urgent to remember, so it stands out. Generic
+   notes need nothing: they're plain text. */
+.note--note .note-text {
+  padding: 6px 10px;
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+}
+.note--note .note-text::before {
+  content: "Note: ";
+  font-weight: 700;
+  color: var(--danger);
+}
+
 .note--list-point { padding-left: 30px; }
 .note--list-point::before {
   content: "";

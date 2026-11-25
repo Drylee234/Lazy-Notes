@@ -6,11 +6,14 @@
 
 const CATEGORY_LABELS = {
   "header":     "Header",
+  "sub topic":  "Sub topic",
   "definition": "Definition",
   "formula":    "Formula",
   "list head":  "List head",
   "list point": "List point",
-  "summary":    "Summary"
+  "summary":    "Summary",
+  "generic":    "Generic",
+  "note":       "Note"
 };
 
 // A short readable name for where a note came from.

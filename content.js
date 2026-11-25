@@ -10,11 +10,14 @@
 
   const CATEGORIES = [
     "header",
+    "sub topic",   // a heading inside a header's section
     "definition",
     "formula",
     "list head",
     "list point",
-    "summary"
+    "summary",
+    "generic",     // a stray fact or aside: just the words, no structure
+    "note"         // something urgent to remember: stands out wherever shown
   ];
 
   const contextRequiredCategories = [
@@ -171,7 +174,7 @@
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
         z-index: 10;
         display: none;
-        max-height: 160px;
+        max-height: 280px;   /* all nine types without scrolling */
         overflow-y: auto;
       }
 

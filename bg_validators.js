@@ -6,11 +6,14 @@ import { LEVELS, SEMESTERS, getCourse, getTopic } from './bg_storage.js';
 
 export const CATEGORIES = [
   "header",
+  "sub topic",
   "definition",
   "formula",
   "list head",
   "list point",
-  "summary"
+  "summary",
+  "generic",
+  "note"
 ];
 
 export async function validateHighlight(payload) {

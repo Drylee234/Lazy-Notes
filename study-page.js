@@ -21,7 +21,7 @@ const StudyPage = (() => {
   const HIGHLIGHT_TYPE = "application/x-lazy-notes-highlight";
 
   // Same choices, and the same "keep the context" rule, as the in-page popup.
-  const TYPES = ["header", "definition", "formula", "list head", "list point", "summary"];
+  const TYPES = ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"];
   const CONTEXT_TYPES = ["definition", "formula", "summary"];
 
   // content.js notes where dragged text came from ("lastDrag"); older than

@@ -33,7 +33,7 @@ async function updateHighlightInStorage(id, courseName, topicName, fields) {
   return topic.highlights[id];
 }
 
-const CATEGORIES = ["header", "definition", "formula", "list head", "list point", "summary"];
+const CATEGORIES = ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"];
 
 // ---------------------------------------------------------------------------
 // Delete helpers

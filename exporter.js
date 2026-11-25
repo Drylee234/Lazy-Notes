@@ -73,6 +73,8 @@ function mdNotes(notes, depth) {
 
     switch (note.category) {
       case "header":     out.push(`${h(depth)} ${text}`); break;
+      case "sub topic":  out.push(`${h(depth + 1)} ${text}`); break;
+      case "note":       out.push(`**Note:** ${text}`); break;
       case "list head":  out.push(`${h(depth + 1)} ${text}`); break;
       case "list point": out.push(`- ${text}`); break;
       case "definition": out.push(`**${text}**`); break;
@@ -181,6 +183,8 @@ function htmlNotes(notes, depth) {
     const hd = Math.min(depth, 6);
     switch (note.category) {
       case "header":     out.push(`<h${hd}>${text}</h${hd}>`); break;
+      case "sub topic":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
+      case "note":       out.push(`<p class="note-callout"><strong>Note:</strong> ${text}</p>`); break;
       case "list head":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
       case "definition": out.push(`<p class="definition"><strong>${text}</strong></p>`); break;
       case "formula":    out.push(`<pre class="formula"><code>${text}</code></pre>`); break;
