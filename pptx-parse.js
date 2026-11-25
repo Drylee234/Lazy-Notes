@@ -216,6 +216,18 @@ const plainText = (txBody) => paragraphsOf(txBody).map((p) => p.text).join("\n")
 const IMAGE_TYPES = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
                       bmp: "image/bmp", webp: "image/webp", svg: "image/svg+xml" };
 
+// The picture in a blipFill, as an image block (null for EMF/WMF and
+// friends, which browsers can't show).
+async function imageBlock(blipFill, shape, ctx) {
+  const id = kid(blipFill, "blip")?.getAttributeNS(NS_R, "embed");
+  const target = id && ctx.rels.get(id)?.target;
+  const type = target && IMAGE_TYPES[target.split(".").pop().toLowerCase()];
+  if (!type) return null;
+  const data = await ctx.zip.read(target);
+  const nv = kid(shape, "nvPicPr") || kid(shape, "nvSpPr");
+  return data ? { kind: "image", blob: new Blob([data], { type }), alt: path(nv, "cNvPr")?.getAttribute("descr") || "" } : null;
+}
+
 // Shapes of a tree (slide or group) → [{ block, pos, order }]
 async function collect(tree, ctx) {
   const found = [];
@@ -233,6 +245,12 @@ async function collect(tree, ctx) {
 
     switch (el.localName) {
       case "sp": {
+        // A shape filled with a picture (picture placeholders, image fills).
+        const fill = path(el, "spPr", "blipFill");
+        if (fill) {
+          const image = await imageBlock(fill, el, ctx);
+          if (image) add(image);
+        }
         const body = kid(el, "txBody");
         if (!body) break;
         if (ph && TITLE_TYPES.has(ph.type)) {
@@ -248,12 +266,8 @@ async function collect(tree, ctx) {
         break;
       }
       case "pic": {
-        const id = path(el, "blipFill", "blip")?.getAttributeNS(NS_R, "embed");
-        const target = id && ctx.rels.get(id)?.target;
-        const type = target && IMAGE_TYPES[target.split(".").pop().toLowerCase()];
-        if (!type) break;  // EMF/WMF and friends: browsers can't show them
-        const data = await ctx.zip.read(target);
-        if (data) add({ kind: "image", blob: new Blob([data], { type }), alt: path(el, "nvPicPr", "cNvPr")?.getAttribute("descr") || "" });
+        const image = await imageBlock(kid(el, "blipFill"), el, ctx);
+        if (image) add(image);
         break;
       }
       case "graphicFrame": {
