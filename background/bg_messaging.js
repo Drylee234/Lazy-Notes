@@ -37,7 +37,7 @@ function isMissingContentScript() {
 
 function injectContentScript(tabId) {
   chrome.scripting
-    .executeScript({ target: { tabId }, files: ["content.js"] })
+    .executeScript({ target: { tabId }, files: ["content/content.js"] })
     .catch(() => { /* restricted page (e.g. Chrome Web Store) */ });
 }
 

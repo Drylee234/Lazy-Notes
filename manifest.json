@@ -23,19 +23,19 @@
   ],
 
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "background/background.js",
     "type": "module"
   },
 
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["content/content.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["http://*/*", "https://*/*", "file:///*"],
-      "js": ["pdf-prompt.js"],
+      "js": ["content/pdf-prompt.js"],
       "run_at": "document_idle"
     }
   ],

@@ -7,9 +7,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
 <!-- Toolbar, start screen and message styles are the PDF reader's, so the
      two readers look and work the same. pptxreader.css adds the slides. -->
-<link rel="stylesheet" href="pdfreader.css" />
-<link rel="stylesheet" href="pptxreader.css" />
-<script src="theme.js"></script>
+<link rel="stylesheet" href="readers/pdfreader.css" />
+<link rel="stylesheet" href="readers/pptxreader.css" />
+<script src="shared/theme.js"></script>
 </head>
 <body>
 
@@ -69,9 +69,9 @@
 
 <div id="message" hidden></div>
 
-<script src="pptxreader-host.js"></script>
-<script src="docs-recent.js"></script>
-<script src="content.js"></script>
-<script type="module" src="pptxreader.js"></script>
+<script src="readers/pptxreader-host.js"></script>
+<script src="readers/docs-recent.js"></script>
+<script src="content/content.js"></script>
+<script type="module" src="readers/pptxreader.js"></script>
 </body>
 </html>

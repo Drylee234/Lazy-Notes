@@ -10,7 +10,7 @@
 //   pdfreader.html?local=<id>       a file from this computer, kept in IndexedDB
 // with an optional #page=N.
 
-import * as pdfjsLib from "./lib/pdfjs/pdf.min.mjs";
+import * as pdfjsLib from "../lib/pdfjs/pdf.min.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdfjs/pdf.worker.min.mjs";
 
