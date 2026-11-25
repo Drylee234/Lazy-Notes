@@ -20,7 +20,10 @@ export async function handleSaveTypedNote(message) {
     : null;
 
   const id = message.id || crypto.randomUUID();
-  if (!updated) await insertTypedNote(id, courseName, topicName, text);
+  if (!updated && !(await insertTypedNote(id, courseName, topicName, text))) {
+    // The topic went away after the check above (deleted in another window).
+    return { ok: false, reason: `Topic "${topicName}" no longer exists.` };
+  }
 
   notifySidePanel();
   return { ok: true, id };
