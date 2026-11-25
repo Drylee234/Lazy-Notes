@@ -5,7 +5,9 @@
 // Lazy Notes reader, where selecting text saves notes as on any website.
 //
 // Shows on every PDF opened in a tab (also local files, if "Allow access to
-// file URLs" is on). Clicking it or × removes it until the PDF is opened again.
+// file URLs" is on). "Highlight this PDF" opens the reader in this tab; the
+// button beside it opens it in a new tab, as does Ctrl/⌘-click. Any of these,
+// or ×, removes the prompt until the PDF is opened again.
 
 (() => {
   // Detect by content type, not URL: plenty of PDF links don't end in .pdf
@@ -77,14 +79,14 @@
         height: 22px;
       }
 
-      .close {
+      .icon {
         justify-content: center;
         width: 30px;
         height: 30px;
         color: #a0a0b0;
       }
 
-      .close:hover { color: #ffffff; }
+      .icon:hover { color: #ffffff; }
 
       @keyframes enter {
         from { opacity: 0; transform: translateY(-4px); }
@@ -98,7 +100,7 @@
 
     <aside class="toast" aria-label="Lazy Notes">
       <button class="open" type="button"
-              title="Open in the Lazy Notes reader, where selecting text saves it as a note">
+              title="Open here in the Lazy Notes reader, where selecting text saves it as a note">
         <svg class="logo" viewBox="0 0 128 128" aria-hidden="true">
           <rect width="128" height="128" rx="28" fill="#4f46e5"/>
           <rect x="26" y="30" width="76" height="11" rx="5.5" fill="#ffffff" opacity="0.92"/>
@@ -108,7 +110,14 @@
         </svg>
         <span>Highlight this PDF</span>
       </button>
-      <button class="close" type="button" title="Dismiss" aria-label="Dismiss">
+      <button class="icon new-tab" type="button"
+              title="Open in a new tab" aria-label="Highlight this PDF in a new tab">
+        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 9v3.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 2 12.5v-7A1.5 1.5 0 0 1 3.5 4H7M10 2h4v4M14 2L8 8"/>
+        </svg>
+      </button>
+      <button class="icon close" type="button" title="Dismiss" aria-label="Dismiss">
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
           <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
         </svg>
@@ -123,19 +132,28 @@
     setTimeout(() => host.remove(), 160);
   }
 
-  root.querySelector(".open").addEventListener("click", () => {
+  // The background opens the reader, in this tab or a new one beside it
+  // (active: false leaves this tab in front). It gets location.href, not the
+  // sender URL Chrome reports: that one misses a #page=N added after the PDF
+  // opened.
+  function openInReader({ newTab = false, active = true } = {}) {
     dismiss();
-    // The background swaps this tab over to the reader. location.href, not
-    // the sender URL Chrome reports: that one misses a #page=N added after
-    // the PDF opened.
     try {
-      chrome.runtime.sendMessage({ type: "OPEN_PDF_IN_READER", url: location.href }).catch(() => {});
+      chrome.runtime
+        .sendMessage({ type: "OPEN_PDF_IN_READER", url: location.href, newTab, active })
+        .catch(() => {});
     } catch (_) {
       // The extension was reloaded or updated after this page opened, so this
       // copy can't reach it any more. Reloading the page brings a fresh one.
     }
-  });
+  }
 
+  // Ctrl/⌘-click opens a background tab, as it would on a link.
+  root.querySelector(".open").addEventListener("click", (e) => {
+    const background = e.ctrlKey || e.metaKey;
+    openInReader({ newTab: background, active: !background });
+  });
+  root.querySelector(".new-tab").addEventListener("click", () => openInReader({ newTab: true }));
   root.querySelector(".close").addEventListener("click", dismiss);
   toast.addEventListener("keydown", (e) => {
     if (e.key === "Escape") dismiss();

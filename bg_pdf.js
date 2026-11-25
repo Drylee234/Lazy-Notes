@@ -11,13 +11,20 @@ function readerUrlFor(pdfUrl) {
   );
 }
 
-// From pdf-prompt.js ("Highlight this PDF"): show the tab's PDF in the reader
-// instead of Chrome's viewer. Same tab, so Back returns to Chrome's viewer.
-export function openPdfInReader(sender, pdfUrl) {
-  if (sender.tab?.id == null || sender.frameId !== 0) return;
+// From pdf-prompt.js ("Highlight this PDF"): show the tab's PDF in the
+// reader, either in place of Chrome's viewer (Back returns to it) or in a new
+// tab right after it.
+export function openPdfInReader(sender, { url: pdfUrl, newTab = false, active = true }) {
+  const tab = sender.tab;
+  if (tab?.id == null || sender.frameId !== 0) return;
   if (!/^(https?|file):/i.test(pdfUrl ?? "")) return;
 
-  chrome.tabs.update(sender.tab.id, { url: readerUrlFor(pdfUrl) }).catch((err) => {
+  const url = readerUrlFor(pdfUrl);
+  const opened = newTab
+    ? chrome.tabs.create({ url, active, index: tab.index + 1, openerTabId: tab.id })
+    : chrome.tabs.update(tab.id, { url });
+
+  opened.catch((err) => {
     console.warn("LazyNotes [Background]: couldn't open the PDF in the reader ->", err);
   });
 }

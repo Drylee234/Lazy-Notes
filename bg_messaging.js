@@ -88,7 +88,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleToggleTrigger();
       return;
     case "OPEN_PDF_IN_READER":
-      openPdfInReader(sender, message.url);
+      openPdfInReader(sender, message);
       return;
     default:
       return;
