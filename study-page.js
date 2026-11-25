@@ -351,7 +351,7 @@ const StudyPage = (() => {
     // Click anywhere else (not the dock's drop cards): same as Enter.
     const outside = (e) => {
       if (editing?.input !== input) { document.removeEventListener("pointerdown", outside, true); return; }
-      if (el.contains(e.target) || e.target.closest?.("#study-dock, .hs-list")) return;
+      if (el.contains(e.target) || e.target.closest?.("#study-dock, .hs-list, .ln-spell-bar")) return;
       document.removeEventListener("pointerdown", outside, true);
       commit();
     };

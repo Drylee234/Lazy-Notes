@@ -928,6 +928,9 @@ updatePdfBanner();
     pptx.checked = pptxAutoOpen !== false;
     docAuto.checked = lnDocAutoSelect !== false;
   });
+  const spellAuto = document.getElementById("spell-auto");
+  chrome.storage.local.get("lnAutocorrect", ({ lnAutocorrect }) => { spellAuto.checked = lnAutocorrect !== false; });
+  spellAuto.addEventListener("change", () => chrome.storage.local.set({ lnAutocorrect: spellAuto.checked }));
   docAuto.addEventListener("change", () => chrome.storage.local.set({ lnDocAutoSelect: docAuto.checked }));
   seg.addEventListener("click", (e) => {
     const t = e.target.closest("button")?.dataset.themeChoice;

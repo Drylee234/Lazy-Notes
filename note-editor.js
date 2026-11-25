@@ -102,7 +102,7 @@ function noteEditor(note, { onSave, onCancel, onDelete }) {
   const initial = snapshot();
   const outside = (e) => {
     if (!form.isConnected) { document.removeEventListener("pointerdown", outside, true); return; }
-    if (form.contains(e.target) || e.target.closest?.(".hs-list, #study-dock")) return;
+    if (form.contains(e.target) || e.target.closest?.(".hs-list, #study-dock, .ln-spell-bar")) return;
     document.removeEventListener("pointerdown", outside, true);
     if (snapshot() !== initial && text.value.trim()) submit(); else onCancel();
   };

@@ -32,6 +32,7 @@
           <button type="button" data-theme-choice="dark" role="radio">Dark</button>
         </div>
         <label class="set-check"><input type="checkbox" id="doc-auto" /> Opening a document switches to the course &amp; topic it saved to last</label>
+        <label class="set-check"><input type="checkbox" id="spell-auto" /> Fix obvious typos as I type (Backspace undoes a fix)</label>
         <label class="set-check"><input type="checkbox" id="pptx-auto" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
       </div>
     </details>
@@ -243,6 +244,8 @@
   </div>
 </div>
 
+<script src="lib/nspell.js"></script>
+<script src="spell.js"></script>
 <script src="utils.js"></script>
 <script src="hover-select.js"></script>
 <script src="exporter.js"></script>
