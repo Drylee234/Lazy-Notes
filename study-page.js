@@ -457,7 +457,7 @@ const StudyPage = (() => {
       const highlight = dt.getData(HIGHLIGHT_TYPE);
       if (highlight) {
         try {
-          askQuoteOrMove(input, at, JSON.parse(highlight));
+          askQuoteOrMove(input, at, JSON.parse(highlight), { x: e.clientX, y: e.clientY });
           return;
         } catch (_) { /* not ours after all: quote the text */ }
       }
@@ -506,7 +506,7 @@ const StudyPage = (() => {
   const movingIds    = new Set();       // highlights waiting to move (drawn faded)
   let pendingChoice  = null;            // { input, at, highlight }
 
-  function askQuoteOrMove(input, at, highlight) {
+  function askQuoteOrMove(input, at, highlight, point) {
     pendingChoice = { input, at, highlight };
     const short = squashSpaces(highlight.text);
     choiceText.textContent = `Add “${short.length > 60 ? short.slice(0, 57) + "…" : short}” to your note:`;
@@ -516,12 +516,14 @@ const StudyPage = (() => {
     if (editing?.input === input) editing.hint.after(choice);
     else composer.before(choice);
     choice.hidden = false;
+    floatAt(choice, point);
     $("drop-choice-quote").focus();
   }
 
   function closeChoice() {
     pendingChoice = null;
     choice.hidden = true;
+    unfloat(choice);
     composer.before(choice);   // home position in the dock
   }
 
@@ -627,7 +629,8 @@ const StudyPage = (() => {
     if (!isPageTextDrop(e)) return;
     e.preventDefault();
     const text = e.dataTransfer.getData("text/plain");
-    openCard(text, await sourceFor(text));
+    const point = { x: e.clientX, y: e.clientY };
+    openCard(text, await sourceFor(text), point);
   });
 
   // content.js saved where the dragged text came from; it's this drop if the
@@ -651,7 +654,25 @@ const StudyPage = (() => {
     }
   }
 
-  function openCard(rawText, source) {
+  // The drop's follow-up (type card, Quote/Move) opens where the mouse let
+  // go, not down in the dock. Kept inside the panel; above the point if
+  // there's no room below.
+  function floatAt(el, point) {
+    if (!point) return;
+    el.classList.add("floating");
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const left = Math.max(8, Math.min(point.x - 24, innerWidth - w - 8));
+    const below = point.y + 14 + h <= innerHeight - 8;
+    const top = below ? point.y + 14 : Math.max(8, point.y - h - 14);
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }
+  function unfloat(el) {
+    el.classList.remove("floating");
+    el.style.left = el.style.top = "";
+  }
+
+  function openCard(rawText, source, point) {
     const text = (source?.text ?? rawText ?? "").trim();
     if (!text || !target) return;
     closeChoice();
@@ -667,6 +688,7 @@ const StudyPage = (() => {
     drawTypeChips();
 
     card.hidden = false;
+    floatAt(card, point);
     cardTypes.querySelector('[aria-checked="true"]')?.focus();
   }
 
@@ -699,6 +721,7 @@ const StudyPage = (() => {
   function closeCard() {
     draft = null;
     card.hidden = true;
+    unfloat(card);
   }
 
   function saveCard() {
