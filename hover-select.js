@@ -24,7 +24,8 @@
 // "__" are actions ("+ Create Course"): listed last, after a divider.
 
 (() => {
-  const HOVER_OPEN_MS  = 150;
+  const HOVER_OPEN_MS  = 500;   // rest this long to open; passing over does nothing. Click opens at once.
+  const HOVER_SWITCH_MS = 300;  // moving from one open list to the next
   const HOVER_CLOSE_MS = 500;   // only for a pass-by: the mouse never went into the list
   // Once the mouse has been in the list, it behaves like a normal menu: it
   // stays open until you pick, click elsewhere, press Esc or open another.
@@ -260,7 +261,7 @@
       if (open || openTimer || shutUntilLeave || isStillMouse(e)) return;
 
       const otherOpen = instances.some((other) => other !== inst && other.isOpen());
-      openTimer = setTimeout(() => openList({ byHover: true }), otherOpen ? 0 : HOVER_OPEN_MS);
+      openTimer = setTimeout(() => openList({ byHover: true }), otherOpen ? HOVER_SWITCH_MS : HOVER_OPEN_MS);
     };
     wrap.addEventListener("pointerenter", intent);
     wrap.addEventListener("pointermove", intent);

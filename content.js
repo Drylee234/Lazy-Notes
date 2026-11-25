@@ -468,7 +468,8 @@
   // is one hover area. Labels sit left of the lists, so an open list never
   // covers them: hovering a label is how to get past an open list.
 
-  const HOVER_OPEN_MS  = 150;
+  const HOVER_OPEN_MS  = 500;   // rest this long to open; passing over does nothing. Click opens at once.
+  const HOVER_SWITCH_MS = 300;  // moving from one open list to the next
   const HOVER_CLOSE_MS = 500;   // only for a pass-by; a list you've been in stays open
 
   // Something just moved under a still mouse (the popup appeared, a list
@@ -532,7 +533,7 @@
         openTimer = null;
         delete menu.dataset.used;
         openMenu(menu, { byHover: true });
-      }, otherOpen ? 0 : HOVER_OPEN_MS);
+      }, otherOpen ? HOVER_SWITCH_MS : HOVER_OPEN_MS);
     };
 
     row.addEventListener("pointerenter", intent);
