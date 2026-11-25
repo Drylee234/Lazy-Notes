@@ -167,8 +167,34 @@ async function openLocalRecord(record) {
   await loadDocument(await record.data.arrayBuffer(), record.name);
 }
 
+// Slides go to the slides reader: the file is handed over through its
+// IndexedDB store (same extension origin), then opened there by id.
+async function openInSlidesReader(file) {
+  const db = await new Promise((resolve, reject) => {
+    const req = indexedDB.open("lazynotes-slides", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("files", { keyPath: "id" });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+  const store = db.transaction("files").objectStore("files");
+  const all = await new Promise((r) => { const q = store.getAll(); q.onsuccess = () => r(q.result || []); });
+  const id = all.find((f) => f.name === file.name && f.size === file.size)?.id ?? crypto.randomUUID();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("files", "readwrite");
+    tx.objectStore("files").put({ id, name: file.name, size: file.size, data: file, openedAt: Date.now() });
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  location.href = `pptxreader.html?local=${encodeURIComponent(id)}`;
+}
+
 async function openPickedFile(file) {
   if (!file) return;
+  if (/\.pptx$/i.test(file.name)) return openInSlidesReader(file);
+  if (/\.ppt$/i.test(file.name)) {
+    showMessage("Older .ppt files can't be read. Save it as .pptx (or PDF) in PowerPoint first.", true);
+    return;
+  }
   if (file.type && file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
     showMessage("That isn't a PDF.", true);
     return;
