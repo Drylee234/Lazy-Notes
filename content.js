@@ -447,6 +447,13 @@
     container.addEventListener("click", (e) => {
       if (e.target.closest?.(".lazy-notes-dropdown-item")) pauseHoverOpen(e);
     }, true);
+
+    // Clicking a list item mustn't take keyboard focus out of the popup (list
+    // items can't hold focus, so it would fall to the page): Enter has to
+    // keep saving after picking with the mouse.
+    [courseMenu, topicMenu, categoryMenu].forEach((menu) =>
+      menu.addEventListener("mousedown", (e) => e.preventDefault())
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -459,7 +466,7 @@
   // covers them: hovering a label is how to get past an open list.
 
   const HOVER_OPEN_MS  = 150;
-  const HOVER_CLOSE_MS = 250;
+  const HOVER_CLOSE_MS = 700;   // forgiving: slow or curved moves onto a list are fine
 
   // Something just moved under a still mouse (the popup appeared, a list
   // closed after a pick): events at that same spot aren't hover. The first
@@ -812,11 +819,14 @@
     }
 
     // Only save on Enter when focus is inside the popup — otherwise pressing
-    // Enter in a page form while the popup is open would save a note.
+    // Enter in a page form while the popup is open would save a note. An open
+    // list doesn't stop it (arrow keys already applied the pick, and a list
+    // opened by hovering isn't being used); a focused Save or Dismiss button
+    // keeps its own Enter, so Enter on Dismiss dismisses.
     if (
       event.key === "Enter" &&
-      !isCourseOpen && !isTopicOpen && !isCategoryOpen &&
       active !== annotationInputEl &&
+      !active?.classList?.contains("lazy-notes-btn") &&
       popupContainer.contains(active)
     ) {
       event.preventDefault();

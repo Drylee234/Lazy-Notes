@@ -10,8 +10,8 @@
 //
 // Hover works like the save popup's dropdowns (content.js):
 //   - resting on the button for a moment opens the list; brushing past doesn't
-//   - the list stays open across the gap below the button, and closes a
-//     moment after the mouse leaves
+//   - the list stays open across the gap below the button, and closes 0.7s
+//     after the mouse leaves
 //   - with another list already open, hovering this one switches at once,
 //     like a menu bar
 //   - a click right after a hover-open keeps the list open
@@ -25,7 +25,7 @@
 
 (() => {
   const HOVER_OPEN_MS  = 150;
-  const HOVER_CLOSE_MS = 250;
+  const HOVER_CLOSE_MS = 700;   // forgiving: slow or curved moves onto a list are fine
   const CLICK_KEEPS_MS = 1000;  // a click this soon after a hover-open means "open"
 
   const instances = [];
