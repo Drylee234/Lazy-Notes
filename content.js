@@ -984,7 +984,91 @@
       chrome.runtime.sendMessage(payload);
     } catch (err) {
       console.error("LazyNotes: sendMessage failed:", err);
+      return;
     }
+    showUndoToast(payload);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Undo — a few seconds to take back a highlight saved by mistake
+  // ---------------------------------------------------------------------------
+  // The highlight is saved at once (closing the tab can't lose it); Undo, or
+  // Ctrl/⌘+Z while the toast shows, deletes it again. Hovering the toast
+  // pauses the countdown. A newer save replaces the toast.
+
+  const UNDO_MS = 6000;
+  let undoToast = null;   // { host, cancel }
+
+  function showUndoToast(saved) {
+    undoToast?.cancel();
+
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        :host { all: initial; position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; }
+        .toast {
+          position: relative; overflow: hidden;
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 10px 10px 14px;
+          background: #1e1e24; color: #f0f0f0;
+          border: 1px solid #33333d; border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+          font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .msg { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        button {
+          all: unset; cursor: pointer; padding: 5px 10px; border-radius: 5px;
+          background: #4f46e5; color: #fff; font-weight: 600; font-size: 12px;
+        }
+        button:hover { background: #4338ca; }
+        button:focus-visible { outline: 2px solid #818cf8; outline-offset: 1px; }
+        .bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #4f46e5;
+               transform-origin: left; animation: run ${UNDO_MS}ms linear forwards; }
+        .toast:hover .bar { animation-play-state: paused; }
+        @keyframes run { to { transform: scaleX(0); } }
+        @media (prefers-reduced-motion: reduce) { .bar { animation: none; opacity: 0; } }
+      </style>
+      <div class="toast" role="status">
+        <span class="msg"></span>
+        <button type="button" title="Undo (Ctrl+Z)">Undo</button>
+        <div class="bar"></div>
+      </div>`;
+    root.querySelector(".msg").textContent = `Saved to ${saved.course} › ${saved.topic}`;
+
+    // Countdown that pauses while hovered (the bar pauses with it).
+    let left = UNDO_MS, startedAt = Date.now(), timer = setTimeout(close, left);
+    const toast = root.querySelector(".toast");
+    toast.addEventListener("mouseenter", () => { clearTimeout(timer); left -= Date.now() - startedAt; });
+    toast.addEventListener("mouseleave", () => { startedAt = Date.now(); timer = setTimeout(close, Math.max(left, 800)); });
+
+    function close() {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", onKey, true);
+      host.remove();
+      if (undoToast?.host === host) undoToast = null;
+    }
+
+    function undo() {
+      close();
+      try {
+        chrome.runtime.sendMessage({ type: "DELETE_HIGHLIGHT", id: saved.id, courseName: saved.course, topicName: saved.topic });
+      } catch (_) { /* extension reloaded: nothing to reach */ }
+    }
+
+    // Ctrl/⌘+Z undoes, unless the page's own undo is wanted (typing somewhere).
+    function onKey(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== "z") return;
+      const t = document.activeElement;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      undo();
+    }
+
+    root.querySelector("button").addEventListener("click", undo);
+    document.addEventListener("keydown", onKey, true);
+    (document.body || document.documentElement).appendChild(host);
+    undoToast = { host, cancel: close };
   }
 
   // ---------------------------------------------------------------------------
