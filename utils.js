@@ -46,3 +46,21 @@ function sortTopics(topics, by) {
 
   return list;
 }
+
+// A typed note's text as blocks: lines starting with ">" are quotes, the
+// rest is the note's own words. Consecutive lines of the same kind stay
+// together. "a\n> b\n> c\nd" -> [{quote:false,text:"a"}, {quote:true,
+// text:"b\nc"}, {quote:false,text:"d"}]. Used to show and export notes.
+function typedNoteBlocks(text) {
+  const blocks = [];
+  String(text ?? "").split("\n").forEach((line) => {
+    const quote = /^>/.test(line);
+    const content = quote ? line.replace(/^>\s?/, "") : line;
+    const last = blocks[blocks.length - 1];
+    if (last && last.quote === quote) last.text += "\n" + content;
+    else blocks.push({ quote, text: content });
+  });
+  return blocks
+    .map((b) => ({ quote: b.quote, text: b.text.replace(/^(\s*\n)+/, "").replace(/\s+$/, "") }))
+    .filter((b) => b.text.trim() !== "");
+}

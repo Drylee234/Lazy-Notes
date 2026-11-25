@@ -174,13 +174,12 @@ function updateFooterCount() {
     const numTopics = Object.keys(courseTree[selectedCourse].topics || {}).length;
     noteCount.textContent = `${numTopics} topic${numTopics === 1 ? "" : "s"}`;
   } else {
-    if (!selectedCourse || !studySelectedTopic) {
-      noteCount.textContent = "0 notes";
-      return;
-    }
-    const topic = courseTree[selectedCourse]?.topics?.[studySelectedTopic];
-    const numNotes = Object.keys(topic?.highlights || {}).length;
-    noteCount.textContent = `${numNotes} note${numNotes === 1 ? "" : "s"}`;
+    const topic = selectedCourse && studySelectedTopic
+      ? courseTree[selectedCourse]?.topics?.[studySelectedTopic]
+      : null;
+    const { highlights, notes } = StudyPage.counts(topic);
+    noteCount.textContent =
+      `${highlights} highlight${highlights === 1 ? "" : "s"} · ${notes} note${notes === 1 ? "" : "s"}`;
   }
 }
 
@@ -197,10 +196,12 @@ async function loadHomeTopics() {
   }
 
   const topicsDict = courseTree[selectedCourse].topics || {};
+  // Highlights and typed notes together: "3 notes" on a row means everything
+  // in the topic (also what "Most notes" sorts by and a delete removes).
   const topics = Object.entries(topicsDict).map(([name, t]) => ({
     name,
     created: t.created,
-    highlightCount: Object.keys(t.highlights || {}).length
+    highlightCount: Object.keys(t.highlights || {}).length + Object.keys(t.notes || {}).length
   }));
 
   if (topics.length === 0) {
@@ -334,16 +335,20 @@ homeTopicSortSel.addEventListener("change", async () => {
 // Study — topic tabs + notes
 // ---------------------------------------------------------------------------
 
+// No topic to show: say why, and park the page (study-page.js).
+function showStudyEmpty(text) {
+  StudyPage.clear();
+  emptyStudy.style.display = "block";
+  emptyStudy.textContent   = text;
+  updateFooterCount();
+}
+
 async function loadStudyTopics() {
   studyTopicSelect.innerHTML = "";
   studyTopicSelect.hidden = true;
-  noteList.innerHTML  = "";
-  emptyStudy.style.display = "none";
 
   if (!selectedCourse || !courseTree[selectedCourse]) {
-    emptyStudy.style.display = "block";
-    emptyStudy.textContent   = "Pick a course to read its notes.";
-    updateFooterCount();
+    showStudyEmpty("Pick a course to read its notes.");
     return;
   }
 
@@ -354,9 +359,7 @@ async function loadStudyTopics() {
   ).map((t) => t.name);
 
   if (topicNames.length === 0) {
-    emptyStudy.style.display = "block";
-    emptyStudy.textContent   = "No topics for this course yet.";
-    updateFooterCount();
+    showStudyEmpty("No topics for this course yet.");
     return;
   }
 
@@ -384,38 +387,23 @@ studyTopicSelect.addEventListener("change", async () => {
   await loadNotes();
 });
 
+// The open topic as a written page: highlights and typed notes, with the
+// composer under it. Drawing it is study-page.js's job.
 async function loadNotes() {
-  noteList.innerHTML = "";
-  emptyStudy.style.display = "none";
+  const topic = selectedCourse && studySelectedTopic
+    ? courseTree[selectedCourse]?.topics?.[studySelectedTopic]
+    : null;
 
-  if (!selectedCourse || !studySelectedTopic) {
-    updateFooterCount();
+  if (!topic) {
+    showStudyEmpty("No notes for this topic yet.");
     return;
   }
 
-  const topic = courseTree[selectedCourse]?.topics?.[studySelectedTopic];
-  const highlightsDict = topic?.highlights || {};
-
-  const notes = Object.entries(highlightsDict).map(([id, fields]) => ({
-    id,
-    ...fields
-  }));
-
-  const sorted = sortHighlights(notes, "chronological");
-
-  if (sorted.length === 0) {
-    emptyStudy.style.display = "block";
-    emptyStudy.textContent   = "No notes for this topic yet.";
-    updateFooterCount();
-    return;
-  }
-
-  sorted.forEach((note) => {
-    noteList.appendChild(renderNote(note, { compact: true }));
-  });
-
+  StudyPage.render({ courseName: selectedCourse, topicName: studySelectedTopic, topic });
   updateFooterCount();
 }
+
+StudyPage.init({ onRequestRender: () => loadNotes() });
 
 // ---------------------------------------------------------------------------
 // View tabs

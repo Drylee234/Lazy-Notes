@@ -37,17 +37,32 @@ function formatWhen(iso) {
 // note: { text, category, annotation, sourceUrl, sourceTitle, timestamp, edited }
 // Returns a <div class="note note--<category>"> with text, annotation and a
 // meta line (category · source · date) that shows on hover/focus.
-function renderNote(note, { compact = false } = {}) {
+//
+// page: draw it as part of a written page (the side panel's Study tab): the
+// highlighted words get a marker, so they stand apart from typed notes; a
+// definition shows its meaning (the sentence it came from) and a formula its
+// context as a caption.
+function renderNote(note, { compact = false, page = false } = {}) {
   const el = document.createElement("div");
   el.className = `note note--${(note.category || "summary").replace(/\s+/g, "-")}`;
   if (compact) el.classList.add("note--compact");
+  if (page) el.classList.add("note--page");
   el.dataset.id = note.id ?? "";
   el.tabIndex = 0;
 
   const text = document.createElement("div");
   text.className = "note-text";
-  text.textContent = note.text;
+  if (page) fillPageText(text, note);
+  else text.textContent = note.text;
   el.appendChild(text);
+
+  const caption = page && note.category === "formula" ? squashSpaces(note.context) : "";
+  if (caption && caption !== squashSpaces(note.text)) {
+    const cap = document.createElement("div");
+    cap.className = "note-caption";
+    cap.textContent = caption;
+    el.appendChild(cap);
+  }
 
   if (note.annotation) {
     const ann = document.createElement("div");
@@ -84,5 +99,115 @@ function renderNote(note, { compact = false } = {}) {
   meta.appendChild(when);
 
   el.appendChild(meta);
+  return el;
+}
+
+// ---------------------------------------------------------------------------
+// Written-page mode (renderNote with page: true)
+// ---------------------------------------------------------------------------
+
+function squashSpaces(s) {
+  return String(s ?? "").replace(/\s+/g, " ").trim();
+}
+
+function markedText(text) {
+  const mark = document.createElement("mark");
+  mark.className = "hl-mark";
+  mark.textContent = text;
+  return mark;
+}
+
+function fillPageText(el, note) {
+  if (note.category === "definition") fillDefinition(el, note);
+  else el.appendChild(markedText(note.text));
+}
+
+// "Mitochondria" + context "… Mitochondria are the organelles that make
+// ATP. …" -> "**Mitochondria** are the organelles that make ATP." with the
+// term marked. Without the term in the context: "**Term** — context".
+function fillDefinition(el, note) {
+  const term    = squashSpaces(note.text);
+  const context = squashSpaces(note.context);
+  const bold = (text) => {
+    const b = document.createElement("strong");
+    b.appendChild(markedText(text));
+    return b;
+  };
+
+  if (!context || context.toLowerCase() === term.toLowerCase()) {
+    el.appendChild(bold(term));
+    return;
+  }
+
+  const at = context.toLowerCase().indexOf(term.toLowerCase());
+  if (at === -1) {
+    el.append(bold(term), " — ", context);
+    return;
+  }
+
+  let { start, end } = sentenceAround(context, at, term.length);
+
+  // A "sentence" without full stops can be a whole paragraph: keep it short.
+  const MAX_BEFORE = 120;
+  const MAX_AFTER  = 200;
+  const pre  = at - start > MAX_BEFORE ? "…" : "";
+  const post = end - (at + term.length) > MAX_AFTER ? "…" : "";
+  if (pre) start = context.lastIndexOf(" ", at - MAX_BEFORE) + 1;
+  if (post) {
+    const cut = context.indexOf(" ", at + term.length + MAX_AFTER);
+    end = cut === -1 ? context.length : cut;
+  }
+
+  el.append(
+    pre + context.slice(start, at),
+    bold(context.slice(at, at + term.length)),
+    context.slice(at + term.length, end) + post
+  );
+}
+
+// Start and end of the sentence of `text` that holds text[at .. at+len).
+function sentenceAround(text, at, len) {
+  const before  = text.slice(0, at);
+  const lastEnd = before.match(/^.*[.!?]\s+/s);
+  const start   = lastEnd ? lastEnd[0].length : 0;
+
+  const after   = text.slice(at + len);
+  const nextEnd = after.match(/[.!?](\s|$)/);
+  const end     = nextEnd ? at + len + nextEnd.index + 1 : text.length;
+  return { start, end };
+}
+
+// ---------------------------------------------------------------------------
+// Typed notes — written in the side panel, not highlighted
+// ---------------------------------------------------------------------------
+
+// note: { id, text, timestamp, edited }. Quotes (lines starting ">", often a
+// highlight dragged in) show as block quotes. Returns a <div class="note
+// note--typed"> with a meta line ("Your note · date") like a highlight's.
+function renderTypedNote(note) {
+  const el = document.createElement("div");
+  el.className = "note note--typed";
+  el.dataset.id = note.id ?? "";
+  el.tabIndex = 0;
+
+  const body = document.createElement("div");
+  body.className = "note-text";
+  typedNoteBlocks(note.text).forEach(({ quote, text }) => {
+    const block = document.createElement(quote ? "blockquote" : "p");
+    block.textContent = text;
+    body.appendChild(block);
+  });
+  el.appendChild(body);
+
+  const meta = document.createElement("div");
+  meta.className = "note-meta";
+  const kind = document.createElement("span");
+  kind.className = "note-cat";
+  kind.textContent = "Your note";
+  const when = document.createElement("span");
+  when.textContent = formatWhen(note.timestamp) + (note.edited ? " · edited" : "");
+  meta.append(kind, when);
+  el.appendChild(meta);
+
   return el;
 }

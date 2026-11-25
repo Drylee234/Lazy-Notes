@@ -1,0 +1,260 @@
+/* Lazy Notes — the side panel's Study tab as a written page (study-page.js).
+   Needs theme.css and notes.css. Everything here is scoped to the side panel,
+   so the All notes viewer keeps its own look. */
+
+:root {
+  /* Highlighter yellow from the logo, as a pen stroke under the words. */
+  --marker: rgba(253, 224, 71, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --marker: rgba(253, 224, 71, 0.2); }
+}
+
+/* ── Page head: the topic as the page's title ── */
+#page-head { margin: 18px 0 6px; }
+#page-head[hidden] { display: none; }
+#page-title {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+#page-subtitle { margin-top: 3px; font-size: 11.5px; color: var(--dim); }
+#page-head:not([hidden]) + #note-list { margin-top: 8px; }
+
+/* ── Highlights on the page ── */
+.note--page .hl-mark {
+  color: inherit;
+  background: linear-gradient(to top, var(--marker) 0, var(--marker) 45%, transparent 45%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 1px;
+}
+
+/* A definition reads as the sentence it came from, so no side bar. */
+#note-list .note--page.note--definition .note-text { border-left: none; padding-left: 0; }
+
+/* A formula's context, as a caption under it. */
+.note-caption {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--sec);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* List points hang under their list head. */
+#note-list .note--page.note--list-head + .note--list-point,
+#note-list .note--page.note--list-point + .note--list-point { margin-top: -2px; }
+
+#note-list .note--page[draggable="true"] { cursor: grab; }
+#note-list .note.dragging { opacity: 0.5; }
+
+/* "Move it": waiting for the note it's going into to be saved. */
+#note-list .note--moving { opacity: 0.45; }
+#note-list .note--moving::after {
+  content: "moving into your note";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--accent);
+}
+
+/* ── Typed notes ── */
+#note-list .note--typed { padding-left: 28px; padding-right: 30px; cursor: text; }
+#note-list .note--typed::before { left: 9px; }
+#note-list .note--typed.editing { background: var(--hover); cursor: default; }
+
+.typed-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+}
+.note--typed:hover .typed-delete,
+.typed-delete:focus-visible,
+.typed-delete.armed { opacity: 1; }
+.typed-delete:hover { color: var(--danger); background: var(--bg); }
+.typed-delete.armed {
+  font-size: 11px;
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.note--typed.editing .typed-delete { display: none; }
+@media (hover: none) { .typed-delete { opacity: 1; } }
+
+.typed-editor {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  line-height: 1.5;
+  resize: none;
+  overflow-y: hidden;
+}
+.typed-editor:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.typed-editor.drop-target { border-style: dashed; background: var(--accent-soft); }
+.typed-editor-hint { margin-top: 4px; font-size: 11px; color: var(--dim); }
+.note--typed.editing .note-meta { display: none; }
+
+/* ── Dropping text on the page ── */
+#study-view.drop-zone {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
+}
+#drop-hint {
+  display: none;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  text-align: center;
+}
+body:has(#study-view.drop-zone) #drop-hint { display: block; }
+
+/* ── Dock: under the page, above the footer, Study tab only ── */
+#study-dock {
+  display: none;
+  flex-shrink: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+body:has(#study-view.visible) #study-dock { display: block; }
+
+#composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 5px 5px 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+#composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+#composer:has(.drop-target) { border-style: dashed; border-color: var(--accent); background: var(--accent-soft); }
+
+#composer-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: hidden;
+}
+#composer-input:focus-visible { outline: none; }   /* the box shows focus */
+#composer-input:disabled { cursor: not-allowed; }
+
+#composer-save {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+#composer-save:hover:not(:disabled) { background: var(--accent-hover); }
+#composer-save:disabled { opacity: 0.35; cursor: default; }
+
+#composer-error { margin-top: 6px; font-size: 12px; color: var(--danger); }
+#composer-error[hidden] { display: none; }
+
+/* Save dropped text as a highlight */
+.dock-card {
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+.dock-card[hidden] { display: none; }
+.dock-card-title { font-size: 12px; color: var(--sec); }
+#drop-card-topic { color: var(--pri); font-weight: 600; }
+.dock-card-text {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.dock-card-source { margin-top: 4px; font-size: 11px; color: var(--dim); }
+
+.type-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.type-chip {
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--sec);
+  font-size: 11.5px;
+}
+.type-chip:hover { border-color: var(--border-strong); color: var(--pri); }
+.type-chip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+#drop-card-annotation {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+#drop-card-annotation:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.dock-card-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.dock-card-actions button { height: 28px; }
+
+/* Quote or move a highlight dropped where you type */
+.dock-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 12px;
+}
+.dock-choice[hidden] { display: none; }
+#drop-choice-text { flex: 1 1 100%; overflow-wrap: anywhere; }
+.dock-choice-actions { display: flex; gap: 4px; }
+.dock-choice button {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+}
+.dock-choice button:hover { border-color: var(--border-strong); }
+#drop-choice-quote { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.note--typed .dock-choice { margin: 6px 0 0; }
