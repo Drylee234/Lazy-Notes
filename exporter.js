@@ -64,8 +64,9 @@ function mdNotes(notes, depth) {
     if (note.kind === "typed") {
       typedNoteBlocks(note.text).forEach((block, i) => {
         if (i) out.push("");
-        const lines = block.text.split("\n").map(mdInline);
-        out.push(block.quote ? lines.map((l) => `> ${l}`).join("\n") : lines.join("  \n"));
+        // Typed notes are already written Markdown-style: keep them as typed.
+        const lines = block.text.split("\n");
+        out.push(block.quote ? lines.map((l) => `> ${l}`).join("\n") : lines.join("\n"));
       });
       prevWasListPoint = false;
       return;
@@ -161,10 +162,7 @@ function htmlNotes(notes, depth) {
   notes.forEach((note) => {
     if (note.kind === "typed") {
       closeList();
-      typedNoteBlocks(note.text).forEach((block) => {
-        const html = escHtml(block.text).replace(/\n/g, "<br>");
-        out.push(block.quote ? `<blockquote>${html}</blockquote>` : `<p class="typed">${html}</p>`);
-      });
+      out.push(`<div class="typed">${typedNoteHtml(note.text)}</div>`);
       return;
     }
 

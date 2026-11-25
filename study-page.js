@@ -749,3 +749,43 @@ const StudyPage = (() => {
 
   return { init, render, clear, counts };
 })();
+
+// ---------------------------------------------------------------------------
+// Typing lists in the note boxes: Shift+Enter on a point starts the next one
+// ("- ", "• " or the next number); on an empty point it ends the list. Tab /
+// Shift+Tab indent or outdent a point.
+// ---------------------------------------------------------------------------
+document.addEventListener("keydown", (e) => {
+  const box = e.target;
+  if (!(box instanceof HTMLTextAreaElement) || !box.matches("#composer-input, .typed-editor") || e.isComposing) return;
+  if (box.selectionStart !== box.selectionEnd) return;
+  const v = box.value, c = box.selectionStart;
+  const lineStart = v.lastIndexOf("\n", c - 1) + 1;
+  const line = v.slice(lineStart, c);
+  const m = line.match(/^(\s*)([-*•]|(\d+)([.)]))\s+(.*)$/);
+  if (!m) return;
+
+  if (e.key === "Enter" && e.shiftKey && !(e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    if (!m[5].trim()) {                 // empty point: end the list
+      box.setSelectionRange(lineStart, c);
+      document.execCommand("delete");
+      return;
+    }
+    const marker = m[3] ? `${Number(m[3]) + 1}${m[4]}` : m[2];
+    document.execCommand("insertText", false, `\n${m[1]}${marker} `);
+  } else if (e.key === "Tab") {
+    e.preventDefault();
+    if (e.shiftKey) {
+      const cut = Math.min(2, m[1].length);
+      if (!cut) return;
+      box.setSelectionRange(lineStart, lineStart + cut);
+      document.execCommand("delete");
+      box.setSelectionRange(c - cut, c - cut);
+    } else {
+      box.setSelectionRange(lineStart, lineStart);
+      document.execCommand("insertText", false, "  ");
+      box.setSelectionRange(c + 2, c + 2);
+    }
+  }
+}, true);

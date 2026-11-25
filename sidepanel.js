@@ -157,7 +157,22 @@ async function onCourseSelectChange(selectEl) {
 }
 
 homeCourseSelect.addEventListener("change", () => onCourseSelectChange(homeCourseSelect));
-studyCourseSelect.addEventListener("change", () => onCourseSelectChange(studyCourseSelect));
+// The Study tab shows where you're writing, so picking there also makes it
+// where highlights save ("Saving to …" in the readers and side panel).
+studyCourseSelect.addEventListener("change", async () => {
+  await onCourseSelectChange(studyCourseSelect);
+  makeStudyTopicActive();
+});
+
+function makeStudyTopicActive() {
+  if (!selectedCourse || !studySelectedTopic) return;
+  if (activeCourse === selectedCourse && activeTopic === studySelectedTopic) return;
+  chrome.runtime.sendMessage({ type: "SET_ACTIVE_TOPIC", courseName: selectedCourse, topicName: studySelectedTopic });
+  activeCourse = selectedCourse;
+  activeTopic  = studySelectedTopic;
+  renderHomeTopicActiveState();
+  updateToggleBtnGuard();
+}
 
 // ---------------------------------------------------------------------------
 // Dynamic Footer Count
@@ -384,6 +399,7 @@ async function loadStudyTopics() {
 
 studyTopicSelect.addEventListener("change", async () => {
   studySelectedTopic = studyTopicSelect.value;
+  makeStudyTopicActive();
   await loadNotes();
 });
 

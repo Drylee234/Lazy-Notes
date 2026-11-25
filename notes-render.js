@@ -195,11 +195,7 @@ function renderTypedNote(note) {
 
   const body = document.createElement("div");
   body.className = "note-text";
-  typedNoteBlocks(note.text).forEach(({ quote, text }) => {
-    const block = document.createElement(quote ? "blockquote" : "p");
-    block.textContent = text;
-    body.appendChild(block);
-  });
+  body.innerHTML = typedNoteHtml(note.text);   // escaped first: see utils.js
   el.appendChild(body);
 
   const meta = document.createElement("div");
