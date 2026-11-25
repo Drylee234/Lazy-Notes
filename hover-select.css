@@ -1,0 +1,124 @@
+/* Lazy Notes — dropdowns that open on hover (hover-select.js).
+   The button copies .select in sidepanel.css. Colours come from theme.css. */
+
+.hs { position: relative; }
+.hs[hidden] { display: none; }
+.hs + .hs { margin-top: 6px; }
+
+/* The real <select>: still there for the code, invisible to people. */
+.hs > select.hs-native {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hs-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hs-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--pri);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.hs-button:hover,
+.hs--open .hs-button { border-color: var(--border-strong); }
+.hs-button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Same chevron as .select; it flips while the list is open. */
+.hs-button::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 10px;
+  height: 6px;
+  margin-top: -3px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%238e8e99' stroke-width='1.5'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E") no-repeat center;
+  transition: transform 0.12s ease;
+}
+.hs--open .hs-button::after { transform: rotate(180deg); }
+
+.hs-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hs-button--placeholder .hs-value { color: var(--dim); }
+
+.hs-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+.hs-list[hidden] { display: none; }
+.hs-list:focus-visible { border-color: var(--accent); }
+
+.hs-option {
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--pri);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* The current value is tinted; the one under the mouse (or the keyboard's)
+   is solid, so it's clear which one a click or Enter picks. */
+.hs-option.is-selected {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-weight: 550;
+}
+.hs-option.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.hs-option[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+
+/* Actions such as "+ Create Course" sit last, after a divider. */
+.hs-option--action { color: var(--accent); }
+.hs-option--action.is-active { color: var(--on-accent); }
+
+.hs-divider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
