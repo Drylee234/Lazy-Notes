@@ -305,6 +305,7 @@ async function renderPage(p) {
       viewport
     });
     await textLayer.render();
+    registerTextLayer(textLayerEl);
     p.textReady = true;
     drawHighlights(p);
   } catch (err) {
@@ -351,6 +352,91 @@ function setScale(newScale, { fit = false } = {}) {
 function toolbarHeight() {
   return $("toolbar").offsetHeight;
 }
+
+// ---------------------------------------------------------------------------
+// Text selection — keep a drag from running on down the page
+// ---------------------------------------------------------------------------
+// From pdfjs-dist web/text_layer_builder.js (Apache-2.0): PDF.js's own viewer
+// wraps TextLayer in this; we call TextLayer directly.
+//
+// A text layer is absolutely positioned spans with empty space between them.
+// With the pointer over that space Chrome has no text under it and moves the
+// end of the selection further down the layer, often to its end: a drag that
+// strays past the end of a line, or into the gap under a paragraph, suddenly
+// takes in the paragraphs below. So each layer gets an empty, unselectable
+// .endOfContent div. While selecting, it covers the layer under the spans
+// (see pdfreader.css), so the empty space is over it and the selection can
+// only stop next to it. Moving it right after the span where the selection
+// is changing (before it, when dragging backwards) keeps the selection there.
+// PDF.js doesn't move it in Firefox, which doesn't need it; we're Chrome-only.
+
+const textLayers = new Map();   // .textLayer → its .endOfContent
+
+// Called once a page's text layer has rendered.
+function registerTextLayer(layer) {
+  const end = document.createElement("div");
+  end.className = "endOfContent";
+  layer.append(end);
+  layer.addEventListener("mousedown", () => layer.classList.add("selecting"));
+
+  textLayers.set(layer, end);
+  // Zooming and opening another PDF replace the text layers; forget old ones
+  // (this one too, if a zoom replaced it while it was rendering).
+  textLayers.forEach((_, l) => { if (!l.isConnected) textLayers.delete(l); });
+}
+
+// Back to the end of its layer, no longer covering it.
+function resetTextLayer(end, layer) {
+  layer.append(end);
+  end.style.width = "";
+  end.style.height = "";
+  layer.classList.remove("selecting");
+}
+
+const resetTextLayers = () => textLayers.forEach(resetTextLayer);
+
+// A selection is done when the pointer comes up, the window loses focus, or
+// a key (Shift+arrow) is released while no drag is going on.
+let pointerIsDown = false;
+document.addEventListener("pointerdown", () => { pointerIsDown = true; });
+document.addEventListener("pointerup", () => { pointerIsDown = false; resetTextLayers(); });
+window.addEventListener("blur", () => { pointerIsDown = false; resetTextLayers(); });
+document.addEventListener("keyup", () => { if (!pointerIsDown) resetTextLayers(); });
+
+let prevRange = null;
+document.addEventListener("selectionchange", () => {
+  if (textLayers.size === 0) return;
+  const selection = document.getSelection();
+  if (selection.rangeCount === 0) {
+    resetTextLayers();
+    return;
+  }
+
+  // Only the layers the selection is in get covered.
+  const range = selection.getRangeAt(0);
+  textLayers.forEach((end, layer) => {
+    if (range.intersectsNode(layer)) layer.classList.add("selecting");
+    else resetTextLayer(end, layer);
+  });
+
+  // The start is what's moving if the end stayed put, or if the drag went
+  // back past where it began.
+  const modifyStart = prevRange &&
+    (range.compareBoundaryPoints(Range.END_TO_END, prevRange) === 0 ||
+     range.compareBoundaryPoints(Range.START_TO_END, prevRange) === 0);
+  let anchor = modifyStart ? range.startContainer : range.endContainer;
+  if (anchor.nodeType === Node.TEXT_NODE) anchor = anchor.parentNode;
+
+  const layer = anchor.parentElement?.closest(".textLayer");
+  const end = textLayers.get(layer);
+  if (end) {
+    // Its new parent can be a markedContent span, which has no size.
+    end.style.width  = layer.style.width;
+    end.style.height = layer.style.height;
+    anchor.parentElement.insertBefore(end, modifyStart ? anchor : anchor.nextSibling);
+  }
+  prevRange = range.cloneRange();
+});
 
 // ---------------------------------------------------------------------------
 // Saved highlights — notes taken from this PDF, painted back onto the pages
