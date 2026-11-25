@@ -97,9 +97,10 @@ function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
+// Highlights and notes typed in the side panel.
 function countNotes(course) {
   return Object.values(course?.topics || {})
-    .reduce((sum, t) => sum + Object.keys(t.highlights || {}).length, 0);
+    .reduce((sum, t) => sum + Object.keys(t.highlights || {}).length + Object.keys(t.notes || {}).length, 0);
 }
 
 // Breadcrumb in the top bar: [{ label, href? }]; the last item is the page.
@@ -382,7 +383,7 @@ async function renderTopics() {
     const topics = Object.entries(course.topics || {}).map(([name, t]) => ({
       name,
       created: t.created,
-      highlightCount: Object.keys(t.highlights || {}).length
+      highlightCount: Object.keys(t.highlights || {}).length + Object.keys(t.notes || {}).length
     }));
 
     if (topics.length === 0) {
@@ -485,6 +486,16 @@ async function renderDisplay() {
 
     notes = sortHighlights(notes, sortSel.value);
 
+    // Notes typed in the side panel: shown in time order among the
+    // highlights (after them when sorted by type), edited in the panel.
+    const typed = categoryFilter.value ? [] :
+      Object.entries(topic.notes || {}).map(([id, fields]) => ({ id, kind: "typed", ...fields }));
+    if (typed.length) {
+      notes = sortSel.value === "category"
+        ? [...notes, ...sortHighlights(typed, "chronological")]
+        : sortHighlights([...notes, ...typed], sortSel.value);
+    }
+
     if (notes.length === 0) {
       listEl.innerHTML = categoryFilter.value
         ? '<div class="empty-state">No notes of this kind.</div>'
@@ -493,6 +504,13 @@ async function renderDisplay() {
     }
 
     notes.forEach((note) => {
+      if (note.kind === "typed") {
+        const el = renderTypedNote(note);
+        el.title = "Typed in the side panel — edit it there";
+        listEl.appendChild(el);
+        return;
+      }
+
       const el = renderNote(note);
       const edit = () => { if (editingNoteId === null) expandToEdit(el, note); };
       el.addEventListener("click", edit);

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="theme.css" />
 <link rel="stylesheet" href="notes.css" />
 <link rel="stylesheet" href="sidepanel.css" />
+<link rel="stylesheet" href="study.css" />
 </head>
 <body>
 
@@ -68,12 +69,57 @@
     </select>
     <select id="study-topic-select" class="select" aria-label="Topic" hidden></select>
 
+    <!-- The topic as a written page: highlights and typed notes in time order.
+         Drawn by study-page.js. -->
+    <header id="page-head" hidden>
+      <h1 id="page-title"></h1>
+      <p id="page-subtitle"></p>
+    </header>
     <div id="note-list"></div>
     <div id="empty-study" class="empty">No notes for this topic yet.</div>
 
   </section>
 
 </main>
+
+<!-- ── Study dock: type a note; save dropped text; quote or move ── -->
+<div id="study-dock">
+
+  <div id="drop-hint">Drop on the page to save it as a highlight · drop in the box to quote it</div>
+
+  <div id="drop-card" class="dock-card" role="dialog" aria-labelledby="drop-card-title" hidden>
+    <div id="drop-card-title" class="dock-card-title">Save as a highlight in <span id="drop-card-topic"></span></div>
+    <div id="drop-card-text" class="dock-card-text"></div>
+    <div id="drop-card-source" class="dock-card-source"></div>
+    <div id="drop-card-types" class="type-chips" role="radiogroup" aria-label="Type"></div>
+    <input id="drop-card-annotation" type="text" placeholder="Add your own note to it (optional)" aria-label="Your note about it (optional)" />
+    <div class="dock-card-actions">
+      <button id="drop-card-cancel" class="ln-btn-cancel" type="button">Cancel</button>
+      <button id="drop-card-save" class="ln-btn-submit" type="button">Save</button>
+    </div>
+  </div>
+
+  <div id="drop-choice" class="dock-choice" role="group" aria-labelledby="drop-choice-text" hidden>
+    <span id="drop-choice-text"></span>
+    <div class="dock-choice-actions">
+      <button id="drop-choice-quote" type="button" title="Copy its words into your note; the highlight stays">Quote it</button>
+      <button id="drop-choice-move" type="button" title="Put it in your note; the highlight is removed when you save">Move it</button>
+      <button id="drop-choice-cancel" type="button">Cancel</button>
+    </div>
+  </div>
+
+  <form id="composer" autocomplete="off">
+    <textarea id="composer-input" rows="1" placeholder="Type a note…" aria-label="Type a note"></textarea>
+    <button id="composer-save" type="submit" title="Save note (Enter)" aria-label="Save note">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 3v5.5a2 2 0 0 1-2 2H3.5M6.5 7.5l-3 3 3 3"/>
+      </svg>
+    </button>
+  </form>
+  <div id="composer-error" role="alert" hidden></div>
+
+</div>
 
 <!-- ── Footer ── -->
 <footer id="footer">
@@ -160,6 +206,7 @@
 <script src="utils.js"></script>
 <script src="exporter.js"></script>
 <script src="notes-render.js"></script>
+<script src="study-page.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

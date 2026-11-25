@@ -102,3 +102,24 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 /* Compact (side panel) */
 .note--compact { font-size: 13px; }
 .note--compact.note--header .note-text { font-size: 1.15em; }
+
+/* Typed notes — written in the side panel, not highlighted: plain text with
+   a pencil in the margin; quotes (often a dragged-in highlight) indented. */
+.note--typed { padding-left: 28px; }
+.note--typed::before {
+  content: "✎";
+  position: absolute;
+  left: 10px;
+  top: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--dim);
+}
+.note--typed .note-text p { white-space: pre-wrap; }
+.note--typed .note-text > * + * { margin-top: 4px; }
+.note--typed blockquote {
+  padding-left: 10px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--sec);
+  white-space: pre-wrap;
+}

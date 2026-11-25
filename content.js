@@ -951,6 +951,51 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Drag to the side panel
+  // ---------------------------------------------------------------------------
+  // Selected text dropped on the side panel's Study tab is saved like a
+  // highlight. A drop only carries the text, so note where it came from in
+  // storage ("lastDrag"): the panel can read that whichever site the text was
+  // dragged from, and matches it to the dropped text.
+
+  function handleDragStart(event) {
+    if (dead || shutDownIfOrphaned()) return;
+
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (!text || selection.rangeCount === 0) return;
+
+    // Dragging the selection itself, not a link or image somewhere else.
+    if (event.dataTransfer?.types?.includes("text/uri-list")) return;
+    const range = selection.getRangeAt(0);
+    if (!(event.target instanceof Node) || !range.intersectsNode(event.target)) return;
+
+    const el   = findContextElement(selection.anchorNode);
+    const host = globalThis.LazyNotesHost;
+    const lastDrag = {
+      text,
+      sourceUrl:   host?.sourceUrl   ? host.sourceUrl(el)   : window.location.href,
+      sourceTitle: host?.sourceTitle ? host.sourceTitle(el) : document.title || null,
+      context:     host?.contextFor  ? host.contextFor(el)  : el?.textContent ?? null,
+      anchor:      host?.anchorFor   ? host.anchorFor(range) : null,
+      at:          Date.now()
+    };
+
+    try {
+      chrome.storage.local.set({ lastDrag });
+    } catch (_) { /* extension reloaded: the panel falls back to the bare text */ }
+
+    // The save popup for this selection would be left behind; hide it but
+    // keep the selection, since that's what is being dragged.
+    if (popupContainer && popupContainer.style.display !== "none") {
+      popupContainer.style.display = "none";
+      allMenus().forEach((m) => m.classList.remove("open"));
+    }
+  }
+
+  document.addEventListener("dragstart", handleDragStart, true);
+
+  // ---------------------------------------------------------------------------
   // Message listener
   // ---------------------------------------------------------------------------
 
