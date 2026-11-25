@@ -31,6 +31,7 @@
           <button type="button" data-theme-choice="light" role="radio">Light</button>
           <button type="button" data-theme-choice="dark" role="radio">Dark</button>
         </div>
+        <label class="set-check"><input type="checkbox" id="doc-auto" /> Opening a document switches to the course &amp; topic it saved to last</label>
         <label class="set-check"><input type="checkbox" id="pptx-auto" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
       </div>
     </details>
@@ -53,6 +54,28 @@
 
   <!-- HOME VIEW -->
   <section id="home-view" class="visible">
+
+    <!-- On a Lazy Notes PDF/slides tab: what's open and where notes go. -->
+    <div id="reading-now" hidden>
+      <div class="rn-doc">
+        <span class="doc-icon" id="rn-icon">PDF</span>
+        <div class="rn-text">
+          <div class="rn-name" id="rn-name"></div>
+          <div class="rn-meta" id="rn-meta"></div>
+        </div>
+      </div>
+      <div class="rn-target">
+        <span class="rn-label">Saving to</span>
+        <span class="rn-where" id="rn-where"></span>
+      </div>
+    </div>
+
+    <!-- Anywhere else: documents to go back to. -->
+    <div id="continue" hidden>
+      <div class="list-head"><span class="field-label">Continue reading</span></div>
+      <div id="continue-list"></div>
+      <button id="open-doc-btn" class="open-doc-btn" type="button">Open a document…</button>
+    </div>
 
     <label class="field-label" for="home-course-select">Course</label>
     <select id="home-course-select" class="select">
@@ -140,7 +163,7 @@
   <span id="note-count"></span>
   <div class="footer-actions">
     <a id="open-viewer-link" href="courses.html" target="_blank" class="footer-link" title="Browse, search and edit all notes">All notes</a>
-    <a id="open-pdf-reader" href="pdfreader.html" target="_blank" class="footer-link" title="Open a PDF or PowerPoint (.pptx) and take notes">Document reader</a>
+    <a id="open-pdf-reader" hidden href="pdfreader.html" target="_blank" class="footer-link" title="Open a PDF or PowerPoint (.pptx) and take notes">Document reader</a>
     <button id="export-btn" type="button">Export</button>
   </div>
 </footer>

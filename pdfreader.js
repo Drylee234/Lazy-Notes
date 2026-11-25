@@ -235,6 +235,7 @@ async function loadDocument(data, name) {
   await loadDocNotes();
   await buildPages();
   goToPage(initialPageFromHash(), false);
+  LazyDocs.opened({ kind: "pdf", name: title, pages: pdfDoc.numPages, page: currentPage });
 }
 
 // ---------------------------------------------------------------------------
@@ -642,6 +643,7 @@ function goToPage(num, smooth = true) {
 
 function setCurrentPage(num) {
   currentPage = num;
+  LazyDocs.page(num);
   if (document.activeElement !== pageInput) pageInput.value = String(num);
 }
 

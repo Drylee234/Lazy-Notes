@@ -172,6 +172,7 @@ async function loadDeck(data, name) {
   renderDeck();
   await loadDeckNotes();
   goToSlide(slideFromHash(), false);
+  LazyDocs.opened({ kind: "pptx", name, pages: deck.slides.length, page: currentSlide });
 }
 
 // ---------------------------------------------------------------------------
@@ -588,6 +589,7 @@ function goToSlide(n, smooth = true) {
 
 function setCurrentSlide(n) {
   currentSlide = n;
+  LazyDocs.page(n);
   if (document.activeElement !== slideInput) slideInput.value = String(n);
 }
 

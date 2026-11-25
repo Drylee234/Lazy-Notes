@@ -776,6 +776,98 @@ pdfBannerOpen.addEventListener("click", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Reading now / Continue reading (docs-recent.js keeps lnDocs)
+// ---------------------------------------------------------------------------
+
+const readingNowEl = document.getElementById("reading-now");
+const continueEl   = document.getElementById("continue");
+const continueList = document.getElementById("continue-list");
+const READER_PAGES = ["/pdfreader.html", "/pptxreader.html"];
+
+function docKeyOf(url) {
+  try {
+    const u = new URL(url);
+    if (u.origin !== location.origin || !READER_PAGES.includes(u.pathname)) return null;
+    return u.pathname + u.search;
+  } catch (_) { return null; }
+}
+
+function docLink(doc) {
+  const unit = doc.kind === "pptx" ? "slide" : "page";
+  return chrome.runtime.getURL(doc.key.slice(1)) + `#${unit}=${doc.page || 1}`;
+}
+
+const unitName = (doc) => (doc.kind === "pptx" ? "Slide" : "Page");
+
+async function updateReading() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const { lnDocs = {}, activeCourse: c, activeTopic: t } =
+    await chrome.storage.local.get(["lnDocs", "activeCourse", "activeTopic"]);
+  const key = tab && docKeyOf(tab.url);
+  const doc = key && lnDocs[key];
+
+  readingNowEl.hidden = !key;
+  continueEl.hidden = !!key;
+
+  if (key) {
+    const icon = document.getElementById("rn-icon");
+    const kind = doc?.kind ?? (key.startsWith("/pptx") ? "pptx" : "pdf");
+    icon.textContent = kind === "pptx" ? "PPT" : "PDF";
+    icon.className = `doc-icon ${kind}`;
+    document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — Lazy Notes$/, "");
+    document.getElementById("rn-meta").textContent = doc
+      ? `${unitName(doc)} ${doc.page || 1}${doc.pages ? ` of ${doc.pages}` : ""}` : "";
+    const where = document.getElementById("rn-where");
+    where.textContent = c && t ? `${c} › ${t}` : "Nowhere yet: pick a course and topic below";
+    where.classList.toggle("none", !(c && t));
+    return;
+  }
+
+  const docs = Object.values(lnDocs).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 3);
+  continueList.replaceChildren(...docs.map((doc) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cr-item";
+    const icon = document.createElement("span");
+    icon.className = `doc-icon ${doc.kind}`;
+    icon.textContent = doc.kind === "pptx" ? "PPT" : "PDF";
+    const text = document.createElement("span");
+    text.className = "cr-text";
+    const name = document.createElement("div");
+    name.className = "cr-name";
+    name.textContent = doc.name;
+    const meta = document.createElement("div");
+    meta.className = "cr-meta";
+    meta.textContent = [`${unitName(doc)} ${doc.page || 1}${doc.pages ? ` of ${doc.pages}` : ""}`,
+                        doc.course && doc.topic ? `${doc.course} › ${doc.topic}` : null].filter(Boolean).join(" · ");
+    const bar = document.createElement("div");
+    bar.className = "cr-bar";
+    const fill = document.createElement("i");
+    fill.style.width = `${doc.pages ? Math.round(((doc.page || 1) / doc.pages) * 100) : 0}%`;
+    bar.appendChild(fill);
+    text.append(name, meta, bar);
+    const go = document.createElement("span");
+    go.className = "cr-go";
+    go.textContent = "Open ›";
+    b.append(icon, text, go);
+    b.addEventListener("click", () => chrome.tabs.create({ url: docLink(doc) }));
+    return b;
+  }));
+}
+
+document.getElementById("open-doc-btn").addEventListener("click", () =>
+  chrome.tabs.create({ url: chrome.runtime.getURL("pdfreader.html") }));
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && (changes.lnDocs || changes.activeCourse || changes.activeTopic)) updateReading();
+});
+chrome.tabs.onActivated.addListener(updateReading);
+chrome.tabs.onUpdated.addListener((_id, info, tab) => {
+  if (tab.active && (info.url || info.status === "complete" || info.title)) updateReading();
+});
+updateReading();
+
 chrome.tabs.onActivated.addListener(updatePdfBanner);
 chrome.tabs.onUpdated.addListener((_id, info, tab) => {
   if (tab.active && (info.url || info.status === "complete")) updatePdfBanner();
@@ -794,10 +886,13 @@ updatePdfBanner();
   const settings = document.getElementById("settings");
   const mark = (t) => seg.querySelectorAll("button").forEach((b) =>
     b.setAttribute("aria-checked", String(b.dataset.themeChoice === (t || "auto"))));
-  chrome.storage.local.get(["lnTheme", "pptxAutoOpen"], ({ lnTheme, pptxAutoOpen }) => {
+  const docAuto = document.getElementById("doc-auto");
+  chrome.storage.local.get(["lnTheme", "pptxAutoOpen", "lnDocAutoSelect"], ({ lnTheme, pptxAutoOpen, lnDocAutoSelect }) => {
     mark(lnTheme);
     pptx.checked = pptxAutoOpen !== false;
+    docAuto.checked = lnDocAutoSelect !== false;
   });
+  docAuto.addEventListener("change", () => chrome.storage.local.set({ lnDocAutoSelect: docAuto.checked }));
   seg.addEventListener("click", (e) => {
     const t = e.target.closest("button")?.dataset.themeChoice;
     if (!t) return;

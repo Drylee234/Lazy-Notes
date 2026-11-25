@@ -394,3 +394,42 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 .seg button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
 .set-check { display: flex; gap: 7px; align-items: flex-start; color: var(--pri); line-height: 1.35; cursor: pointer; }
 .set-check input { margin-top: 2px; accent-color: var(--accent); }
+
+/* ── Reading now / Continue reading (Topics tab) ── */
+#reading-now, #continue { margin-bottom: 16px; }
+#reading-now[hidden], #continue[hidden] { display: none; }
+#reading-now {
+  padding: 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
+.rn-doc, .cr-item { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.doc-icon {
+  flex: none; width: 30px; height: 38px; border-radius: 4px; background: #fff;
+  border: 1px solid var(--border); display: grid; place-items: center;
+  font-size: 9px; font-weight: 700; color: #c0392b; letter-spacing: 0.02em;
+}
+.doc-icon.pptx { color: #d4570f; }
+.rn-text, .cr-text { min-width: 0; flex: 1; }
+.rn-name, .cr-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rn-meta, .cr-meta { font-size: 11.5px; color: var(--sec); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rn-target {
+  display: flex; align-items: baseline; gap: 8px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.rn-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; flex: none; }
+.rn-where { font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+.rn-where.none { color: var(--danger); font-weight: 500; }
+.cr-item {
+  width: 100%; padding: 8px; margin-bottom: 6px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--pri);
+  text-align: left; cursor: pointer; font: inherit;
+}
+.cr-item:hover { background: var(--hover); border-color: var(--border-strong); }
+.cr-bar { height: 3px; margin-top: 5px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.cr-bar i { display: block; height: 100%; background: var(--accent); }
+.cr-go { flex: none; color: var(--accent); font-size: 12px; font-weight: 600; }
+.open-doc-btn {
+  width: 100%; padding: 8px; border-radius: var(--radius-sm); border: 1px dashed var(--border-strong);
+  background: transparent; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer;
+}
+.open-doc-btn:hover { background: var(--accent-soft); border-style: solid; }
