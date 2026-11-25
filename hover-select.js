@@ -25,7 +25,9 @@
 
 (() => {
   const HOVER_OPEN_MS  = 150;
-  const HOVER_CLOSE_MS = 700;   // forgiving: slow or curved moves onto a list are fine
+  const HOVER_CLOSE_MS = 500;   // only for a pass-by: the mouse never went into the list
+  // Once the mouse has been in the list, it behaves like a normal menu: it
+  // stays open until you pick, click elsewhere, press Esc or open another.
   const CLICK_KEEPS_MS = 1000;  // a click this soon after a hover-open means "open"
 
   const instances = [];
@@ -206,6 +208,7 @@
 
       if (!open) {
         open = true;
+        usedList = !byHover;   // opened by click or keyboard: a real menu from the start
         render();  // fresh from the select, in case its value changed quietly
         list.hidden = false;
         wrap.classList.add("hs--open");
@@ -268,7 +271,7 @@
       clearTimeout(closeTimer);
       openTimer = null;
       shutUntilLeave = false;
-      if (open) closeTimer = setTimeout(() => closeList({ quiet: true }), HOVER_CLOSE_MS);
+      if (open && !usedList) closeTimer = setTimeout(() => closeList({ quiet: true }), HOVER_CLOSE_MS);
     });
 
     button.addEventListener("click", () => {
@@ -279,6 +282,9 @@
         openList();
       }
     });
+
+    let usedList = false;
+    list.addEventListener("pointerenter", () => { usedList = true; });
 
     // The item under the mouse is the active one.
     list.addEventListener("pointermove", (e) => {

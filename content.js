@@ -469,7 +469,7 @@
   // covers them: hovering a label is how to get past an open list.
 
   const HOVER_OPEN_MS  = 150;
-  const HOVER_CLOSE_MS = 700;   // forgiving: slow or curved moves onto a list are fine
+  const HOVER_CLOSE_MS = 500;   // only for a pass-by; a list you've been in stays open
 
   // Something just moved under a still mouse (the popup appeared, a list
   // closed after a pick): events at that same spot aren't hover. The first
@@ -530,6 +530,7 @@
       const otherOpen = allMenus().some((m) => m !== menu && m.classList.contains("open"));
       openTimer = setTimeout(() => {
         openTimer = null;
+        delete menu.dataset.used;
         openMenu(menu, { byHover: true });
       }, otherOpen ? 0 : HOVER_OPEN_MS);
     };
@@ -543,8 +544,12 @@
       openTimer = null;
       delete menu.dataset.shutUntilLeave;
       clearTimeout(closeTimer);
+      // Once the mouse has been in the list it stays open like a normal menu
+      // (pick, click elsewhere or Esc closes it); a pass-by closes quickly.
+      if (menu.dataset.used) return;
       closeTimer = setTimeout(() => menu.classList.remove("open"), HOVER_CLOSE_MS);
     });
+    menu.addEventListener("pointerenter", () => { if (menu.classList.contains("open")) menu.dataset.used = "1"; });
   }
 
   // ---------------------------------------------------------------------------

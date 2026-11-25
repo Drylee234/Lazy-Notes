@@ -43,8 +43,9 @@
   cursor: pointer;
   position: relative;
 }
-.hs-button:hover,
-.hs--open .hs-button { border-color: var(--border-strong); }
+.hs-button { height: 34px; font-size: 13px; font-weight: 500; transition: border-color 0.12s, box-shadow 0.12s; }
+.hs-button:hover { border-color: var(--border-strong); }
+.hs--open .hs-button { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .hs-button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Same chevron as .select; it flips while the list is open. */
@@ -73,52 +74,60 @@
 .hs-list {
   position: absolute;
   z-index: 20;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  max-height: 280px;
+  max-height: 300px;
   overflow-y: auto;
   margin: 0;
-  padding: 4px;
+  padding: 5px;
   list-style: none;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
   outline: none;
+  animation: hs-in 0.12s ease-out;
 }
+@keyframes hs-in { from { opacity: 0; transform: translateY(-4px); } }
 .hs-list[hidden] { display: none; }
 .hs-list:focus-visible { border-color: var(--accent); }
 
+/* Quiet rows: grey under the mouse, a tick and accent text for the current
+   one. No big coloured blocks. */
 .hs-option {
-  padding: 6px 8px;
-  border-radius: 4px;
+  position: relative;
+  padding: 7px 30px 7px 10px;
+  border-radius: var(--radius-sm);
   color: var(--pri);
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   user-select: none;
 }
-
-/* The current value is tinted; the one under the mouse (or the keyboard's)
-   is solid, so it's clear which one a click or Enter picks. */
-.hs-option.is-selected {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  font-weight: 550;
-}
-.hs-option.is-active {
-  background: var(--accent);
-  color: var(--on-accent);
+.hs-option.is-active { background: var(--hover); }
+.hs-option.is-selected { color: var(--accent); font-weight: 600; }
+.hs-option.is-selected::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  margin-top: -6px;
+  border: solid var(--accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 .hs-option[aria-disabled="true"] { opacity: 0.5; cursor: default; }
 
 /* Actions such as "+ Create Course" sit last, after a divider. */
-.hs-option--action { color: var(--accent); }
-.hs-option--action.is-active { color: var(--on-accent); }
+.hs-option--action { color: var(--accent); font-weight: 500; }
 
 .hs-divider {
   height: 1px;
-  margin: 4px 2px;
+  margin: 5px 4px;
   background: var(--border);
 }
