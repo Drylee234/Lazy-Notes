@@ -193,6 +193,12 @@ function renderDeck() {
 
     // Everything a note can be taken from sits in .slide-body (the host
     // bridge looks for it), the label stays outside.
+    // The slide's own background colour, with text that reads on it.
+    el.style.background = slide.background ?? "";
+    viewerEl.appendChild(el);
+    cardBackground = toHex(getComputedStyle(el).backgroundColor);
+    if (slide.background) el.style.color = luminance(cardBackground) > 0.4 ? "#16161a" : "#f4f4f6";
+
     const body = document.createElement("div");
     body.className = "slide-body";
     slide.blocks.forEach((b) => body.appendChild(renderBlock(b)));
@@ -231,11 +237,54 @@ function withLines(el, text) {
   return el;
 }
 
+// ---------------------------------------------------------------------------
+// Light formatting: bold, italic, underline, colours, relative sizes. Only
+// what keeps text readable: a colour too close to the card's background is
+// dropped, sizes are kept within reason (18pt = normal).
+// ---------------------------------------------------------------------------
+
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a, b) {
+  const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m);
+  return (x + 0.05) / (y + 0.05);
+}
+
+// "rgb(24, 24, 27)" → "#18181b"
+function toHex(css) {
+  const m = css.match(/\d+/g);
+  return m ? "#" + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, "0")).join("") : "#ffffff";
+}
+
+let cardBackground = "#ffffff";   // the slide card being drawn
+
+function withRuns(el, runs) {
+  runs.forEach((run) => {
+    if (run.text === "\n") { el.appendChild(document.createElement("br")); return; }
+    if (!run.b && !run.i && !run.u && !run.color && !run.size) {
+      withLines(el, run.text);
+      return;
+    }
+    const span = withLines(document.createElement("span"), run.text);
+    if (run.b) span.style.fontWeight = "650";
+    if (run.i) span.style.fontStyle = "italic";
+    if (run.u) span.style.textDecoration = "underline";
+    if (run.color && contrast(run.color, cardBackground) >= 3) span.style.color = run.color;
+    if (run.size) span.style.fontSize = `${Math.min(1.6, Math.max(0.8, run.size / 18)).toFixed(2)}em`;
+    el.appendChild(span);
+  });
+  return el;
+}
+
 function renderParas(paras) {
   const wrap = document.createElement("div");
   wrap.className = "s-text";
   paras.forEach((p) => {
-    const el = withLines(document.createElement("p"), p.text);
+    const el = p.runs ? withRuns(document.createElement("p"), p.runs) : withLines(document.createElement("p"), p.text);
     el.className = "s-p";
     el.style.setProperty("--lvl", String(p.level));
     if (p.marker) {

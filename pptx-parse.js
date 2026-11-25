@@ -12,6 +12,8 @@
 //         | { kind: "table", rows: [[{ text, colSpan, rowSpan }]], header }   header: first row is headings
 //         | { kind: "image", blob, alt }
 //   notes:  [{ text, level, marker }]
+//   paragraphs also carry runs: [{ text, b, i, u, color, size }] for light
+//   formatting; slides carry background ("#rrggbb" or null).
 
 const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
@@ -182,9 +184,16 @@ function paragraphsOf(txBody, { bulleted = false } = {}) {
 
   kids(txBody, "p").forEach((p) => {
     let text = "";
+    const runs = [];   // [{ text, b, i, u, color, size }]: light formatting
     for (const c of p.children) {
-      if (c.localName === "r" || c.localName === "fld") text += kid(c, "t")?.textContent ?? "";
-      else if (c.localName === "br") text += "\n";
+      if (c.localName === "r" || c.localName === "fld") {
+        const t = kid(c, "t")?.textContent ?? "";
+        text += t;
+        if (t) runs.push({ text: t, ...runStyle(kid(c, "rPr")) });
+      } else if (c.localName === "br") {
+        text += "\n";
+        runs.push({ text: "\n" });
+      }
     }
     if (!text.trim()) return;
 
@@ -202,9 +211,30 @@ function paragraphsOf(txBody, { bulleted = false } = {}) {
       counters[level] = null;     // a plain paragraph ends a numbered run
       if (kid(pPr, "buChar") || (bulleted && !kid(pPr, "buNone"))) marker = BULLETS[level % BULLETS.length];
     }
-    out.push({ text, level, marker });
+    out.push({ text, level, marker, runs });
   });
   return out;
+}
+
+// Bold, italic, underline, an explicit colour and the size of a run. Theme
+// ("scheme") colours are left out: they need the deck's theme to resolve.
+function runStyle(rPr) {
+  if (!rPr) return {};
+  const style = {};
+  if (rPr.getAttribute("b") === "1") style.b = true;
+  if (rPr.getAttribute("i") === "1") style.i = true;
+  if ((rPr.getAttribute("u") || "none") !== "none") style.u = true;
+  const color = path(rPr, "solidFill", "srgbClr")?.getAttribute("val");
+  if (color) style.color = `#${color}`;
+  const sz = Number(rPr.getAttribute("sz"));   // hundredths of a point
+  if (sz) style.size = sz / 100;
+  return style;
+}
+
+// A slide's own solid background colour ("#rrggbb"), if it sets one.
+function slideBackground(root) {
+  const val = path(root, "cSld", "bg", "bgPr", "solidFill", "srgbClr")?.getAttribute("val");
+  return val ? `#${val}` : null;
 }
 
 const plainText = (txBody) => paragraphsOf(txBody).map((p) => p.text).join("\n");
@@ -360,6 +390,7 @@ export async function readPptx(buffer) {
       number: slides.length + 1,
       title:  blocks.find((b) => b.kind === "title")?.text.replace(/\s+/g, " ").trim() ?? "",
       hidden: root.getAttribute("show") === "0",
+      background: slideBackground(root),
       blocks,
       notes
     });
