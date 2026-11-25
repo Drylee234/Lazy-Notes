@@ -275,7 +275,7 @@ function placeBlock(block) {
     top: `${(y / deck.height) * 100}%`,
     width: `${(w / deck.width) * 100}%`,
     height: `${(h / deck.height) * 100}%`,
-    zIndex: String(block.z ?? 0)
+    zIndex: String((block.z ?? 0) + (block.kind === "image" ? 0 : 1000))
   });
 
   if (block.kind === "image") {
