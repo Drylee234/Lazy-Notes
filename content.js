@@ -58,6 +58,16 @@
   let topicMenuEl       = null;
   let categoryBtnEl     = null;
   let whereEl           = null;
+  let textEditEl        = null;
+  let popupAnchor       = null;   // the selection's box in page coordinates
+
+  function fitTextEdit() {
+    if (!textEditEl) return;
+    textEditEl.style.height = "auto";
+    const h = Math.min(textEditEl.scrollHeight + 2, 110);
+    textEditEl.style.height = `${h}px`;
+    textEditEl.style.overflowY = textEditEl.scrollHeight + 2 > 110 ? "auto" : "hidden";
+  }
   let categoryMenuEl    = null;
   let annotationInputEl = null;
 
@@ -102,6 +112,10 @@
         transition: width 0.15s ease;
       }
 
+      .lazy-notes-text-edit {
+        margin: 0 0 10px; resize: none; line-height: 1.4; font-size: 12.5px;
+        border-left: 3px solid #fde047 !important; color: #f0f0f0;
+      }
       .lazy-notes-where {
         margin: 0 0 10px; font-size: 11.5px; color: #a1a1aa;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -318,6 +332,23 @@
     where.className = "lazy-notes-where";
     container.appendChild(where);
     whereEl = where;
+
+    // The highlighted words, editable: trim them, fix a typo or a broken
+    // line break before saving. Enter saves, Shift+Enter is a new line.
+    const textEdit = document.createElement("textarea");
+    textEdit.className = "lazy-notes-textarea lazy-notes-text-edit";
+    textEdit.rows = 2;
+    textEdit.spellcheck = true;
+    textEdit.setAttribute("aria-label", "Highlighted text (you can edit it)");
+    textEdit.title = "You can edit this before saving";
+    textEdit.addEventListener("input", () => {
+      currentSelectedText = textEdit.value;
+      fitTextEdit();
+      if (popupAnchor) positionPopup();
+    });
+    container.appendChild(textEdit);
+    textEditEl = textEdit;
+
     container.appendChild(row1);
 
     // ── ROW 2: Topic ──────────────────────────────────────────────────────────
@@ -414,6 +445,7 @@
       container.style.width = lineLen > 25
         ? `${Math.min(280 + (lineLen - 25) * 3, 420)}px`
         : "280px";
+      if (popupAnchor) positionPopup();
     });
 
     row4.appendChild(annotationInput);
@@ -856,6 +888,7 @@
     if (
       event.key === "Enter" &&
       active !== annotationInputEl &&
+      !(active === textEditEl && event.shiftKey) &&
       !active?.classList?.contains("lazy-notes-btn") &&
       popupContainer.contains(active)
     ) {
@@ -887,12 +920,21 @@
   // Popup show / hide
   // ---------------------------------------------------------------------------
 
+  // Above the selection, so it doesn't cover what comes next; below only
+  // when there's no room above. Re-run when the pop-up grows.
   function positionPopup(rect) {
     if (!popupContainer) return;
-    const top  = rect.bottom + window.scrollY + 8;
-    const left = Math.max(10, rect.left + window.scrollX);
+    if (rect) {
+      popupAnchor = { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY, left: rect.left + window.scrollX };
+    }
+    const a = popupAnchor;
+    if (!a) return;
+    const h = popupContainer.offsetHeight;
+    const roomAbove = a.top - window.scrollY - 8 >= h;
+    const top = roomAbove ? a.top - h - 8 : a.bottom + 8;
+    const maxLeft = window.scrollX + document.documentElement.clientWidth - popupContainer.offsetWidth - 10;
     popupContainer.style.top  = `${top}px`;
-    popupContainer.style.left = `${left}px`;
+    popupContainer.style.left = `${Math.max(10, Math.min(a.left, maxLeft))}px`;
   }
 
   function showPopup(rect, selectedText, paragraphElement) {
@@ -902,8 +944,9 @@
     currentSelectedText     = selectedText;
     currentParagraphElement = paragraphElement;
 
-    positionPopup(rect);
     popupContainer.style.display = "block";
+    if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
+    positionPopup(rect);
 
     setTimeout(() => categoryBtnEl?.focus(), 50);
   }
@@ -918,6 +961,7 @@
     currentParagraphElement = null;
     currentSelectedText     = "";
     currentRange            = null;
+    popupAnchor             = null;
   }
 
   function isEventInsidePopup(event) {
@@ -971,6 +1015,7 @@
   // ---------------------------------------------------------------------------
 
   function sendHighlight() {
+    currentSelectedText = String(currentSelectedText ?? "").trim();
     if (!currentSelectedText) {
       console.warn("LazyNotes: Cannot send highlight — missing text");
       return;
