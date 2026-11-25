@@ -9,9 +9,9 @@ let courseTree = {};   // lazynotes.courses — { name: { level, semester, detai
 let activeCourse = null;   // name string | null
 let activeTopic  = null;   // name string | null
 
-let homeSelectedCourse  = null;
-let studySelectedCourse = null;
-let studySelectedTopic  = null;
+// One course for both tabs, so Topics and Study always show the same one.
+let selectedCourse     = null;
+let studySelectedTopic = null;
 
 let homeTopicSort = "chronological";
 
@@ -79,11 +79,8 @@ async function init() {
 
   setToggleBtn(stored.highlighterActive ?? false);
 
-  homeSelectedCourse  = activeCourse;
-  studySelectedCourse = activeCourse;
-
-  renderHomeCourseSelect();
-  renderStudyCourseSelect();
+  selectedCourse = activeCourse;
+  renderCourseSelects();
 
   updateCreateTopicBtn();
   updateToggleBtnGuard();
@@ -133,13 +130,34 @@ function populateCourseSelect(selectEl, selectedName) {
   selectEl.appendChild(createOpt);
 }
 
-function renderHomeCourseSelect() {
-  populateCourseSelect(homeCourseSelect, homeSelectedCourse);
+function renderCourseSelects() {
+  populateCourseSelect(homeCourseSelect, selectedCourse);
+  populateCourseSelect(studyCourseSelect, selectedCourse);
 }
 
-function renderStudyCourseSelect() {
-  populateCourseSelect(studyCourseSelect, studySelectedCourse);
+// Picking a course in either tab, or outside the panel (right-click menu, a
+// new course), shows it in both. Study then opens on the active topic if it's
+// in this course, else the first one.
+async function selectCourse(name) {
+  selectedCourse     = name;
+  studySelectedTopic = null;
+  renderCourseSelects();
+  updateCreateTopicBtn();
+  await loadHomeTopics();
+  await loadStudyTopics();
 }
+
+async function onCourseSelectChange(selectEl) {
+  if (selectEl.value === "__create_course__") {
+    selectEl.value = selectedCourse || "";
+    openCourseModalWithDefaults();
+    return;
+  }
+  await selectCourse(selectEl.value || null);
+}
+
+homeCourseSelect.addEventListener("change", () => onCourseSelectChange(homeCourseSelect));
+studyCourseSelect.addEventListener("change", () => onCourseSelectChange(studyCourseSelect));
 
 // ---------------------------------------------------------------------------
 // Dynamic Footer Count
@@ -149,18 +167,18 @@ function updateFooterCount() {
   updateExportBtn();
   updateStartHint();
   if (homeView.classList.contains("visible")) {
-    if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
+    if (!selectedCourse || !courseTree[selectedCourse]) {
       noteCount.textContent = "0 topics";
       return;
     }
-    const numTopics = Object.keys(courseTree[homeSelectedCourse].topics || {}).length;
+    const numTopics = Object.keys(courseTree[selectedCourse].topics || {}).length;
     noteCount.textContent = `${numTopics} topic${numTopics === 1 ? "" : "s"}`;
   } else {
-    if (!studySelectedCourse || !studySelectedTopic) {
+    if (!selectedCourse || !studySelectedTopic) {
       noteCount.textContent = "0 notes";
       return;
     }
-    const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
+    const topic = courseTree[selectedCourse]?.topics?.[studySelectedTopic];
     const numNotes = Object.keys(topic?.highlights || {}).length;
     noteCount.textContent = `${numNotes} note${numNotes === 1 ? "" : "s"}`;
   }
@@ -173,12 +191,12 @@ function updateFooterCount() {
 async function loadHomeTopics() {
   homeTopicList.innerHTML = "";
 
-  if (!homeSelectedCourse || !courseTree[homeSelectedCourse]) {
+  if (!selectedCourse || !courseTree[selectedCourse]) {
     updateFooterCount();
     return;
   }
 
-  const topicsDict = courseTree[homeSelectedCourse].topics || {};
+  const topicsDict = courseTree[selectedCourse].topics || {};
   const topics = Object.entries(topicsDict).map(([name, t]) => ({
     name,
     created: t.created,
@@ -199,7 +217,7 @@ async function loadHomeTopics() {
   sorted.forEach((topic) => {
     const row = document.createElement("div");
     row.className = "topic-row";
-    if (topic.name === activeTopic && homeSelectedCourse === activeCourse) {
+    if (topic.name === activeTopic && selectedCourse === activeCourse) {
       row.classList.add("active");
     }
 
@@ -214,7 +232,7 @@ async function loadHomeTopics() {
     const right = document.createElement("span");
     right.className = "topic-row-right";
     right.appendChild(meta);
-    right.appendChild(makeTopicDeleteButton(homeSelectedCourse, topic));
+    right.appendChild(makeTopicDeleteButton(selectedCourse, topic));
 
     row.appendChild(name);
     row.appendChild(right);
@@ -222,13 +240,17 @@ async function loadHomeTopics() {
     row.addEventListener("click", () => {
       chrome.runtime.sendMessage({
         type:       "SET_ACTIVE_TOPIC",
-        courseName: homeSelectedCourse,
+        courseName: selectedCourse,
         topicName:  topic.name
       });
-      activeCourse = homeSelectedCourse;
+      activeCourse = selectedCourse;
       activeTopic  = topic.name;
       renderHomeTopicActiveState();
       updateToggleBtnGuard();
+
+      // Study opens on the topic just picked.
+      studySelectedTopic = topic.name;
+      loadStudyTopics();
     });
 
     homeTopicList.appendChild(row);
@@ -293,25 +315,14 @@ function renderHomeTopicActiveState() {
     const name = row.querySelector(".topic-name")?.textContent;
     row.classList.toggle(
       "active",
-      name === activeTopic && homeSelectedCourse === activeCourse
+      name === activeTopic && selectedCourse === activeCourse
     );
   });
 }
 
-homeCourseSelect.addEventListener("change", async () => {
-  if (homeCourseSelect.value === "__create_course__") {
-    homeCourseSelect.value = homeSelectedCourse || "";
-    openCourseModalWithDefaults();
-    return;
-  }
-  homeSelectedCourse = homeCourseSelect.value || null;
-  updateCreateTopicBtn();
-  await loadHomeTopics();
-});
-
 function updateCreateTopicBtn() {
-  openCreateTopic.disabled = !homeSelectedCourse;
-  openCreateTopic.title = homeSelectedCourse ? "" : "Select a course first";
+  openCreateTopic.disabled = !selectedCourse;
+  openCreateTopic.title = selectedCourse ? "" : "Select a course first";
 }
 
 homeTopicSortSel.addEventListener("change", async () => {
@@ -329,14 +340,14 @@ async function loadStudyTopics() {
   noteList.innerHTML  = "";
   emptyStudy.style.display = "none";
 
-  if (!studySelectedCourse || !courseTree[studySelectedCourse]) {
+  if (!selectedCourse || !courseTree[selectedCourse]) {
     emptyStudy.style.display = "block";
     emptyStudy.textContent   = "Pick a course to read its notes.";
     updateFooterCount();
     return;
   }
 
-  const topicsDict = courseTree[studySelectedCourse].topics || {};
+  const topicsDict = courseTree[selectedCourse].topics || {};
   const topicNames = sortTopics(
     Object.entries(topicsDict).map(([name, t]) => ({ name, created: t.created })),
     "chronological"
@@ -351,7 +362,7 @@ async function loadStudyTopics() {
 
   // Default to the topic being highlighted into, if it's in this course.
   if (!topicNames.includes(studySelectedTopic)) {
-    studySelectedTopic = studySelectedCourse === activeCourse && topicNames.includes(activeTopic)
+    studySelectedTopic = selectedCourse === activeCourse && topicNames.includes(activeTopic)
       ? activeTopic
       : topicNames[0];
   }
@@ -373,27 +384,16 @@ studyTopicSelect.addEventListener("change", async () => {
   await loadNotes();
 });
 
-studyCourseSelect.addEventListener("change", async () => {
-  if (studyCourseSelect.value === "__create_course__") {
-    studyCourseSelect.value = studySelectedCourse || "";
-    openCourseModalWithDefaults();
-    return;
-  }
-  studySelectedCourse = studyCourseSelect.value || null;
-  studySelectedTopic  = null;
-  await loadStudyTopics();
-});
-
 async function loadNotes() {
   noteList.innerHTML = "";
   emptyStudy.style.display = "none";
 
-  if (!studySelectedCourse || !studySelectedTopic) {
+  if (!selectedCourse || !studySelectedTopic) {
     updateFooterCount();
     return;
   }
 
-  const topic = courseTree[studySelectedCourse]?.topics?.[studySelectedTopic];
+  const topic = courseTree[selectedCourse]?.topics?.[studySelectedTopic];
   const highlightsDict = topic?.highlights || {};
 
   const notes = Object.entries(highlightsDict).map(([id, fields]) => ({
@@ -465,9 +465,9 @@ function updateStartHint() {
   if (!isActive && !(activeCourse && activeTopic)) {
     if (Object.keys(courseTree).length === 0) {
       text = "Create a course to get started.";
-    } else if (!homeSelectedCourse) {
+    } else if (!selectedCourse) {
       text = "Pick a course, then click a topic to start highlighting.";
-    } else if (Object.keys(courseTree[homeSelectedCourse]?.topics || {}).length === 0) {
+    } else if (Object.keys(courseTree[selectedCourse]?.topics || {}).length === 0) {
       text = "Create a topic, then click it to start highlighting.";
     } else {
       text = "Click a topic to start highlighting.";
@@ -554,7 +554,7 @@ function closeTopicModal() {
 }
 
 openCreateTopic.addEventListener("click", () => {
-  openTopicModal(homeSelectedCourse);
+  openTopicModal(selectedCourse);
 });
 
 ctCancel.addEventListener("click", closeTopicModal);
@@ -587,12 +587,12 @@ createTopicModal.addEventListener("click", (e) => {
 
 function exportTarget() {
   if (homeView.classList.contains("visible")) {
-    const course = courseTree[homeSelectedCourse];
-    return course ? { courseName: homeSelectedCourse, course, topicName: null } : null;
+    const course = courseTree[selectedCourse];
+    return course ? { courseName: selectedCourse, course, topicName: null } : null;
   }
-  const course = courseTree[studySelectedCourse];
+  const course = courseTree[selectedCourse];
   if (!course || !studySelectedTopic || !course.topics?.[studySelectedTopic]) return null;
-  return { courseName: studySelectedCourse, course, topicName: studySelectedTopic };
+  return { courseName: selectedCourse, course, topicName: studySelectedTopic };
 }
 
 function updateExportBtn() {
@@ -622,8 +622,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
   if (message.type === "NOTES_UPDATED") {
     await refreshCourseTree();
-    renderHomeCourseSelect();
-    renderStudyCourseSelect();
+    renderCourseSelects();
     if (studyView.classList.contains("visible")) await loadNotes();
     if (homeView.classList.contains("visible"))  await loadHomeTopics();
     return;
@@ -633,25 +632,12 @@ chrome.runtime.onMessage.addListener(async (message) => {
     const { courseName } = message;
 
     await refreshCourseTree();
-    renderHomeCourseSelect();
-    renderStudyCourseSelect();
+    renderCourseSelects();
 
-    if (homeSelectedCourse === courseName)  await loadHomeTopics();
-    if (studySelectedCourse === courseName) await loadStudyTopics();
-    return;
-  }
-
-  if (message.type === "ACTIVE_COURSE_CHANGED") {
-    activeCourse       = message.activeCourse ?? activeCourse;
-    activeTopic        = message.activeTopic ?? null;
-    homeSelectedCourse = activeCourse;
-
-    await refreshCourseTree();
-    renderHomeCourseSelect();
-    renderStudyCourseSelect();
-    updateCreateTopicBtn();
-    updateToggleBtnGuard();
-    await loadHomeTopics();
+    if (selectedCourse === courseName) {
+      await loadHomeTopics();
+      await loadStudyTopics();
+    }
     return;
   }
 });
@@ -689,10 +675,7 @@ async function handlePanelRequest(request) {
 
 async function showCreateTopic(courseName) {
   await refreshCourseTree();
-  homeSelectedCourse = courseName;
-  renderHomeCourseSelect();
-  updateCreateTopicBtn();
-  await loadHomeTopics();
+  await selectCourse(courseName);
 
   viewTabs.forEach((t) => t.classList.remove("active"));
   document.querySelector('[data-view="home"]').classList.add("active");
@@ -715,24 +698,30 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     courseTree = changes.lazynotes.newValue?.courses ?? {};
 
     // A course or topic may have been deleted from the viewer.
-    if (homeSelectedCourse && !courseTree[homeSelectedCourse]) {
-      homeSelectedCourse = null;
+    if (selectedCourse && !courseTree[selectedCourse]) {
+      selectedCourse     = null;
+      studySelectedTopic = null;
       updateCreateTopicBtn();
     }
-    if (studySelectedCourse && !courseTree[studySelectedCourse]) {
-      studySelectedCourse = null;
-      studySelectedTopic  = null;
-    }
-    if (studyView.classList.contains("visible")) await loadStudyTopics();
-
-    renderHomeCourseSelect();
-    renderStudyCourseSelect();
-    if (homeView.classList.contains("visible"))  await loadHomeTopics();
+    // Both tabs, not just the visible one, so switching never shows stale lists.
+    renderCourseSelects();
+    await loadHomeTopics();
+    await loadStudyTopics();
   }
 
   if (changes.activeCourse || changes.activeTopic) {
     if (changes.activeCourse) activeCourse = changes.activeCourse.newValue ?? null;
     if (changes.activeTopic)  activeTopic  = changes.activeTopic.newValue ?? null;
+
+    // Picked outside the panel (right-click menu, a new course): show it here
+    // too. Deletes clear these to null, which leaves the panel's choice alone.
+    if (activeCourse && activeCourse !== selectedCourse) {
+      await selectCourse(activeCourse);
+    } else if (activeTopic && activeTopic !== studySelectedTopic) {
+      studySelectedTopic = activeTopic;
+      await loadStudyTopics();
+    }
+
     renderHomeTopicActiveState();
     updateToggleBtnGuard();
   }
