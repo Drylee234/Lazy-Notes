@@ -194,6 +194,12 @@
         color: #ffffff;
       }
 
+      /* While the mouse is over a list only the hovered item is solid, so it's
+         clear which one a click picks; the current one is just tinted. */
+      .lazy-notes-dropdown-menu:hover .lazy-notes-dropdown-item.focused:not(:hover) {
+        background-color: rgba(79, 70, 229, 0.3);
+      }
+
       .lazy-notes-dropdown-empty {
         padding: 5px 8px;
         font-size: 12px;
@@ -290,9 +296,7 @@
 
     courseBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      topicMenuEl?.classList.remove("open");
-      categoryMenuEl?.classList.remove("open");
-      courseMenu.classList.toggle("open");
+      clickDropdown(courseMenu);
     });
 
     row1.appendChild(courseBtn);
@@ -317,9 +321,7 @@
 
     topicBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      courseMenuEl?.classList.remove("open");
-      categoryMenuEl?.classList.remove("open");
-      topicMenu.classList.toggle("open");
+      clickDropdown(topicMenu);
     });
 
     row2.appendChild(topicBtn);
@@ -359,9 +361,7 @@
 
     categoryBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      courseMenuEl?.classList.remove("open");
-      topicMenuEl?.classList.remove("open");
-      categoryMenu.classList.toggle("open");
+      clickDropdown(categoryMenu);
     });
 
     row3.appendChild(categoryBtn);
@@ -436,6 +436,105 @@
     categoryBtnEl     = categoryBtn;
     categoryMenuEl    = categoryMenu;
     annotationInputEl = annotationInput;
+
+    openOnHover(row1, courseMenu);
+    openOnHover(row2, topicMenu);
+    openOnHover(row3, categoryMenu);
+
+    // Picking an item closes its list, which can leave the mouse resting on
+    // another dropdown: don't pop that one open. (Capture: items stop the
+    // click from bubbling.)
+    container.addEventListener("click", (e) => {
+      if (e.target.closest?.(".lazy-notes-dropdown-item")) pauseHoverOpen(e);
+    }, true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dropdowns open on click, and when the mouse rests on them
+  // ---------------------------------------------------------------------------
+  // Opening waits a moment, so brushing past a button on the way to another
+  // doesn't open it; closing waits a moment, so crossing the gap between a
+  // button and its list doesn't close it. Each row (label + button + list)
+  // is one hover area. Labels sit left of the lists, so an open list never
+  // covers them: hovering a label is how to get past an open list.
+
+  const HOVER_OPEN_MS  = 150;
+  const HOVER_CLOSE_MS = 250;
+
+  // Something just moved under a still mouse (the popup appeared, a list
+  // closed after a pick): events at that same spot aren't hover. The first
+  // real move is.
+  let stillMouseAt = null;
+
+  function pauseHoverOpen(e) {
+    stillMouseAt = { x: e.clientX, y: e.clientY };
+  }
+
+  function isStillMouse(e) {
+    return !!stillMouseAt &&
+      Math.abs(e.clientX - stillMouseAt.x) < 1 &&
+      Math.abs(e.clientY - stillMouseAt.y) < 1;
+  }
+
+  // Closed on purpose (click, Esc) with the mouse on it: stays shut until the
+  // mouse leaves the row, or the next nudge would open it straight back up.
+  function shutMenu(menu) {
+    menu.classList.remove("open");
+    if (menu.parentElement?.matches(":hover")) menu.dataset.shutUntilLeave = "1";
+  }
+
+  function allMenus() {
+    return [courseMenuEl, topicMenuEl, categoryMenuEl].filter(Boolean);
+  }
+
+  function openMenu(menu, { byHover = false } = {}) {
+    allMenus().forEach((m) => m.classList.toggle("open", m === menu));
+    menu.dataset.hoverOpenedAt = byHover ? String(performance.now()) : "";
+  }
+
+  function clickDropdown(menu) {
+    // A click just after hover opened the list means "open", not "close".
+    const justHoverOpened =
+      performance.now() - Number(menu.dataset.hoverOpenedAt || 0) < 1000;
+
+    if (menu.classList.contains("open") && !justHoverOpened) {
+      shutMenu(menu);
+    } else {
+      openMenu(menu);
+    }
+  }
+
+  function openOnHover(row, menu) {
+    let openTimer  = null;
+    let closeTimer = null;
+
+    // pointermove as well as pointerenter: the mouse may already be inside
+    // the row when it starts to count (resting there after a list closed).
+    const intent = (e) => {
+      if (e.pointerType !== "mouse") return;
+      clearTimeout(closeTimer);
+      if (openTimer || menu.classList.contains("open")) return;
+      if (menu.dataset.shutUntilLeave || isStillMouse(e)) return;
+
+      // With another list already open, switch at once, like a menu bar.
+      const otherOpen = allMenus().some((m) => m !== menu && m.classList.contains("open"));
+      openTimer = setTimeout(() => {
+        openTimer = null;
+        openMenu(menu, { byHover: true });
+      }, otherOpen ? 0 : HOVER_OPEN_MS);
+    };
+
+    row.addEventListener("pointerenter", intent);
+    row.addEventListener("pointermove", intent);
+
+    row.addEventListener("pointerleave", (e) => {
+      if (e.pointerType !== "mouse") return;
+      clearTimeout(openTimer);
+      openTimer = null;
+      delete menu.dataset.shutUntilLeave;
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => menu.classList.remove("open"), HOVER_CLOSE_MS);
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -562,9 +661,10 @@
 
     selectCourseOption(defaultCourse);
 
-    if (courseMenuEl)    courseMenuEl.classList.remove("open");
-    if (topicMenuEl)     topicMenuEl.classList.remove("open");
-    if (categoryMenuEl)  categoryMenuEl.classList.remove("open");
+    allMenus().forEach((m) => {
+      m.classList.remove("open");
+      delete m.dataset.shutUntilLeave;
+    });
 
     if (annotationInputEl) {
       annotationInputEl.value = "";
@@ -589,9 +689,9 @@
 
     if (event.key === "Escape") {
       event.preventDefault();
-      if (isCourseOpen)   courseMenuEl.classList.remove("open");
-      else if (isTopicOpen)    topicMenuEl.classList.remove("open");
-      else if (isCategoryOpen) categoryMenuEl.classList.remove("open");
+      if (isCourseOpen)   shutMenu(courseMenuEl);
+      else if (isTopicOpen)    shutMenu(topicMenuEl);
+      else if (isCategoryOpen) shutMenu(categoryMenuEl);
       else hidePopup();
       return;
     }
@@ -813,6 +913,7 @@
 
     const paragraphElement = findContextElement(selection.anchorNode);
     showPopup(rect, text, paragraphElement);
+    pauseHoverOpen(event);   // the popup may have appeared under the mouse
   }
 
   function handleDocumentClick(event) {

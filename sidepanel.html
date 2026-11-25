@@ -6,6 +6,7 @@
 <title>Lazy Notes</title>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
 <link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="hover-select.css" />
 <link rel="stylesheet" href="notes.css" />
 <link rel="stylesheet" href="sidepanel.css" />
 </head>
@@ -124,7 +125,7 @@
 
       <div class="field-row">
         <label for="cc-details">Details <span class="optional">optional</span></label>
-        <textarea id="cc-details" placeholder="Lecturer, room, anything else"></textarea>
+        <textarea id="cc-details" placeholder="Lecturer, room, anything else" title="Ctrl+Enter to save"></textarea>
       </div>
     </div>
 
@@ -158,6 +159,7 @@
 </div>
 
 <script src="utils.js"></script>
+<script src="hover-select.js"></script>
 <script src="exporter.js"></script>
 <script src="notes-render.js"></script>
 <script src="sidepanel.js"></script>
