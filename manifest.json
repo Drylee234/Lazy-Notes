@@ -32,6 +32,11 @@
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*", "file:///*"],
+      "js": ["pdf-prompt.js"],
+      "run_at": "document_idle"
     }
   ],
 

@@ -11,6 +11,7 @@ import {
   handleDeleteHighlight
 } from './bg_courses.js';
 import { requestSidePanel } from './bg_sidepanel.js';
+import { openPdfInReader } from './bg_pdf.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -58,7 +59,7 @@ const DELETE_HANDLERS = {
   DELETE_HIGHLIGHT: handleDeleteHighlight
 };
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const deleteHandler = DELETE_HANDLERS[message.type];
   if (deleteHandler) {
     deleteHandler(message)
@@ -85,6 +86,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return;
     case "TOGGLE_HIGHLIGHTER_REQUEST":
       handleToggleTrigger();
+      return;
+    case "OPEN_PDF_IN_READER":
+      openPdfInReader(sender, message.url);
       return;
     default:
       return;
