@@ -66,7 +66,7 @@
 }
 
 /* ── Typed notes ── */
-#note-list .note--typed { padding-left: 28px; padding-right: 30px; cursor: text; }
+#note-list .note--typed { padding-right: 30px; cursor: text; }
 #note-list .note--typed::before { left: 9px; }
 #note-list .note--typed.editing { background: var(--hover); cursor: default; }
 
@@ -351,3 +351,12 @@ body:has(#study-view.visible) #study-dock { display: block; }
 #rn-picker { margin: 0; min-width: 0; flex: 1; }
 #rn-picker .hs-button { height: 26px; color: var(--accent); }
 #rn-picker .hs-list { min-width: 200px; }
+
+/* "Save as" in the formatting bar: My note, or a highlight type */
+#composer-type, .note--typed.editing select {
+  margin-left: auto; height: 24px; max-width: 120px; padding: 0 20px 0 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--sec);
+  font: inherit; font-size: 12px; cursor: pointer; appearance: none;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none' stroke='%238e8e99' stroke-width='1.4'%3E%3Cpath d='M1 1l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 7px center;
+}
+#composer-type:hover { border-color: var(--border-strong); color: var(--pri); }

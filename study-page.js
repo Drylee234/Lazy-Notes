@@ -50,8 +50,21 @@ const StudyPage = (() => {
     const bar = createFormatBar(box);
     bar.id = "composer-bar";
     box.closest("form").prepend(bar);
+
+    // What you're writing: your own note (formatted), or one of the
+    // highlight types (Definition, Formula, …), saved like a highlight.
+    const type = document.createElement("select");
+    type.id = "composer-type";
+    type.title = "Save as";
+    type.setAttribute("aria-label", "Save as");
+    type.add(new Option("My note", ""));
+    ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"]
+      .forEach((t) => type.add(new Option(CATEGORY_LABELS[t] || t, t)));
+    type.addEventListener("mousedown", (e) => e.stopPropagation());
+    bar.appendChild(type);
     return box;
   })();
+  const composerType = $("composer-type");
   const composerSave   = $("composer-save");
   const composerError  = $("composer-error");
 
@@ -306,6 +319,21 @@ const StudyPage = (() => {
   async function submitComposer() {
     const text = composerInput.value.trim();
     if (!text || !target) return;
+
+    // Saved as a highlight type: plain words, like a highlight without a link.
+    if (composerType.value) {
+      const id = crypto.randomUUID();
+      const words = composerInput.innerText.replace(/\n{3,}/g, "\n\n").trim();
+      chrome.runtime.sendMessage({   // no reply for highlights, same as a drop
+        type: "NEW_HIGHLIGHT", id, text: words, context: null, category: composerType.value,
+        course: target.courseName, topic: target.topicName, annotation: "",
+        sourceUrl: null, sourceTitle: null, anchor: null
+      });
+      dropPendingMoves(composerInput);
+      composerInput.value = "";
+      scrollToId = id;
+      return;
+    }
 
     const id = crypto.randomUUID();
     if (!await saveTypedNote({ id, ...target, text })) return;

@@ -903,7 +903,10 @@ async function updateReading() {
     go.className = "cr-go";
     go.textContent = "Open ›";
     b.append(icon, text, go);
-    b.addEventListener("click", () => chrome.tabs.create({ url: docLink(doc) }));
+    b.addEventListener("click", () => {
+      chrome.tabs.create({ url: docLink(doc) });
+      document.querySelector('.view-tab[data-view="study"]')?.click();   // straight to writing notes
+    });
     return b;
   }));
 }
