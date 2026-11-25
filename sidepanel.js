@@ -798,6 +798,34 @@ function docLink(doc) {
   return chrome.runtime.getURL(doc.key.slice(1)) + `#${unit}=${doc.page || 1}`;
 }
 
+// Files the readers already keep (opened from this computer before
+// lnDocs existed, or never re-opened since): shown too. Only opened if the
+// database exists, since opening a missing one would create it without its
+// store and break the reader.
+async function storedFiles() {
+  const out = [];
+  let names = [];
+  try { names = (await indexedDB.databases()).map((d) => d.name); } catch (_) { return out; }
+  for (const [db, page, kind] of [["lazynotes-pdfs", "/pdfreader.html", "pdf"], ["lazynotes-slides", "/pptxreader.html", "pptx"]]) {
+    if (!names.includes(db)) continue;
+    try {
+      const records = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(db);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const conn = req.result;
+          if (!conn.objectStoreNames.contains("files")) { conn.close(); resolve([]); return; }
+          const all = conn.transaction("files").objectStore("files").getAll();
+          all.onsuccess = () => { conn.close(); resolve(all.result || []); };
+          all.onerror = () => { conn.close(); reject(all.error); };
+        };
+      });
+      records.forEach((r) => out.push({ key: `${page}?local=${encodeURIComponent(r.id)}`, kind, name: r.name, openedAt: r.openedAt || 0, page: 1 }));
+    } catch (_) { /* skip this store */ }
+  }
+  return out;
+}
+
 const unitName = (doc) => (doc.kind === "pptx" ? "Slide" : "Page");
 
 async function updateReading() {
@@ -824,7 +852,15 @@ async function updateReading() {
     return;
   }
 
-  const docs = Object.values(lnDocs).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 3);
+  const all = { ...Object.fromEntries((await storedFiles()).map((d) => [d.key, d])), ...lnDocs };
+  const docs = Object.values(all).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 3);
+  if (!docs.length) {
+    const empty = document.createElement("div");
+    empty.className = "cr-empty";
+    empty.textContent = "PDFs and slides you open will show here.";
+    continueList.replaceChildren(empty);
+    return;
+  }
   continueList.replaceChildren(...docs.map((doc) => {
     const b = document.createElement("button");
     b.type = "button";
