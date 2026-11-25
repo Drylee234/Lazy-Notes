@@ -12,6 +12,7 @@ import {
 } from './bg_courses.js';
 import { requestSidePanel } from './bg_sidepanel.js';
 import { openPdfInReader } from './bg_pdf.js';
+import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -52,17 +53,19 @@ export function ensureContentScripts() {
   });
 }
 
-// Deletes reply with { ok, reason? } so the page can tell the user if it failed.
-const DELETE_HANDLERS = {
-  DELETE_COURSE:    handleDeleteCourse,
-  DELETE_TOPIC:     handleDeleteTopic,
-  DELETE_HIGHLIGHT: handleDeleteHighlight
+// These reply with { ok, reason? } so the page can tell the user if it failed.
+const REPLY_HANDLERS = {
+  DELETE_COURSE:      handleDeleteCourse,
+  DELETE_TOPIC:       handleDeleteTopic,
+  DELETE_HIGHLIGHT:   handleDeleteHighlight,
+  SAVE_TYPED_NOTE:    handleSaveTypedNote,
+  DELETE_TYPED_NOTE:  handleDeleteTypedNote
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const deleteHandler = DELETE_HANDLERS[message.type];
-  if (deleteHandler) {
-    deleteHandler(message)
+  const replyHandler = REPLY_HANDLERS[message.type];
+  if (replyHandler) {
+    replyHandler(message)
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, reason: String(err) }));
     return true;  // keep the channel open for the async reply

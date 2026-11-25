@@ -39,6 +39,23 @@ export async function validateHighlight(payload) {
   return { valid: true };
 }
 
+export async function validateTypedNote(payload) {
+  if (!payload || typeof payload.text !== "string" || !payload.text.trim()) {
+    return { valid: false, reason: "The note is empty." };
+  }
+
+  if (!payload.courseName || !payload.topicName) {
+    return { valid: false, reason: "Missing course or topic." };
+  }
+
+  const topic = await getTopic(payload.courseName, payload.topicName);
+  if (!topic) {
+    return { valid: false, reason: `Topic "${payload.topicName}" does not exist.` };
+  }
+
+  return { valid: true };
+}
+
 export function validateCourse(name, level, semester) {
   if (!name || typeof name !== "string" || !name.trim()) {
     return { valid: false, reason: "Course name is required." };

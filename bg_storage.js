@@ -20,12 +20,20 @@
 //               anchor ({ page, occurrence } for PDF notes, else null),
 //               timestamp, edited
 //             }
+//           },
+//           notes: {               // typed in the side panel, not highlighted
+//             "<uuid>": {
+//               text,              // plain text; lines starting "> " are quotes
+//               timestamp, edited
+//             }
 //           }
 //         }
 //       }
 //     }
 //   }
 // }
+//
+// Topics created before typed notes existed have no "notes" key; read it as {}.
 //
 // Separate top-level keys: activeCourse, activeTopic, highlighterActive,
 // lastCourseDefaults.
@@ -129,7 +137,8 @@ export async function createTopic(courseName, topicName) {
 
   course.topics[topicName] = {
     created: new Date().toISOString(),
-    highlights: course.topics[topicName]?.highlights || {}
+    highlights: course.topics[topicName]?.highlights || {},
+    notes:      course.topics[topicName]?.notes || {}
   };
 
   await setLazyNotes(data);
@@ -218,4 +227,42 @@ export async function countHighlights(courseName, topicName) {
   const topic = await getTopic(courseName, topicName);
   if (!topic || !topic.highlights) return 0;
   return Object.keys(topic.highlights).length;
+}
+
+// ---------------------------------------------------------------------------
+// Typed notes — nested at courses[course].topics[topic].notes
+// ---------------------------------------------------------------------------
+
+export async function insertTypedNote(id, courseName, topicName, text) {
+  const data = await getLazyNotes();
+  const topic = data.courses[courseName]?.topics?.[topicName];
+  if (!topic) return null;
+
+  if (!topic.notes) topic.notes = {};
+  topic.notes[id] = { text, timestamp: new Date().toISOString(), edited: null };
+
+  await setLazyNotes(data);
+  return topic.notes[id];
+}
+
+export async function updateTypedNote(id, courseName, topicName, text) {
+  const data = await getLazyNotes();
+  const note = data.courses[courseName]?.topics?.[topicName]?.notes?.[id];
+  if (!note) return null;
+
+  note.text   = text;
+  note.edited = new Date().toISOString();
+
+  await setLazyNotes(data);
+  return note;
+}
+
+export async function deleteTypedNote(id, courseName, topicName) {
+  const data = await getLazyNotes();
+  const topic = data.courses[courseName]?.topics?.[topicName];
+  if (!topic?.notes?.[id]) return null;
+
+  delete topic.notes[id];
+  await setLazyNotes(data);
+  return topic.notes;
 }

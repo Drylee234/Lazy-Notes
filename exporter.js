@@ -5,9 +5,11 @@
 // Each category maps to a structural element, so an exported topic reads like
 // a set of notes rather than a dump of highlights.
 
+// Highlights and typed notes (kind: "typed") in the order they were taken.
 function topicNotes(topic) {
-  const notes = Object.entries(topic?.highlights || {}).map(([id, f]) => ({ id, ...f }));
-  return sortHighlights(notes, "chronological");
+  const highlights = Object.entries(topic?.highlights || {}).map(([id, f]) => ({ id, ...f }));
+  const typed = Object.entries(topic?.notes || {}).map(([id, f]) => ({ id, kind: "typed", ...f }));
+  return sortHighlights([...highlights, ...typed], "chronological");
 }
 
 function courseTopics(course) {
@@ -57,6 +59,17 @@ function mdNotes(notes, depth) {
 
     // Blank line between blocks, but keep consecutive list points together.
     if (out.length && !(isListPoint && prevWasListPoint)) out.push("");
+
+    // A typed note: its own paragraphs (line breaks kept) and "> " quotes.
+    if (note.kind === "typed") {
+      typedNoteBlocks(note.text).forEach((block, i) => {
+        if (i) out.push("");
+        const lines = block.text.split("\n").map(mdInline);
+        out.push(block.quote ? lines.map((l) => `> ${l}`).join("\n") : lines.join("  \n"));
+      });
+      prevWasListPoint = false;
+      return;
+    }
 
     switch (note.category) {
       case "header":     out.push(`${h(depth)} ${text}`); break;
@@ -144,6 +157,15 @@ function htmlNotes(notes, depth) {
   const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
 
   notes.forEach((note) => {
+    if (note.kind === "typed") {
+      closeList();
+      typedNoteBlocks(note.text).forEach((block) => {
+        const html = escHtml(block.text).replace(/\n/g, "<br>");
+        out.push(block.quote ? `<blockquote>${html}</blockquote>` : `<p class="typed">${html}</p>`);
+      });
+      return;
+    }
+
     const text = escHtml(note.text);
     const ann  = note.annotation
       ? `<blockquote>${escHtml(note.annotation)}</blockquote>`
