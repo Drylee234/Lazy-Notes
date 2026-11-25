@@ -105,6 +105,19 @@
     }).slice(0, 4).map((s) => (/^[A-Z]/.test(word) ? s[0].toUpperCase() + s.slice(1) : s));
   }
 
+  // ── Mistaken capitals: "THe" → "The", "wATER" (caps lock) → "Water",
+  //    "i" / "i'm" → "I" / "I'm". Only when the fixed word is a real word,
+  //    and not acronym plurals like "IDs" / "PCs". ──
+  function capsFix(word, atStart) {
+    if (/^i('(m|ll|d|ve))?$/.test(word)) return "I" + word.slice(1);
+    if (!speller || word.length < 3) return null;
+    const title = word[0].toUpperCase() + word.slice(1).toLowerCase();
+    const real = (w) => speller.correct(w.toLowerCase()) || speller.correct(w);
+    if (/^[A-Z]{2}[a-z]+$/.test(word) && !(word.length <= 4 && /^[A-Z]+s$/.test(word)) && real(title)) return title;
+    if (/^[a-z][A-Z]{2,}$/.test(word) && real(title)) return atStart ? title : word.toLowerCase();
+    return null;
+  }
+
   // ── Editing the box ──
   function replace(field, start, end, text) {
     field.focus();
@@ -128,9 +141,13 @@
     if (!m) return;
     const word = m[0].replace(/'+$/, "");
     const start = caret - 1 - m[0].length;
-    if (!checkable(word, sentenceStartAt(field.value, start)) || !misspelled(word)) return;
-    const fixed = clearFix(word);
-    if (!fixed) return;
+    if (ignore.has(word.toLowerCase()) && word !== "i") return;
+    let fixed = capsFix(word, sentenceStartAt(field.value, start));
+    if (!fixed) {
+      if (!checkable(word, sentenceStartAt(field.value, start)) || !misspelled(word)) return;
+      fixed = clearFix(word);
+    }
+    if (!fixed || fixed === word) return;
     replace(field, start, start + word.length, fixed);
     const newCaret = caret + fixed.length - word.length;
     field.setSelectionRange(newCaret, newCaret);
