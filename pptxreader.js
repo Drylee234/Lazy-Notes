@@ -154,6 +154,8 @@ async function loadDeck(data, name) {
     deck = await readPptx(data);
   } catch (err) {
     deck = null;
+    // An unreadable file from this computer isn't kept in Recent.
+    if (S.source?.kind === "local") await dbRun("readwrite", (st) => st.delete(S.source.id)).catch(() => {});
     showMessage(`Couldn't read these slides (${err.message}).`, true);
     await showStartScreen();
     return;
@@ -642,10 +644,11 @@ document.addEventListener("keydown", (e) => {
 // Start screen
 // ---------------------------------------------------------------------------
 
+// There's one start page for PDFs and slides: the document reader's. Any
+// message (e.g. "Couldn't read these slides") goes along to show there.
 async function showStartScreen() {
-  startScreen.hidden = false;
-  slideControls.hidden = true;
-  await renderRecent();
+  const msg = messageEl.hidden ? "" : messageEl.textContent;
+  location.replace("pdfreader.html" + (msg ? `?msg=${encodeURIComponent(msg)}` : ""));
 }
 
 async function renderRecent() {

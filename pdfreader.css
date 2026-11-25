@@ -296,3 +296,9 @@ body {
   user-select: none;
 }
 .textLayer.selecting .endOfContent { top: 0; }
+
+.recent-kind {
+  flex: none; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.03em; background: rgba(192, 57, 43, 0.12); color: #c0392b;
+}
+.recent-kind.pptx { background: rgba(212, 87, 15, 0.12); color: #d4570f; }

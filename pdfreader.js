@@ -712,15 +712,40 @@ async function showStartScreen() {
   await renderRecent();
 }
 
+// Slides opened before live in the slides reader's own store; list them
+// here too (only if that database exists: opening a missing one would
+// create it without its store).
+async function slidesStore(fn) {
+  const names = (await indexedDB.databases().catch(() => [])).map((d) => d.name);
+  if (!names.includes("lazynotes-slides")) return null;
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("lazynotes-slides");
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("files")) { db.close(); resolve(null); return; }
+      const r = fn(db.transaction("files", "readwrite").objectStore("files"));
+      r.onsuccess = () => { db.close(); resolve(r.result); };
+      r.onerror = () => { db.close(); reject(r.error); };
+    };
+  });
+}
+
 async function renderRecent() {
   const list = $("recent-list");
-  const files = await listLocalFiles().catch(() => []);
+  const pdfs   = (await listLocalFiles().catch(() => [])).map((f) => ({ ...f, kind: "pdf" }));
+  const slides = ((await slidesStore((s) => s.getAll()).catch(() => null)) || []).map((f) => ({ ...f, kind: "pptx" }));
+  const files  = [...pdfs, ...slides].sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
   $("recent").hidden = files.length === 0;
   list.innerHTML = "";
 
   files.forEach((f) => {
     const row = document.createElement("div");
     row.className = "recent-row";
+
+    const tag = document.createElement("span");
+    tag.className = `recent-kind ${f.kind}`;
+    tag.textContent = f.kind === "pptx" ? "PPT" : "PDF";
 
     const name = document.createElement("span");
     name.className = "recent-name";
@@ -736,12 +761,14 @@ async function renderRecent() {
     remove.title = "Remove from recent files (your notes stay)";
     remove.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await deleteLocalFile(f.id);
+      if (f.kind === "pptx") await slidesStore((s) => s.delete(f.id)).catch(() => {});
+      else await deleteLocalFile(f.id);
       renderRecent();
     });
 
-    row.append(name, meta, remove);
+    row.append(tag, name, meta, remove);
     row.addEventListener("click", () => {
+      if (f.kind === "pptx") { location.href = `pptxreader.html?local=${encodeURIComponent(f.id)}`; return; }
       history.replaceState(null, "", `?local=${encodeURIComponent(f.id)}`);
       openLocalRecord(f);
     });
@@ -759,6 +786,10 @@ urlForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
   if (!url) return;
+  if (/\.pptx$/i.test(url.split(/[?#]/)[0])) {
+    location.href = `pptxreader.html?url=${encodeURIComponent(url)}`;
+    return;
+  }
   history.replaceState(null, "", `?url=${encodeURIComponent(url)}`);
   openFromUrl(url);
 });
@@ -837,6 +868,11 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   const url    = params.get("url");
   const local  = params.get("local");
+  const msg    = params.get("msg");   // handed over by the slides reader
+  if (msg) {
+    history.replaceState(null, "", location.pathname);
+    showMessage(msg, true);
+  }
 
   if (url) {
     await openFromUrl(url);
