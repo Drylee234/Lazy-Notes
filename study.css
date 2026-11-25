@@ -269,16 +269,16 @@ body:has(#study-view.visible) #study-dock { display: block; }
 #note-list .edit-form { margin: 6px -10px 8px -12px; }
 
 /* ── Course › Topic picker: one quiet breadcrumb line, not two big boxes ── */
-#study-picker {
+:is(#study-picker, #rn-picker) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 2px;
   margin: 2px -8px 0;
 }
-#study-picker .hs { position: relative; min-width: 0; max-width: 100%; }
-#study-picker .hs + .hs { margin-top: 0; }
-#study-picker .hs + .hs:not([hidden])::before {
+:is(#study-picker, #rn-picker) .hs { position: relative; min-width: 0; max-width: 100%; }
+:is(#study-picker, #rn-picker) .hs + .hs { margin-top: 0; }
+:is(#study-picker, #rn-picker) .hs + .hs:not([hidden])::before {
   content: "›";
   position: absolute;
   left: -9px;
@@ -288,8 +288,8 @@ body:has(#study-view.visible) #study-dock { display: block; }
   font-size: 15px;
   pointer-events: none;
 }
-#study-picker .hs + .hs { margin-left: 12px; }
-#study-picker .hs-button {
+:is(#study-picker, #rn-picker) .hs + .hs { margin-left: 12px; }
+:is(#study-picker, #rn-picker) .hs-button {
   width: auto;
   max-width: 100%;
   height: 30px;
@@ -300,10 +300,10 @@ body:has(#study-view.visible) #study-dock { display: block; }
   font-weight: 600;
   box-shadow: none;
 }
-#study-picker .hs-button::after { right: 8px; opacity: 0.7; }
-#study-picker .hs-button:hover { background: var(--hover); border-color: transparent; }
-#study-picker .hs--open .hs-button { background: var(--hover); border-color: transparent; box-shadow: none; }
-#study-picker .hs-list { right: auto; min-width: 220px; max-width: calc(100vw - 24px); }
+:is(#study-picker, #rn-picker) .hs-button::after { right: 8px; opacity: 0.7; }
+:is(#study-picker, #rn-picker) .hs-button:hover { background: var(--hover); border-color: transparent; }
+:is(#study-picker, #rn-picker) .hs--open .hs-button { background: var(--hover); border-color: transparent; box-shadow: none; }
+:is(#study-picker, #rn-picker) .hs-list { right: auto; min-width: 220px; max-width: calc(100vw - 24px); }
 
 /* After a drop, the type card / Quote-or-Move pop up where the mouse let go */
 .dock-card.floating, .dock-choice.floating {
@@ -346,3 +346,8 @@ body:has(#study-view.visible) #study-dock { display: block; }
 .fb-mark { padding: 0 3px; border-radius: 3px; background: rgba(253, 224, 71, 0.55); color: var(--pri); font-weight: 600; }
 .fb-sep { width: 1px; height: 14px; margin: 0 4px; background: var(--border); }
 .note--typed.editing .format-bar { margin-bottom: 4px; }
+
+/* In the "Saving to" card the pickers sit on the card's own line */
+#rn-picker { margin: 0; min-width: 0; flex: 1; }
+#rn-picker .hs-button { height: 26px; color: var(--accent); }
+#rn-picker .hs-list { min-width: 200px; }

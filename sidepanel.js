@@ -852,7 +852,9 @@ async function updateReading() {
   const doc = key && lnDocs[key];
 
   readingNowEl.hidden = !key;
-  continueEl.hidden = !!key;
+  continueEl.hidden = false;
+  document.getElementById("continue-label").textContent = key ? "Other documents" : "Continue reading";
+  document.getElementById("open-doc-btn").hidden = !!key;
 
   if (key) {
     const icon = document.getElementById("rn-icon");
@@ -862,13 +864,11 @@ async function updateReading() {
     document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — Lazy Notes$/, "");
     document.getElementById("rn-meta").textContent = doc
       ? `${unitName(doc)} ${doc.page || 1}${doc.pages ? ` of ${doc.pages}` : ""}` : "";
-    const where = document.getElementById("rn-where");
-    where.textContent = c && t ? `${c} › ${t}` : "Nowhere yet: pick a course and topic below";
-    where.classList.toggle("none", !(c && t));
-    return;
+    fillSavingTo(c, t);
   }
 
   const all = { ...Object.fromEntries((await storedFiles()).map((d) => [d.key, d])), ...lnDocs };
+  if (key) delete all[key];   // the one open now is in the card above
   const docs = Object.values(all).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 3);
   if (!docs.length) {
     const empty = document.createElement("div");
@@ -907,6 +907,53 @@ async function updateReading() {
     return b;
   }));
 }
+
+// "Saving to [Course ▾] › [Topic ▾]" on the document card: pick where this
+// document's notes go without leaving it.
+const rnCourse = document.getElementById("rn-course");
+const rnTopic  = document.getElementById("rn-topic");
+enhanceSelect(rnCourse);
+enhanceSelect(rnTopic);
+
+function fillOptions(select, names, value, placeholder) {
+  select.replaceChildren();
+  if (!value || !names.includes(value)) {
+    const o = new Option(placeholder, "");
+    o.disabled = true;
+    select.add(o);
+  }
+  names.forEach((n) => select.add(new Option(n, n)));
+  select.value = value && names.includes(value) ? value : "";
+  select.dispatchEvent(new Event("input"));   // redraw the dropdown's button
+}
+
+function fillSavingTo(course, topic) {
+  const topics = Object.keys(courseTree[course]?.topics ?? {});
+  fillOptions(rnCourse, Object.keys(courseTree), course, "Pick a course");
+  fillOptions(rnTopic, topics, topic, topics.length ? "Pick a topic" : "No topics yet");
+  rnTopic.closest(".hs").hidden = !course;
+  document.getElementById("rn-where").hidden = !!(course && topic);
+}
+
+function setSavingTo(course, topic) {
+  if (topic) {
+    chrome.runtime.sendMessage({ type: "SET_ACTIVE_TOPIC", courseName: course, topicName: topic });
+    activeCourse = course;
+    activeTopic  = topic;
+  }
+  if (course !== selectedCourse) selectCourse(course);   // the topic list below follows
+  else { renderHomeTopicActiveState(); }
+  updateToggleBtnGuard();
+  fillSavingTo(course, topic);
+}
+
+rnCourse.addEventListener("change", async () => {
+  await refreshCourseTree();
+  const course = rnCourse.value;
+  const topics = Object.keys(courseTree[course]?.topics ?? {});
+  setSavingTo(course, topics[0] ?? null);
+});
+rnTopic.addEventListener("change", () => setSavingTo(rnCourse.value, rnTopic.value));
 
 document.getElementById("open-doc-btn").addEventListener("click", () =>
   chrome.tabs.create({ url: chrome.runtime.getURL("pdfreader.html") }));

@@ -38,7 +38,7 @@
     </details>
   </div>
   <nav id="view-tabs" role="tablist">
-    <button class="view-tab active" data-view="home" role="tab">Topics</button>
+    <button class="view-tab active" data-view="home" role="tab">Home</button>
     <button class="view-tab" data-view="study" role="tab">Study</button>
   </nav>
 </header>
@@ -67,13 +67,17 @@
       </div>
       <div class="rn-target">
         <span class="rn-label">Saving to</span>
-        <span class="rn-where" id="rn-where"></span>
+        <div id="rn-picker">
+          <select id="rn-course" aria-label="Course these notes go to"></select>
+          <select id="rn-topic" aria-label="Topic these notes go to"></select>
+        </div>
       </div>
+      <div class="rn-where none" id="rn-where" hidden>Pick a course and topic for this document's notes</div>
     </div>
 
     <!-- Anywhere else: documents to go back to. -->
     <div id="continue" hidden>
-      <div class="list-head"><span class="field-label">Continue reading</span></div>
+      <div class="list-head"><span class="field-label" id="continue-label">Continue reading</span></div>
       <div id="continue-list"></div>
       <button id="open-doc-btn" class="open-doc-btn" type="button">Open a document…</button>
     </div>

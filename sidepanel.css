@@ -418,7 +418,10 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
   border-top: 1px solid var(--border);
 }
 .rn-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; flex: none; }
-.rn-where { font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+.rn-where { margin-top: 6px; font-size: 12px; }
+.rn-where[hidden] { display: none; }
+.rn-target { flex-direction: column; align-items: stretch !important; gap: 2px !important; }
+#rn-picker { margin-left: -8px !important; }
 .rn-where.none { color: var(--danger); font-weight: 500; }
 .cr-item {
   width: 100%; padding: 8px; margin-bottom: 6px; border: 1px solid var(--border);
