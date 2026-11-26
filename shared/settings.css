@@ -58,3 +58,7 @@
 .ln-settings .set-sync-status[data-tone="bad"] { color: var(--danger); }
 .ln-settings .set-sync-phone { margin-top: 4px; font-size: 11.5px; color: var(--sec); }
 .ln-settings .set-sync-link { user-select: all; color: var(--accent); overflow-wrap: anywhere; }
+
+/* More options (folded) */
+.ln-settings .set-more .set-sub { margin-top: 10px; text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--sec); }
+.ln-settings .set-more .seg { margin-bottom: 4px; }

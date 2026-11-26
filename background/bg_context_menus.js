@@ -170,7 +170,28 @@ async function rebuildMenus() {
   createStaticMenuItems(highlighterActive);
   createCourseMenuItems(courses);
   createTopicMenuItems(courses);
+  await createQuickNoteMenuItem();
 }
+
+// Our readers only: "Quick note here" opens the pop-up note box at the
+// right-click (readers/quick-note.js). Off with lnQuickMenu = false.
+const READER_PAGES = ["pdfreader.html", "pptxreader.html", "docxreader.html"]
+  .map((p) => `${chrome.runtime.getURL(p)}*`);
+
+async function createQuickNoteMenuItem() {
+  const { lnQuickMenu } = await storageGet("lnQuickMenu");
+  if (lnQuickMenu === false) return;
+  chrome.contextMenus.create({
+    id: "lazy-notes-quick-note",
+    title: "✎ Quick note here",
+    contexts: ["page", "selection", "image"],
+    documentUrlPatterns: READER_PAGES
+  }, () => void chrome.runtime.lastError);
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && "lnQuickMenu" in changes) refreshCourseContextMenuItems();
+});
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const id = info.menuItemId;
@@ -179,6 +200,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // only allowed while the click still counts as a user gesture.
   if (id === "lazy-notes-create-course") {
     requestSidePanel({ type: "SHOW_CREATE_COURSE" }, tab);
+    return;
+  }
+
+  if (id === "lazy-notes-quick-note") {
+    chrome.runtime.sendMessage({ type: "LN_QUICK_NOTE_MENU", tabId: tab?.id }, () => void chrome.runtime.lastError);
     return;
   }
 

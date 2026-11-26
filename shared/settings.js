@@ -6,10 +6,15 @@
 //   lnAutocorrectLevel 0 Off · 1 Mild · 2 Strong · 3 Toxic   (old lnAutocorrect === false → 0)
 //   lnDocAutoSelect    false = opening a document doesn't switch course/topic
 //   pptxAutoOpen       false = .pptx downloads aren't opened in Lazy Notes
+//   More options: lnPanelMode "tab" | "docked"; lnQuickDblClick, lnQuickSelButtons,
+//   lnQuickMenu, lnQuickFloat (ways to open the readers' pop-up note box);
+//   lnDocCaret (keyboard cursor in PDFs). false = off.
 // Needs shared/settings.css.
 
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
+  // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -33,6 +38,21 @@ globalThis.LazySettings = (() => {
     </label>
     <label class="set-check"><input type="checkbox" data-key="lnDocAutoSelect" /> Opening a document switches to the course &amp; topic it saved to last</label>
     <label class="set-check"><input type="checkbox" data-key="pptxAutoOpen" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
+    <details class="set-sync set-more">
+      <summary class="set-label set-sync-head">More options</summary>
+      <div class="set-label set-sub">Notes panel in the readers</div>
+      <div class="seg" data-key="lnPanelMode" data-default="tab" role="radiogroup" aria-label="Notes panel in the readers">
+        <button type="button" data-value="tab" role="radio" title="Hidden behind a tab on the right edge; slides out over the page">Edge tab</button>
+        <button type="button" data-value="docked" role="radio" title="Always beside the document">Docked</button>
+      </div>
+      <div class="set-label set-sub">Pop-up note box opens with</div>
+      <label class="set-check"><input type="checkbox" data-key="lnQuickDblClick" /> Double-click blank space</label>
+      <label class="set-check"><input type="checkbox" data-key="lnQuickSelButtons" /> ✎ Note / ❝ Quote buttons in the save pop-up</label>
+      <label class="set-check"><input type="checkbox" data-key="lnQuickMenu" /> Right-click → Quick note here</label>
+      <label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab</label>
+      <div class="set-label set-sub">Documents</div>
+      <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
+    </details>
     <div class="set-label set-backup-label">Backup</div>
     <div class="set-backup">
       <button type="button" class="set-btn set-export">Download backup</button>
@@ -83,7 +103,7 @@ globalThis.LazySettings = (() => {
 
     function load() {
       chrome.storage.local.get(
-        ["lnTheme", "lnPopupSide", "lnAutocorrect", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen"],
+        ["lnTheme", "lnPopupSide", "lnAutocorrect", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS],
         (r) => {
           segs.forEach((seg) => markSeg(seg, r[seg.dataset.key]));
           checks.forEach((c) => { c.checked = r[c.dataset.key] !== false; });
@@ -257,7 +277,7 @@ globalThis.LazySettings = (() => {
     });
     showSync();
 
-    const KEYS = ["lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen"];
+    const KEYS = ["lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS];
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === "local" && KEYS.some((k) => k in changes)) load();
     });

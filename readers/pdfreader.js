@@ -903,9 +903,21 @@ function selectionInText() {
   return el?.closest?.(".textLayer") ? sel : null;
 }
 
+// Shown only after a plain click or while selecting with Shift+arrows:
+// never while the mouse button is down, so a drag looks like a highlight
+// growing, not a cursor being moved. Off entirely with lnDocCaret = false.
+let caretOn = true;
+let keySelecting = false;      // the selection was made/changed with the keyboard
+chrome.storage?.local.get("lnDocCaret", (r) => { caretOn = r?.lnDocCaret !== false; drawCaret(); });
+chrome.storage?.onChanged.addListener((c, area) => {
+  if (area === "local" && "lnDocCaret" in c) { caretOn = c.lnDocCaret.newValue !== false; drawCaret(); }
+});
+document.addEventListener("pointerdown", () => { keySelecting = false; caretEl.hidden = true; }, true);
+document.addEventListener("pointerup", () => setTimeout(drawCaret, 0));
+
 function drawCaret() {
   const sel = selectionInText();
-  if (!sel || snipping) { caretEl.hidden = true; return; }
+  if (!sel || snipping || !caretOn || pointerIsDown || (!sel.isCollapsed && !keySelecting)) { caretEl.hidden = true; return; }
   // The caret's spot as a point inside text: when the focus sits between
   // elements (end of a line, a <br>), use the end of the text just before it
   // or the start of the text just after it.
@@ -967,6 +979,7 @@ document.addEventListener("keydown", (e) => {
   const t = e.target;
   if (t.closest?.(".lazy-notes-popup, .lnf-pop") || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable) return;
   if (document.querySelector(".lazy-notes-popup")?.style.display === "block") return;
+  if (!caretOn) return;
   const sel = selectionInText();
   if (!sel) return;
 
@@ -976,6 +989,7 @@ document.addEventListener("keydown", (e) => {
     e.stopImmediatePropagation();    // not also a page turn
     const [dir, unit] = move;
     const by = (e.ctrlKey || e.metaKey) && unit === "character" ? "word" : unit;
+    keySelecting = true;
     sel.modify(e.shiftKey ? "extend" : "move", dir, by);
     drawCaret();
     // Keep the caret on screen.

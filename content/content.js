@@ -32,6 +32,7 @@
     "generic":    { mark: "¶",   name: "Plain",      key: "0" }
   };
   let chipEls = {};
+  let handoffBtnEls = [];
   let chipCaptionEl = null;
 
   // A selection that's a list: { head, items } when 2+ lines start with a
@@ -419,6 +420,14 @@
         margin-top: 10px;
       }
 
+      .lazy-notes-handoff {
+        padding: 5px 8px; border-radius: 4px; font-size: 11px;
+        font-weight: 600; cursor: pointer; border: 1px solid #45456a;
+        background: transparent; color: #a5b4fc;
+      }
+      .lazy-notes-handoff.last { margin-right: auto; }
+      .lazy-notes-handoff:hover { background: #2a2a44; color: #c7d2fe; }
+
       .lazy-notes-btn {
         padding: 5px 12px;
         border-radius: 4px;
@@ -718,6 +727,23 @@
       hidePopup();
     });
 
+    // In the readers: hand the words to the pop-up note box (quick-note.js),
+    // to rewrite them as your own note or keep them as a quote with a note.
+    const handoffBtns = [["note", "✎ Note", "Write your own note from these words"],
+                         ["quote", "❝ Quote", "Keep these words as a quote and add your note (Ctrl+.)"]].map(([mode, label, tip]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lazy-notes-handoff";
+      b.textContent = label;
+      b.title = tip;
+      b.style.display = "none";
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", (e) => { e.stopPropagation(); handOff(mode); });
+      row5.appendChild(b);
+      return b;
+    });
+    handoffBtns[1].classList.add("last");
+    handoffBtnEls = handoffBtns;
     row5.appendChild(dismissBtn);
     row5.appendChild(saveBtn);
     container.appendChild(row5);
@@ -1319,6 +1345,8 @@
     currentParagraphElement = paragraphElement;
 
     popupContainer.style.display = "block";
+    const canHandOff = !!globalThis.LazyNotesQuick?.enabled("lnQuickSelButtons");
+    handoffBtnEls.forEach((b) => { b.style.display = canHandOff ? "" : "none"; });
     arrangePopup();
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
     positionPopup(rect);
@@ -1374,6 +1402,7 @@
     if (shutDownIfOrphaned()) return;
     if (!highlighterActive) return;
     if (popupContainer && isEventInsidePopup(event)) return;
+    if (event.target?.closest?.(".lnq-box")) return;   // the readers' pop-up note box
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
@@ -1405,6 +1434,27 @@
   // ---------------------------------------------------------------------------
   // Send
   // ---------------------------------------------------------------------------
+
+  // The selection goes to the pop-up note box (readers only). Returns true
+  // if there was a selection to hand over.
+  function handOff(mode) {
+    const quick = globalThis.LazyNotesQuick;
+    if (!quick || !popupContainer || popupContainer.style.display !== "block") return false;
+    const text = String(currentSelectedText ?? "").trim();
+    if (!text) return false;
+    const host = globalThis.LazyNotesHost;
+    const base = {
+      sourceUrl:   host?.sourceUrl ? host.sourceUrl(currentParagraphElement) : window.location.href,
+      sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null,
+      anchor:      host?.anchorFor && currentRange ? host.anchorFor(currentRange) : null,
+      context:     null
+    };
+    const rect = currentRange?.getBoundingClientRect?.();
+    hidePopup();
+    quick.open({ mode, text, base, rect: rect && (rect.width || rect.height) ? rect : null, category: selectedCategory });
+    return true;
+  }
+  if (location.protocol === "chrome-extension:") globalThis.LazyNotesPopupHandOff = handOff;
 
   function sendHighlight() {
     currentSelectedText = String(currentSelectedText ?? "").trim();
