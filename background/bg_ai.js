@@ -228,6 +228,23 @@ async function documentText({ scope = "all", page = 1 } = {}) {
   const pages = store?.pages || [];
   if (!pages.length) return { ok: false, reason: "No document is open, so there's nothing to read." };
 
+  // Belt and braces: the store outlives the tab, so check a reader really is
+  // open before handing its words over. Reading a document you closed an hour
+  // ago and calling it "this document" would be worse than refusing.
+  try {
+    const open = await chrome.tabs.query({
+      url: [
+        chrome.runtime.getURL("pdfreader.html") + "*",
+        chrome.runtime.getURL("pptxreader.html") + "*",
+        chrome.runtime.getURL("docxreader.html") + "*"
+      ]
+    });
+    if (!open.length) {
+      await chrome.storage.session.remove("lnDocPages").catch?.(() => {});
+      return { ok: false, reason: "No document is open. Open one in the reader first." };
+    }
+  } catch (_) { /* can't check: carry on rather than block the job */ }
+
   const total = store.totalPages || pages.length;
   let from = 1, to = pages.length, note = "";
 

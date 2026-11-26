@@ -35,6 +35,26 @@
     "table":      { mark: "▦",   name: "Table",      key: "t" },
     "generic":    { mark: "¶",   name: "Plain",      key: "0" }
   };
+  // The extension can be reloaded or updated while a page is open. The page
+  // keeps a dead copy of this script: `chrome` is still there but
+  // chrome.storage is gone, and touching it throws. Everything below goes
+  // through these, so an orphaned script goes quiet instead of erroring.
+  const storageAlive = () => {
+    try { return !!(chrome?.runtime?.id && chrome.storage?.local); } catch (_) { return false; }
+  };
+  function storageGet(keys, done) {
+    if (!storageAlive()) return;
+    try { chrome.storage.local.get(keys, (r) => { void chrome.runtime.lastError; done(r || {}); }); }
+    catch (_) { /* reloaded between the check and the call */ }
+  }
+  function storageSet(items) {
+    if (!storageAlive()) return;
+    try { chrome.storage.local.set(items, () => { void chrome.runtime.lastError; }); } catch (_) {}
+  }
+  function onStorageChanged(fn) {
+    try { chrome.storage?.onChanged?.addListener(fn); } catch (_) {}
+  }
+
   let chipEls = {};
   let handoffBtnEls = [];
   let handoffOn = true;   // lnQuickSelButtons: ✎ Note / ❝ Quote in the pop-up
@@ -42,7 +62,7 @@
   let pageNumOn = true;   // lnDropPageNums: drop lone page numbers from PDF text
   let dupWarnOn = true;   // lnDupWarn: say when these words are already saved
   let headSplitOn = true; // lnHeadSplit: offer "Heading" + "Definition" for "Heading: words…"
-  chrome.storage.local.get(["lnQuickSelButtons", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit"], (r) => {
+  storageGet(["lnQuickSelButtons", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit"], (r) => {
     handoffOn = r?.lnQuickSelButtons !== false;
     listHeadOn = r?.lnListHeadType !== false;
     pageNumOn = r?.lnDropPageNums !== false;
@@ -281,7 +301,7 @@
   let editGroup         = null;   // text box + annotation, moved between boxes
   let whereElHome       = null;
   let popupSide         = "above";   // above | below | left | right | split
-  chrome.storage.local.get("lnPopupSide", (r) => { if (r?.lnPopupSide) popupSide = r.lnPopupSide; });
+  storageGet("lnPopupSide", (r) => { if (r?.lnPopupSide) popupSide = r.lnPopupSide; });
   const inPopup = (el) => !!el && ((popupContainer && popupContainer.contains(el)) || (sideBox && sideBox.contains(el)));
   let popupAnchor       = null;   // the selection's box in page coordinates
   let popupMouse        = null;   // where the mouse let go (page coordinates)
@@ -1516,7 +1536,7 @@
     } catch (_) { aiOn = false; }
   }
   try {
-    chrome.storage.onChanged.addListener((c, area) => {
+    onStorageChanged((c, area) => {
       if (area === "local" && (c.lnAiOn || c.lnAiKeys || c.lnAiProvider)) refreshAi();
     });
   } catch (_) { /* no storage on this page */ }
@@ -1920,7 +1940,7 @@
     };
 
     try {
-      chrome.storage.local.set({ lastDrag });
+      storageSet({ lastDrag });
     } catch (_) { /* extension reloaded: the panel falls back to the bare text */ }
 
     // The save popup for this selection would be left behind; hide it but
@@ -1976,7 +1996,7 @@
   // Storage sync — keep courseTree fresh without background having to push it
   // ---------------------------------------------------------------------------
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  onStorageChanged((changes, areaName) => {
     if (dead) return;
     if (areaName !== "local") return;
     if (changes.lazynotes) {
@@ -2062,7 +2082,7 @@
     if (dead) return;
     buildPopup();
 
-    chrome.storage.local.get(
+    storageGet(
       ["lazynotes", "highlighterActive", "activeCourse", "activeTopic"],
       (result) => {
         courseTree       = result.lazynotes?.courses ?? {};

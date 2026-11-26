@@ -132,6 +132,13 @@
 
   addEventListener("focus", () => { if (last) chrome.storage.session?.set({ [KEY]: last }).catch?.(() => {}); });
 
+  // Closing the reader (or opening another document in it) must clear the
+  // text: otherwise "Summarise this document" would quietly summarise the
+  // one you read an hour ago. Session storage outlives the tab, so say so.
+  addEventListener("pagehide", () => {
+    try { chrome.storage.session?.remove(KEY); } catch (_) {}
+  }, { capture: true });
+
   function read() {
     if (last) return Promise.resolve(last);
     if (!chrome.storage?.session) return Promise.resolve(null);
