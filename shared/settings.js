@@ -81,7 +81,7 @@ globalThis.LazySettings = (() => {
     </details>
     <details class="set-sync set-ai">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
-      <div class="set-ai-intro">Lazy Notes can ask an AI service to tidy a highlight, summarise a topic, or make test questions. Nothing is sent anywhere until you switch it on and paste a key.</div>
+      <div class="set-ai-intro">Lazy Notes can ask an AI to tidy a highlight, explain it, or write a definition. It needs a <b>Groq API key</b> &mdash; free, no card, about 1,000 questions a day. Other services are in the list too. Nothing is sent anywhere until you paste a key and switch it on.</div>
       <label class="set-field"><span>Service</span>
         <select class="set-ai-provider"></select></label>
       <div class="set-ai-about"></div>
@@ -90,7 +90,7 @@ globalThis.LazySettings = (() => {
         <input type="url" class="set-ai-base" placeholder="http://localhost:11434/v1" spellcheck="false" /></label>
       <label class="set-field"><span>Key</span>
         <span class="set-key-row">
-          <input type="password" class="set-ai-key" placeholder="paste your key" spellcheck="false" autocomplete="off" />
+          <input type="password" class="set-ai-key" placeholder="paste your Groq API key" spellcheck="false" autocomplete="off" />
           <button type="button" class="set-btn set-ai-key-show" title="Show / hide">&#128065;</button>
         </span></label>
       <div class="set-ai-getkey"></div>
@@ -429,6 +429,7 @@ globalThis.LazySettings = (() => {
             o.label = label;
             models.appendChild(o);
           });
+          keyBox.placeholder = `paste your ${p.label} API key`;
           getKey.textContent = "";
           getKey.append(document.createTextNode(p.keyHint + " "));
           if (p.keyUrl) {
