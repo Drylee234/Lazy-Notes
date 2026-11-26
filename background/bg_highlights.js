@@ -57,8 +57,11 @@ export async function handleToggleTrigger() {
 // "ON" on the toolbar icon, so it's visible at a glance whether selecting
 // text will open the save popup.
 export function updateBadge(active) {
-  chrome.action.setBadgeText({ text: active ? "ON" : "" });
-  if (active) chrome.action.setBadgeBackgroundColor({ color: "#4f46e5" });
+  // On: a small green dot on the toolbar icon (a badge with one space is
+  // drawn as a dot); off: no badge.
+  chrome.action.setBadgeText({ text: active ? " " : "" });
+  if (active) chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
+  chrome.action.setTitle({ title: active ? "Lazy Notes · highlighter on" : "Lazy Notes · highlighter off" });
 }
 
 export async function restoreBadge() {
