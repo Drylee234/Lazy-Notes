@@ -15,7 +15,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -58,6 +58,7 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label>
       <label class="set-check"><input type="checkbox" data-key="lnBoldItalic" data-off /> B / I buttons in the note box (Ctrl+B / Ctrl+I always work)</label>
       <label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note; Plain stays for page words)</label>
+      <label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote, no question)</label>
       <div class="set-label set-sub">Saving</div>
       <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>
       <label class="set-check"><input type="checkbox" data-key="lnDropPageNums" /> Leave out lone page numbers picked up from PDFs</label>

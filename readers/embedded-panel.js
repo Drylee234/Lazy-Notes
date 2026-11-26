@@ -175,6 +175,43 @@
     bar.addEventListener("pointermove", move);
     bar.addEventListener("pointerup", up);
   });
+  // Resize from any edge or corner (thin handles around the box; they sit
+  // above the page inside it, so nothing is covered by the iframe).
+  ["n", "s", "e", "w", "ne", "nw", "se", "sw"].forEach((d) => {
+    const h = document.createElement("div");
+    h.className = `ln-rz ln-rz-${d}`;
+    aside.appendChild(h);
+    h.addEventListener("pointerdown", (e) => {
+      if (mode !== "float" || e.button !== 0 || state.folded) return;
+      e.preventDefault();
+      h.setPointerCapture(e.pointerId);
+      const r = aside.getBoundingClientRect();
+      const sx = e.clientX, sy = e.clientY;
+      document.body.classList.add("ln-embed-resizing", "ln-embed-moving");
+      document.body.style.cursor = getComputedStyle(h).cursor;
+      const move = (ev) => {
+        let l = r.left, t = r.top, w = r.width, ht = r.height;
+        const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        if (d.includes("e")) w = Math.min(Math.max(r.width + dx, MIN_W), innerWidth - r.left - 4);
+        if (d.includes("s")) ht = Math.min(Math.max(r.height + dy, 160), innerHeight - r.top - 4);
+        if (d.includes("w")) { w = Math.min(Math.max(r.width - dx, MIN_W), r.right - 4); l = r.right - w; }
+        if (d.includes("n")) { ht = Math.min(Math.max(r.height - dy, 160), r.bottom - 4); t = r.bottom - ht; }
+        Object.assign(aside.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${ht}px` });
+        state.fx = Math.round(l); state.fy = Math.round(t); state.fw = Math.round(w); state.fh = Math.round(ht);
+      };
+      const up = () => {
+        h.removeEventListener("pointermove", move);
+        h.removeEventListener("pointerup", up);
+        h.removeEventListener("pointercancel", up);
+        document.body.classList.remove("ln-embed-resizing", "ln-embed-moving");
+        document.body.style.cursor = "";
+        save();
+      };
+      h.addEventListener("pointermove", move);
+      h.addEventListener("pointerup", up);
+      h.addEventListener("pointercancel", up);
+    });
+  });
   bar.addEventListener("dblclick", (e) => { if (mode === "float" && !e.target.closest("button")) bar.querySelector(".ln-bar-fold").click(); });
   // Resized from its corner (CSS resize): remember the size.
   if (window.ResizeObserver) {

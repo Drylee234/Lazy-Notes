@@ -82,7 +82,7 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
    corner, − folds it to the bar. */
 #ln-embed.ln-floating {
   right: auto; bottom: auto; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-  resize: both; min-width: 280px; min-height: 36px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  min-width: 280px; min-height: 36px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22); z-index: 125;
 }
 #ln-embed.ln-floating .ln-embed-divider { display: none; }
@@ -97,3 +97,13 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 #ln-embed.ln-folded iframe { display: none; }
 #ln-embed:not(.ln-floating) .ln-bar-title { display: none; }
 .ln-bar-fold[hidden] { display: none; }
+
+/* Resize handles of the floating box (all edges and corners). */
+.ln-rz { display: none; position: absolute; z-index: 5; touch-action: none; }
+#ln-embed.ln-floating:not(.ln-folded) .ln-rz { display: block; }
+.ln-rz-n, .ln-rz-s { left: 10px; right: 10px; height: 7px; cursor: ns-resize; }
+.ln-rz-e, .ln-rz-w { top: 10px; bottom: 10px; width: 7px; cursor: ew-resize; }
+.ln-rz-n { top: 0; } .ln-rz-s { bottom: 0; } .ln-rz-e { right: 0; } .ln-rz-w { left: 0; }
+.ln-rz-ne, .ln-rz-nw, .ln-rz-se, .ln-rz-sw { width: 14px; height: 14px; }
+.ln-rz-ne { top: 0; right: 0; cursor: nesw-resize; } .ln-rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.ln-rz-nw { top: 0; left: 0; cursor: nwse-resize; } .ln-rz-se { bottom: 0; right: 0; cursor: nwse-resize; }

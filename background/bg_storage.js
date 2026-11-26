@@ -182,7 +182,18 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 
   if (!topic.highlights) topic.highlights = {};
 
+  // A list point saved right after an indented note sits at the same indent
+  // (the next item of the list you're building).
+  let inheritIndent = 0;
+  if (payload.category === "list point") {
+    const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));
+    const all = [...Object.values(topic.highlights), ...Object.values(topic.notes || {})];
+    const last = all.sort((a, b) => ord(b) - ord(a))[0];
+    if (last && last.indent > 0) inheritIndent = Math.min(3, last.indent);
+  }
+
   topic.highlights[id] = {
+    ...(inheritIndent ? { indent: inheritIndent } : {}),
     text:       payload.text ?? "",
     category:   payload.category,
     ...(payload.category === "figure" && payload.image ? { image: payload.image } : {}),   // figures: data URL

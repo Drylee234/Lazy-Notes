@@ -206,10 +206,16 @@ const StudyPage = (() => {
     return `${n} ${word}${n === 1 ? "" : "s"}`;
   }
 
+  let drawnIds = null;
   function render({ courseName, topicName, topic }) {
     const sameTopic = target?.courseName === courseName && target?.topicName === topicName;
     if (editing && !sameTopic) closeEditor({ redraw: false });
     if (hlEditing && !sameTopic) closeHighlightEditor({ redraw: false });
+
+    // Notes that appeared since the last draw of this topic (saved from a
+    // page/reader): the list scrolls down to the newest.
+    const idsNow = new Set([...Object.keys(topic?.highlights || {}), ...Object.keys(topic?.notes || {})]);
+    const addedIds = sameTopic && drawnIds ? [...idsNow].filter((i) => !drawnIds.has(i)) : [];
 
     target = { courseName, topicName };
     setComposerEnabled(true);
@@ -220,6 +226,7 @@ const StudyPage = (() => {
       return;
     }
 
+    drawnIds = idsNow;
     const { highlights, notes } = counts(topic);
     pageTitle.textContent = topicName;
     pageSubtitle.textContent =
@@ -260,6 +267,10 @@ const StudyPage = (() => {
     emptyStudy.textContent = "Nothing here yet. Type a note below, or drag text here from a page.";
     emptyStudy.style.display = entries.length ? "none" : "block";
 
+    if (addedIds.length && !scrollToId) {
+      const newest = [...noteList.querySelectorAll(".note[data-id]")].reverse().find((n) => addedIds.includes(n.dataset.id));
+      newest?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
     if (scrollToId) {
       noteList.querySelector(`[data-id="${CSS.escape(scrollToId)}"]`)
         ?.scrollIntoView({ block: "nearest" });
@@ -926,6 +937,12 @@ const StudyPage = (() => {
       e.preventDefault();
       e.stopPropagation();   // not also a drop on the page
 
+      // Setting "Dragged text goes in as normal text": no quote, no question.
+      if (dropPlain) {
+        let txt = dt.getData("text/plain");
+        try { txt = JSON.parse(dt.getData(HIGHLIGHT_TYPE) || "null")?.text || txt; } catch (_) {}
+        if (insertPlain(input, e, txt)) return;
+      }
       const at = dropOffset(input, e);
       const highlight = dt.getData(HIGHLIGHT_TYPE);
       if (highlight) {
@@ -936,6 +953,31 @@ const StudyPage = (() => {
       }
       insertQuote(input, at, dt.getData("text/plain"));
     });
+  }
+
+  let dropPlain = false;   // lnDropPlain (Settings › More options)
+  chrome.storage.local.get("lnDropPlain", (r) => { dropPlain = r?.lnDropPlain === true; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnDropPlain" in c) dropPlain = c.lnDropPlain.newValue === true; });
+
+  // The dropped words as ordinary typing, right where they were dropped.
+  function insertPlain(input, e, rawText) {
+    const text = String(rawText ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return false;
+    if (input.isRich) {
+      input.focus();
+      const r = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+      if (r && input.contains(r.startContainer)) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      document.execCommand("insertText", false, text);
+      return true;
+    }
+    const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+    const at = pos && pos.offsetNode === input ? pos.offset
+      : document.activeElement === input ? input.selectionStart : input.value.length;
+    input.setRangeText(text, at, at, "end");
+    input.focus();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    autoGrow(input);
+    return true;
   }
 
   // Where the quote goes: after the line the drop landed on (a quote is a

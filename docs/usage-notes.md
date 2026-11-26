@@ -94,3 +94,11 @@ seen → cause → what changed (commit) or what's still open.
 ## 2026-11-26 · Bug report: notes nested under a typed list item
 
 - A highlight indented under a typed note's list item ("Simple Diffusion:") left a big gap and wasn't "owned" by it → the fold ▾ button now sits at the end of the last line (it was on its own line in typed notes), and indented notes belong to the nearest less-indented note above (fold hides them; any types).
+
+## 2026-11-26 · Bug report: floating panel + list items + drops
+
+- Resizing the floating panel from its corner didn't work (the iframe covered the CSS grip) → thin handles on all edges/corners.
+- A list point saved after an indented note now takes the same indent (the next item of the list being built).
+- The Study list scrolls to the newest note when a highlight is sent to it.
+- Dragging text into a note box always made a quote → Settings › More options "Text dragged into a note box goes in as normal text" (`lnDropPlain`, off by default).
+- Open: "basic hover gestures" on the floating panel and "Ctrl+Up" — asked the owner what they mean.
