@@ -799,7 +799,7 @@ pdfBannerOpen.addEventListener("click", () => {
 const readingNowEl = document.getElementById("reading-now");
 const continueEl   = document.getElementById("continue");
 const continueList = document.getElementById("continue-list");
-const READER_PAGES = ["/pdfreader.html", "/pptxreader.html"];
+const READER_PAGES = ["/pdfreader.html", "/pptxreader.html", "/docxreader.html"];
 
 function docKeyOf(url) {
   try {
@@ -822,7 +822,7 @@ async function storedFiles() {
   const out = [];
   let names = [];
   try { names = (await indexedDB.databases()).map((d) => d.name); } catch (_) { return out; }
-  for (const [db, page, kind] of [["lazynotes-pdfs", "/pdfreader.html", "pdf"], ["lazynotes-slides", "/pptxreader.html", "pptx"]]) {
+  for (const [db, page, kind] of [["lazynotes-pdfs", "/pdfreader.html", "pdf"], ["lazynotes-slides", "/pptxreader.html", "pptx"], ["lazynotes-docs", "/docxreader.html", "docx"]]) {
     if (!names.includes(db)) continue;
     try {
       const records = await new Promise((resolve, reject) => {
@@ -858,8 +858,8 @@ async function updateReading() {
 
   if (key) {
     const icon = document.getElementById("rn-icon");
-    const kind = doc?.kind ?? (key.startsWith("/pptx") ? "pptx" : "pdf");
-    icon.textContent = kind === "pptx" ? "PPT" : "PDF";
+    const kind = doc?.kind ?? (key.startsWith("/pptx") ? "pptx" : key.startsWith("/docx") ? "docx" : "pdf");
+    icon.textContent = kind === "pptx" ? "PPT" : kind === "docx" ? "DOC" : "PDF";
     icon.className = `doc-icon ${kind}`;
     document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — Lazy Notes$/, "");
     document.getElementById("rn-meta").textContent = doc
@@ -883,7 +883,7 @@ async function updateReading() {
     b.className = "cr-item";
     const icon = document.createElement("span");
     icon.className = `doc-icon ${doc.kind}`;
-    icon.textContent = doc.kind === "pptx" ? "PPT" : "PDF";
+    icon.textContent = doc.kind === "pptx" ? "PPT" : doc.kind === "docx" ? "DOC" : "PDF";
     const text = document.createElement("span");
     text.className = "cr-text";
     const name = document.createElement("div");

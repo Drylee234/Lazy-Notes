@@ -170,11 +170,18 @@ async function openLocalRecord(record) {
   await loadDocument(await record.data.arrayBuffer(), record.name);
 }
 
-// Slides go to the slides reader: the file is handed over through its
-// IndexedDB store (same extension origin), then opened there by id.
-async function openInSlidesReader(file) {
+// Slides and Word documents go to their own readers: the file is handed
+// over through that reader's IndexedDB store (same extension origin), then
+// opened there by id.
+const OTHER_READERS = {
+  pptx: { db: "lazynotes-slides", page: "pptxreader.html", tag: "PPT" },
+  docx: { db: "lazynotes-docs",   page: "docxreader.html", tag: "DOC" }
+};
+
+async function openInSlidesReader(file, kind = "pptx") {
+  const { db: dbName, page } = OTHER_READERS[kind];
   const db = await new Promise((resolve, reject) => {
-    const req = indexedDB.open("lazynotes-slides", 1);
+    const req = indexedDB.open(dbName, 1);
     req.onupgradeneeded = () => req.result.createObjectStore("files", { keyPath: "id" });
     req.onsuccess = () => resolve(req.result);
     req.onerror   = () => reject(req.error);
@@ -188,12 +195,17 @@ async function openInSlidesReader(file) {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
-  location.href = `pptxreader.html?local=${encodeURIComponent(id)}`;
+  location.href = `${page}?local=${encodeURIComponent(id)}`;
 }
 
 async function openPickedFile(file) {
   if (!file) return;
-  if (/\.pptx$/i.test(file.name)) return openInSlidesReader(file);
+  if (/\.pptx$/i.test(file.name)) return openInSlidesReader(file, "pptx");
+  if (/\.docx$/i.test(file.name)) return openInSlidesReader(file, "docx");
+  if (/\.doc$/i.test(file.name)) {
+    showMessage("Old .doc files can't be read: open it in Word or Google Docs and save as .docx or PDF.", true);
+    return;
+  }
   if (/\.ppt$/i.test(file.name)) {
     showMessage("Older .ppt files can't be read. Save it as .pptx (or PDF) in PowerPoint first.", true);
     return;
@@ -863,11 +875,11 @@ async function showStartScreen() {
 // Slides opened before live in the slides reader's own store; list them
 // here too (only if that database exists: opening a missing one would
 // create it without its store).
-async function slidesStore(fn) {
+async function slidesStore(fn, dbName = "lazynotes-slides") {
   const names = (await indexedDB.databases().catch(() => [])).map((d) => d.name);
-  if (!names.includes("lazynotes-slides")) return null;
+  if (!names.includes(dbName)) return null;
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("lazynotes-slides");
+    const req = indexedDB.open(dbName);
     req.onerror = () => reject(req.error);
     req.onsuccess = () => {
       const db = req.result;
@@ -883,7 +895,8 @@ async function renderRecent() {
   const list = $("recent-list");
   const pdfs   = (await listLocalFiles().catch(() => [])).map((f) => ({ ...f, kind: "pdf" }));
   const slides = ((await slidesStore((s) => s.getAll()).catch(() => null)) || []).map((f) => ({ ...f, kind: "pptx" }));
-  const files  = [...pdfs, ...slides].sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
+  const words  = ((await slidesStore((s) => s.getAll(), "lazynotes-docs").catch(() => null)) || []).map((f) => ({ ...f, kind: "docx" }));
+  const files  = [...pdfs, ...slides, ...words].sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
   $("recent").hidden = files.length === 0;
   list.innerHTML = "";
 
@@ -893,7 +906,7 @@ async function renderRecent() {
 
     const tag = document.createElement("span");
     tag.className = `recent-kind ${f.kind}`;
-    tag.textContent = f.kind === "pptx" ? "PPT" : "PDF";
+    tag.textContent = OTHER_READERS[f.kind]?.tag ?? "PDF";
 
     const name = document.createElement("span");
     name.className = "recent-name";
@@ -909,14 +922,14 @@ async function renderRecent() {
     remove.title = "Remove from recent files (your notes stay)";
     remove.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (f.kind === "pptx") await slidesStore((s) => s.delete(f.id)).catch(() => {});
+      if (OTHER_READERS[f.kind]) await slidesStore((s) => s.delete(f.id), OTHER_READERS[f.kind].db).catch(() => {});
       else await deleteLocalFile(f.id);
       renderRecent();
     });
 
     row.append(tag, name, meta, remove);
     row.addEventListener("click", () => {
-      if (f.kind === "pptx") { location.href = `pptxreader.html?local=${encodeURIComponent(f.id)}`; return; }
+      if (OTHER_READERS[f.kind]) { location.href = `${OTHER_READERS[f.kind].page}?local=${encodeURIComponent(f.id)}`; return; }
       history.replaceState(null, "", `?local=${encodeURIComponent(f.id)}`);
       openLocalRecord(f);
     });
@@ -934,8 +947,11 @@ urlForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
   if (!url) return;
-  if (/\.pptx$/i.test(url.split(/[?#]/)[0])) {
-    location.href = `pptxreader.html?url=${encodeURIComponent(url)}`;
+  const path = url.split(/[?#]/)[0];
+  if (/\.pptx$/i.test(path)) { location.href = `pptxreader.html?url=${encodeURIComponent(url)}`; return; }
+  if (/\.docx$/i.test(path)) { location.href = `docxreader.html?url=${encodeURIComponent(url)}`; return; }
+  if (/\.doc$/i.test(path)) {
+    showMessage("Old .doc files can't be read: open it in Word or Google Docs and save as .docx or PDF.", true);
     return;
   }
   history.replaceState(null, "", `?url=${encodeURIComponent(url)}`);

@@ -247,7 +247,7 @@ function renderBlocks(blocks) {
 
     switch (b.kind) {
       case "heading": {
-        const h = withRuns(document.createElement(`h${Math.min(6, b.level + 1)}`), b.runs);
+        const h = withRuns(document.createElement(`h${Math.min(6, b.level + 1)}`), b.runs);   // Title → h1
         h.className = `d-h d-h${b.level}`;
         out.push(h);
         break;

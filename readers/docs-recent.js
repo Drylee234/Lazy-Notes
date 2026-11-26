@@ -1,5 +1,5 @@
 // Lazy Notes — recent documents and where each one saves its notes.
-// Loaded by both readers (pdfreader.html, pptxreader.html).
+// Loaded by every reader (pdfreader.html, pptxreader.html, docxreader.html).
 //
 // chrome.storage.local.lnDocs = { [key]: { key, name, kind, page, pages,
 //   openedAt, course, topic } }, key = reader page + ?url=/?local= (no #),
@@ -25,7 +25,7 @@ globalThis.LazyDocs = (() => {
     await chrome.storage.local.set({ lnDocs });
   }
 
-  // A document finished loading: { kind: "pdf" | "pptx", name, pages, page }
+  // A document finished loading: { kind: "pdf" | "pptx" | "docx", name, pages, page }
   async function opened({ kind, name, pages, page }) {
     key = keyNow();
     const { lnDocs = {}, lnDocAutoSelect, activeCourse, activeTopic, lazynotes } =

@@ -9,7 +9,7 @@
 // own DecompressionStream (same reader as pptx-parse.js).
 //
 // readDocx(arrayBuffer) → { pages: [{ number, blocks }] }
-//   blocks: { kind: "heading", level 1-6, runs }
+//   blocks: { kind: "heading", level 0-6, runs }   (0 = the document's Title)
 //         | { kind: "para", runs, list: { level, marker, ordered } | null, align }
 //         | { kind: "table", rows: [[{ paras: [runs], colSpan }]] }
 //         | { kind: "image", blob, alt }
@@ -111,19 +111,22 @@ async function readStyles(zip) {
     let heading = null;
     const m = name.match(/^heading\s*(\d)$/);
     if (m) heading = Number(m[1]);
-    else if (name === "title") heading = 1;
+    else if (name === "title") heading = 0;
     else if (name === "subtitle") heading = 2;
     const outline = val(path(s, "pPr", "outlineLvl"));
     if (heading == null && outline != null && Number(outline) < 6) heading = Number(outline) + 1;
     const rPr = kid(s, "rPr");
-    styles.set(id, { heading, b: on(kid(rPr, "b")), i: on(kid(rPr, "i")), basedOn: val(kid(s, "basedOn")) });
+    // List styles ("List Bullet", "List Number") carry their numbering.
+    const numPr = path(s, "pPr", "numPr");
+    const num = numPr && val(kid(numPr, "numId")) ? { numId: val(kid(numPr, "numId")), ilvl: Number(val(kid(numPr, "ilvl")) || 0) } : null;
+    styles.set(id, { heading, num, b: on(kid(rPr, "b")), i: on(kid(rPr, "i")), basedOn: val(kid(s, "basedOn")) });
   });
   const resolve = (id, seen = new Set()) => {
     const s = styles.get(id);
     if (!s || seen.has(id)) return s ?? null;
     seen.add(id);
     const base = s.basedOn ? resolve(s.basedOn, seen) : null;
-    return { heading: s.heading ?? base?.heading ?? null, b: s.b || !!base?.b, i: s.i || !!base?.i };
+    return { heading: s.heading ?? base?.heading ?? null, num: s.num ?? base?.num ?? null, b: s.b || !!base?.b, i: s.i || !!base?.i };
   };
   return (id) => (id ? resolve(id) : null);
 }
@@ -271,9 +274,10 @@ export async function readDocx(buffer) {
 
     let list = null;
     const numPr = kid(pPr, "numPr");
-    const numId = val(kid(numPr, "numId"));
+    const numId = val(kid(numPr, "numId")) ?? style.num?.numId ?? null;
     if (numId && numId !== "0") {
-      const level = Number(val(kid(numPr, "ilvl")) || 0);
+      const own = val(kid(numPr, "ilvl"));
+      const level = own != null ? Number(own) : (style.num?.ilvl ?? 0);
       const n = numberOf(numId, level);
       if (n) list = { level: Math.min(level, 8), marker: n.marker, ordered: n.ordered };
     }
@@ -307,8 +311,8 @@ export async function readDocx(buffer) {
       if (r.breakBefore) newPage();
       const hasText = r.runs.some((x) => x.text.trim());
       if (hasText) {
-        cur().push(r.heading
-          ? { kind: "heading", level: Math.min(6, r.heading), runs: r.runs }
+        cur().push(r.heading != null
+          ? { kind: "heading", level: Math.min(6, Math.max(0, r.heading)), runs: r.runs }
           : { kind: "para", runs: r.runs, list: r.list, align: r.align });
       }
       r.images.forEach((img) => cur().push(img));

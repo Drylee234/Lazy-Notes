@@ -350,3 +350,4 @@ body[data-page="courses"] #app { max-width: 900px; }
   .brand { font-size: 0; gap: 0; }   /* logo only, so the links fit */
   #recent-docs-grid, #recent-notes-grid { grid-template-columns: 1fr; }
 }
+.rd-icon.docx { color: #2b579a; }

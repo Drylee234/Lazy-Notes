@@ -12,7 +12,7 @@
     const out = [];
     let names = [];
     try { names = (await indexedDB.databases()).map((d) => d.name); } catch (_) { return out; }
-    for (const [db, page, kind] of [["lazynotes-pdfs", "/pdfreader.html", "pdf"], ["lazynotes-slides", "/pptxreader.html", "pptx"]]) {
+    for (const [db, page, kind] of [["lazynotes-pdfs", "/pdfreader.html", "pdf"], ["lazynotes-slides", "/pptxreader.html", "pptx"], ["lazynotes-docs", "/docxreader.html", "docx"]]) {
       if (!names.includes(db)) continue;
       try {
         const records = await new Promise((resolve, reject) => {
@@ -44,7 +44,7 @@
     const cards = docs.map((d) => {
       const a = el("a", "rd-card");
       a.href = link(d);
-      const icon = el("span", `rd-icon ${d.kind}`, d.kind === "pptx" ? "PPT" : "PDF");
+      const icon = el("span", `rd-icon ${d.kind}`, d.kind === "pptx" ? "PPT" : d.kind === "docx" ? "DOC" : "PDF");
       const text = el("span", "rd-text");
       text.append(
         el("span", "rd-name", d.name),
