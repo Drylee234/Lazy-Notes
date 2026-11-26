@@ -377,6 +377,16 @@
     }).observe(toolbar);
   }
 
+  // The toolbar button (background) toggles this panel in readers.
+  chrome.runtime.onMessage.addListener((m) => { if (m?.type === "LN_TOGGLE_PANEL") togglePanel(); });
+
+  // Readers open full screen (once per tab; F11 leaves it). lnReaderFullscreen = false: off.
+  chrome.storage.local.get("lnReaderFullscreen", (r) => {
+    if (r?.lnReaderFullscreen === false) return;
+    try { if (sessionStorage.getItem("ln-fs-done")) return; sessionStorage.setItem("ln-fs-done", "1"); } catch (_) {}
+    chrome.runtime.sendMessage({ type: "READER_FULLSCREEN" }, () => void chrome.runtime.lastError);
+  });
+
   // ── Settings ──
   chrome.storage.local.get(["lnPanelMode", "lnQuickFloat", "lnPanelFade"], (r) => {
     aside.classList.toggle("ln-fade", r.lnPanelFade !== false);

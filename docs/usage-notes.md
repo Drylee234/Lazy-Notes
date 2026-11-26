@@ -103,3 +103,8 @@ seen → cause → what changed (commit) or what's still open.
 - Dragging text into a note box always made a quote → Settings › More options "Text dragged into a note box goes in as normal text" (`lnDropPlain`, off by default).
 - Open: "basic hover gestures" on the floating panel and "Ctrl+Up" — asked the owner what they mean.
 - Answered: Ctrl+↑ in the Study note box jumps to the last note (Enter edits it; Ctrl+↓ on a note returns to the box). "Hover gesture" = the floating box fades while the mouse is away, solid on hover/focus (`lnPanelFade`, Settings › More options).
+
+## 2026-11-26 · Readers: full screen + no Chrome side panel
+
+- Readers (PDF/slides/Word) open full screen once per tab via `chrome.windows.update` (no click needed; F11 leaves) — `lnReaderFullscreen`.
+- Chrome's side panel is switched off on reader tabs; the toolbar button toggles the built-in Notes panel there (`LN_TOGGLE_PANEL`). Web pages still use Chrome's panel (an in-page panel there would mean injecting an iframe into every site) — `lnReaderNativePanel` brings Chrome's panel back in readers.

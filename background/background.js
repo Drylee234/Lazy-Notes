@@ -18,7 +18,40 @@ import { refreshCourseContextMenuItems } from './bg_context_menus.js';
 import { ensureContentScripts } from './bg_messaging.js';
 import { restoreBadge } from './bg_highlights.js';
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+// Our readers (PDF / slides / Word) have the Notes panel built in, so Chrome's
+// own side panel is switched off there (lnReaderNativePanel = true keeps it)
+// and the toolbar button toggles the built-in one. Everywhere else the button
+// opens Chrome's side panel as before.
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+
+const READER_RE = new RegExp("^" + chrome.runtime.getURL("").replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(pdf|pptx|docx)reader\\.html");
+const isReader = (url) => READER_RE.test(url || "");
+
+chrome.action.onClicked.addListener((tab) => {
+  if (isReader(tab.url)) {
+    chrome.tabs.sendMessage(tab.id, { type: "LN_TOGGLE_PANEL" }, () => void chrome.runtime.lastError);
+  } else if (tab.windowId != null) {
+    chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});   // inside the click: allowed
+  }
+});
+
+function syncReaderPanel(tabId, url) {
+  if (!isReader(url)) { chrome.sidePanel.setOptions({ tabId, enabled: true }).catch(() => {}); return; }
+  chrome.storage.local.get("lnReaderNativePanel", (r) => {
+    chrome.sidePanel.setOptions({ tabId, enabled: r?.lnReaderNativePanel === true }).catch(() => {});
+  });
+}
+chrome.tabs.onUpdated.addListener((tabId, _info, tab) => syncReaderPanel(tabId, tab.url || tab.pendingUrl));
+chrome.tabs.onActivated.addListener(({ tabId }) => chrome.tabs.get(tabId, (t) => { if (t) syncReaderPanel(tabId, t.url); }));
+
+// A reader asks for its window to go full screen (the API needs no click).
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type !== "READER_FULLSCREEN" || sender.tab?.windowId == null) return;
+  chrome.windows.get(sender.tab.windowId, (w) => {
+    if (chrome.runtime.lastError || !w || w.type !== "normal" || w.state === "fullscreen") return;
+    chrome.windows.update(w.id, { state: "fullscreen" }, () => void chrome.runtime.lastError);
+  });
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   refreshCourseContextMenuItems();
