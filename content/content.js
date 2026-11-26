@@ -782,6 +782,8 @@
         ? `Saving to ${selectedCourse} › ${selectedTopic}`
         : "Pick a course and topic in the Lazy Notes side panel first";
       whereEl.classList.toggle("none", !(selectedCourse && selectedTopic));
+      // Only shown when something's missing; the side panel says where notes go.
+      whereEl.style.display = selectedCourse && selectedTopic ? "none" : "";
     }
   }
 

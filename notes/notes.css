@@ -265,3 +265,8 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .edit-fold > summary:hover, .edit-fold > summary:focus-visible { color: var(--pri); background: var(--hover); outline: none; }
 .edit-fold[open] > summary { color: var(--sec); }
 .edit-fold > :not(summary) { margin: 4px 0 6px; }
+
+/* Folds side by side on one line; an opened one takes the full width under them */
+.edit-folds { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 2px 10px; }
+.edit-fold[open] { flex-basis: 100%; order: 1; }
+.edit-fold > summary { margin-left: 0; }
