@@ -172,6 +172,8 @@ async function loadDeck(data, name) {
   hideMessage();
 
   renderDeck();
+  // The deck's words go to the AI (readers/doc-words.js), one entry per slide.
+  globalThis.LazyDocText?.publish(slideEls.map((el) => el.innerText), name);
   await loadDeckNotes();
   goToSlide(slideFromHash(), false);
   LazyDocs.opened({ kind: "pptx", name, pages: deck.slides.length, page: currentSlide });

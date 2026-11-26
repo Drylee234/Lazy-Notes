@@ -156,6 +156,9 @@ async function loadDoc(data, name) {
   hideMessage();
 
   renderDoc();
+  // Word has no real pages, so the whole document goes over as one entry
+  // (readers/doc-words.js; "this page" then means the whole thing).
+  globalThis.LazyDocText?.publish([viewerEl.innerText], name);
   await loadDocNotes();
   goToPage(pageFromHash(), false);
   LazyDocs.opened({ kind: "docx", name, pages: doc.pages.length, page: currentPage });
