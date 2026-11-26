@@ -332,6 +332,6 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 /* AI help in the editor (note-editor.js) — a quiet row above the footer */
 .edit-ai { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 0; }
 .edit-ai[hidden] { display: none; }
-.edit-ai-btn { font-size: 11px; padding: 3px 7px; border-color: var(--border); color: var(--sec); }
+.edit-ai-btn { font-size: 11px; padding: 3px 7px; border-color: var(--border); color: var(--sec); white-space: nowrap; }
 .edit-ai-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .edit-ai-btn:disabled { opacity: .6; cursor: default; }

@@ -275,6 +275,7 @@
   let whereEl           = null;
   let textEditEl        = null;
   let tidyBtnEl         = null;   // ✨ Tidy in the pop-up footer
+  let toolsRowEl        = null;   // the row holding Note / Quote / Tidy
   let tidyBefore        = null;   // the words before the AI touched them
   let sideBox           = null;   // split layout: the text + annotation box
   let editGroup         = null;   // text box + annotation, moved between boxes
@@ -505,24 +506,28 @@
 
       .lazy-notes-popup-footer {
         display: flex;
+        flex-wrap: wrap;
+        align-items: center;
         justify-content: flex-end;
         gap: 6px;
         margin-top: 10px;
       }
+      /* "What to do with these words" keeps a line of its own, so a longer
+         label (↩ Undo) never pushes Save onto its own row. */
+      .lazy-notes-popup-tools { display: flex; gap: 6px; width: 100%; }
 
       .lazy-notes-handoff {
-        padding: 5px 8px; border-radius: 4px; font-size: 11px;
+        padding: 5px 7px; border-radius: 4px; font-size: 10.5px;
         font-weight: 600; cursor: pointer; border: 1px solid #45456a;
         background: transparent; color: #a5b4fc;
       }
-      .lazy-notes-handoff.last { margin-right: auto; }
-      .lazy-notes-tidy { border-color: #5b4a7a; color: #d8b4fe; }
+      .lazy-notes-tidy { border-color: #5b4a7a; color: #d8b4fe; white-space: nowrap; }
       .lazy-notes-tidy:hover:not(:disabled) { background: #332a44; color: #e9d5ff; }
       .lazy-notes-tidy:disabled { opacity: .6; cursor: default; }
       .lazy-notes-handoff:hover { background: #2a2a44; color: #c7d2fe; }
 
       .lazy-notes-btn {
-        padding: 5px 12px;
+        padding: 5px 10px;
         border-radius: 4px;
         font-size: 11px;
         font-weight: 500;
@@ -840,6 +845,10 @@
 
     // In the readers: hand the words to the pop-up note box (quick-note.js),
     // to rewrite them as your own note or keep them as a quote with a note.
+    const tools = document.createElement("div");
+    tools.className = "lazy-notes-popup-tools";
+    row5.appendChild(tools);
+
     const handoffBtns = [["note", "✎ Note", "Write your own note from these words"],
                          ["quote", "❝ Quote", "Keep these words as a quote and add your note (Ctrl+.)"]].map(([mode, label, tip]) => {
       const b = document.createElement("button");
@@ -850,10 +859,9 @@
       b.style.display = "none";
       b.addEventListener("mousedown", (e) => e.preventDefault());
       b.addEventListener("click", (e) => { e.stopPropagation(); handOff(mode); });
-      row5.appendChild(b);
+      tools.appendChild(b);
       return b;
     });
-    handoffBtns[1].classList.add("last");
     handoffBtnEls = handoffBtns;
 
     // ✨ Tidy — ask the AI to clean the highlighted words up before saving.
@@ -867,8 +875,9 @@
     tidyBtn.style.display = "none";
     tidyBtn.addEventListener("mousedown", (e) => e.preventDefault());
     tidyBtn.addEventListener("click", (e) => { e.stopPropagation(); runTidy(); });
-    row5.appendChild(tidyBtn);
+    tools.appendChild(tidyBtn);
     tidyBtnEl = tidyBtn;
+    toolsRowEl = tools;
     row5.appendChild(dismissBtn);
     row5.appendChild(saveBtn);
     container.appendChild(row5);
@@ -1550,9 +1559,9 @@
         currentSelectedText = r.text;
         fitTextEdit();
         if (popupAnchor) positionPopup();
-        setTidyLabel("↩ Undo tidy", "Put the original words back");
+        setTidyLabel("↩ Undo", "Put the original words back");
       } else {
-        setTidyLabel("✨ didn't work", r?.reason || "The AI couldn't be reached.", 5000);
+        setTidyLabel("✨ failed", r?.reason || "The AI couldn't be reached.", 5000);
       }
     });
   }
@@ -1575,9 +1584,9 @@
       tidyBtnEl.style.display = aiOn ? "" : "none";
       tidyBtnEl.disabled = false;
       tidyBtnEl.textContent = "✨ Tidy";
-      tidyBtnEl.classList.toggle("last", aiOn);
-      handoffBtnEls[1]?.classList.toggle("last", !aiOn);
     }
+    // The tools row disappears entirely when it has nothing in it.
+    if (toolsRowEl) toolsRowEl.style.display = (aiOn || canHandOff) ? "" : "none";
     arrangePopup();
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
     positionPopup(rect);
