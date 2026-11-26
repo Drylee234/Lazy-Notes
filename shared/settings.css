@@ -65,3 +65,23 @@
 .ln-settings .set-tidy-status { display: block; font-size: 11.5px; color: var(--sec); margin-bottom: 6px; }
 .ln-settings .set-report-row { align-items: center; margin-top: 6px; }
 .ln-settings .set-report-status { font-size: 11.5px; color: var(--sec); }
+
+/* AI help (folded) — reuses the sync section's fold, with its own dot/status */
+.ln-settings .set-ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.ln-settings .set-ai-dot[data-tone="ok"] { background: #16a34a; }
+.ln-settings .set-ai-dot[data-tone="wait"] { background: #d97706; }
+.ln-settings .set-ai-dot[data-tone="bad"] { background: var(--danger); }
+.ln-settings .set-ai-intro { margin: 4px 0 8px; font-size: 11.5px; color: var(--sec); }
+.ln-settings .set-ai-about { margin: 2px 0 6px; font-size: 11px; color: var(--dim); }
+.ln-settings .set-ai-getkey { margin: 2px 0 6px; font-size: 11px; color: var(--dim); }
+.ln-settings .set-ai-getkey a { color: var(--accent); }
+.ln-settings .set-ai-status { margin-top: 6px; font-size: 11.5px; color: var(--dim); }
+.ln-settings .set-ai-status[data-tone="ok"] { color: #16a34a; }
+.ln-settings .set-ai-status[data-tone="wait"] { color: #d97706; }
+.ln-settings .set-ai-status[data-tone="bad"] { color: var(--danger); }
+.ln-settings .set-ai-note { margin-top: 6px; font-size: 11px; color: var(--dim); }
+.ln-settings .set-ai select {
+  width: 100%; box-sizing: border-box; padding: 5px 7px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--pri); font: inherit; font-size: 12px;
+}
+.ln-settings .set-ai-base-row[hidden] { display: none; }

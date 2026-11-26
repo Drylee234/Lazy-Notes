@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -70,6 +70,30 @@ globalThis.LazySettings = (() => {
       </div>
       <div class="set-label set-sub">Documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
+    </details>
+    <details class="set-sync set-ai">
+      <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
+      <div class="set-ai-intro">Lazy Notes can ask an AI service to tidy a highlight, summarise a topic, or make test questions. Nothing is sent anywhere until you switch it on and paste a key.</div>
+      <label class="set-field"><span>Service</span>
+        <select class="set-ai-provider"></select></label>
+      <div class="set-ai-about"></div>
+      <label class="set-field set-ai-base-row" hidden><span>Address</span>
+        <input type="url" class="set-ai-base" placeholder="http://localhost:11434/v1" spellcheck="false" /></label>
+      <label class="set-field"><span>Key</span>
+        <span class="set-key-row">
+          <input type="password" class="set-ai-key" placeholder="paste your key" spellcheck="false" autocomplete="off" />
+          <button type="button" class="set-btn set-ai-key-show" title="Show / hide">&#128065;</button>
+        </span></label>
+      <div class="set-ai-getkey"></div>
+      <label class="set-field"><span>Model</span>
+        <input type="text" class="set-ai-model" list="set-ai-models" spellcheck="false" />
+        <datalist id="set-ai-models"></datalist></label>
+      <div class="set-backup">
+        <button type="button" class="set-btn set-ai-test">Test connection</button>
+      </div>
+      <div class="set-ai-status"></div>
+      <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b> (off until a test passes)</label>
+      <div class="set-ai-note">Your key is kept in this Chrome only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
     </details>
     <div class="set-label set-backup-label">Problems</div>
     <label class="set-check"><input type="checkbox" data-key="lnSendReports" /> Send usage &amp; error reports with sync (never your notes or key)</label>
@@ -171,6 +195,7 @@ globalThis.LazySettings = (() => {
     root.querySelector(".set-export").addEventListener("click", async () => {
       const all = await chrome.storage.local.get(null);
       delete all.lastDrag;
+      delete all.lnAiKeys;   // keys belong to you and this Chrome only
       const file = { app: "lazy-notes", version: 1, exportedAt: new Date().toISOString(), data: all };
       const blob = new Blob([JSON.stringify(file, null, 1)], { type: "application/json" });
       const a = document.createElement("a");
@@ -332,6 +357,118 @@ globalThis.LazySettings = (() => {
     root.querySelector(".set-tidy-undo").addEventListener("click", () => tidy(true));
     chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnTidyLog) showTidy(); });
     showTidy();
+
+    // ── AI help (background/bg_ai.js does the talking) ──
+    const AIP = globalThis.LazyAIProviders;
+    if (AIP) {
+      const pick    = root.querySelector(".set-ai-provider");
+      const about   = root.querySelector(".set-ai-about");
+      const getKey  = root.querySelector(".set-ai-getkey");
+      const keyBox  = root.querySelector(".set-ai-key");
+      const baseRow = root.querySelector(".set-ai-base-row");
+      const baseBox = root.querySelector(".set-ai-base");
+      const modelBox = root.querySelector(".set-ai-model");
+      const models  = root.querySelector("#set-ai-models");
+      const aiStatus = root.querySelector(".set-ai-status");
+      const aiDot   = root.querySelector(".set-ai-dot");
+      const onBox   = root.querySelector('input[data-key="lnAiOn"]');
+
+      AIP.ORDER.forEach((id) => {
+        const o = document.createElement("option");
+        o.value = id;
+        o.textContent = AIP.PROVIDERS[id].label;
+        pick.appendChild(o);
+      });
+
+      let aiToldAt = 0;   // a Test result stays put for a few seconds
+      const aiSay = (text, tone = "", sticky = false) => {
+        aiStatus.textContent = text;
+        aiStatus.dataset.tone = tone;
+        aiDot.dataset.tone = tone;
+        if (sticky) aiToldAt = Date.now();
+      };
+
+      function showAi() {
+        chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiState", "lnAiOn"], (r) => {
+          const id = r.lnAiProvider || "gemini";
+          const p = AIP.get(id);
+          pick.value = id;
+          about.textContent = p.free;
+          baseRow.hidden = !p.needsBase;
+          if (document.activeElement !== baseBox) baseBox.value = r.lnAiBase || p.base || "";
+          if (document.activeElement !== keyBox) keyBox.value = (r.lnAiKeys || {})[id] || "";
+          if (document.activeElement !== modelBox) modelBox.value = (r.lnAiModel || {})[id] || p.defaultModel || "";
+          models.innerHTML = "";
+          p.models.forEach(([value, label]) => {
+            const o = document.createElement("option");
+            o.value = value;
+            o.label = label;
+            models.appendChild(o);
+          });
+          getKey.textContent = "";
+          getKey.append(document.createTextNode(p.keyHint + " "));
+          if (p.keyUrl) {
+            const a = document.createElement("a");
+            a.href = p.keyUrl;
+            a.target = "_blank";
+            a.rel = "noreferrer";
+            a.textContent = "Get a key";
+            getKey.appendChild(a);
+          }
+          const st = r.lnAiState || {};
+          if (Date.now() - aiToldAt < 6000) return;   // don't talk over the Test result
+          if (!keyBox.value) aiSay("No key yet.", "");
+          else if (st.lastError) aiSay(st.lastError, "bad");
+          else if (st.lastOkAt) aiSay(`Working — last answered ${ago(st.lastOkAt)}${r.lnAiOn ? "" : " (still switched off)"}.`, r.lnAiOn ? "ok" : "wait");
+          else aiSay("Not tested yet — press Test connection.", "wait");
+        });
+      }
+
+      const saveAi = async (patch) => chrome.storage.local.set(patch);
+      pick.addEventListener("change", async () => {
+        await saveAi({ lnAiProvider: pick.value, lnAiBase: AIP.get(pick.value).base || "" });
+        showAi();
+      });
+      keyBox.addEventListener("change", async () => {
+        const { lnAiKeys = {} } = await chrome.storage.local.get("lnAiKeys");
+        lnAiKeys[pick.value] = keyBox.value.trim();
+        await saveAi({ lnAiKeys });
+        showAi();
+      });
+      modelBox.addEventListener("change", async () => {
+        const { lnAiModel = {} } = await chrome.storage.local.get("lnAiModel");
+        lnAiModel[pick.value] = modelBox.value.trim();
+        await saveAi({ lnAiModel });
+      });
+      baseBox.addEventListener("change", () => saveAi({ lnAiBase: baseBox.value.trim() }));
+      root.querySelector(".set-ai-key-show").addEventListener("click", () => {
+        keyBox.type = keyBox.type === "password" ? "text" : "password";
+      });
+
+      root.querySelector(".set-ai-test").addEventListener("click", () => {
+        aiSay("Asking the service…", "wait", true);
+        chrome.runtime.sendMessage({
+          type: "AI_TEST",
+          provider: pick.value,
+          key: keyBox.value.trim(),
+          model: modelBox.value.trim(),
+          base: baseBox.value.trim()
+        }, (r) => {
+          void chrome.runtime.lastError;
+          if (r?.ok) {
+            aiSay(`Connected: ${AIP.get(r.provider).label}, ${r.model}, answered in ${(r.ms / 1000).toFixed(1)}s.`, "ok", true);
+            if (!onBox.checked) { onBox.checked = true; chrome.storage.local.set({ lnAiOn: true }); }
+          } else {
+            aiSay(r?.reason || "Couldn't reach the service.", "bad", true);
+          }
+        });
+      });
+
+      chrome.storage.onChanged.addListener((c, area) => {
+        if (area === "local" && (c.lnAiState || c.lnAiProvider || c.lnAiKeys || c.lnAiOn)) showAi();
+      });
+      showAi();
+    }
 
     const KEYS = ["lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS];
     chrome.storage.onChanged.addListener((changes, area) => {
