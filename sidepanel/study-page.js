@@ -425,6 +425,12 @@ const StudyPage = (() => {
       commit();
     };
     setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+    const stopLeave = onLeaveWindow(() => {
+      stopLeave();
+      if (editing?.input !== input) return;
+      document.removeEventListener("pointerdown", outside, true);
+      commit();
+    });
 
     input.addEventListener("keydown", async (e) => {
       if (e.key === "Escape") {
@@ -684,6 +690,22 @@ const StudyPage = (() => {
   }
 
   wireTextDrop(composerInput);
+
+  // A note's source link: if that page is already open in a tab, go to that
+  // tab (and to the right page/slide) instead of opening it again.
+  noteList.addEventListener("click", async (e) => {
+    const a = e.target.closest?.("a.note-source");
+    if (!a || !a.href || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const url = a.href;
+    const base = (u) => String(u || "").split("#")[0];
+    const tabs = await chrome.tabs.query({});
+    const tab = tabs.find((t) => base(t.url) === base(url)) || tabs.find((t) => base(t.pendingUrl) === base(url));
+    if (!tab) { chrome.tabs.create({ url }); return; }
+    await chrome.tabs.update(tab.id, { active: true, ...(tab.url !== url && url.includes("#") ? { url } : {}) });
+    chrome.windows.update(tab.windowId, { focused: true });
+  }, true);
 
   // ---------------------------------------------------------------------------
   // Text dropped on the page: save it like a highlight taken on a website

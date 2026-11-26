@@ -56,13 +56,58 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
     return { d, redraw };
   };
   const short = (v) => (v.length > 28 ? v.slice(0, 27) + "…" : v);
-  const fType = fold(editorField("Type", type), () => `${type.value === "__typed__" ? "My note" : (CATEGORY_LABELS[type.value] || type.value)} ›`);
+  // Type: a small button; the choices float beside it instead of opening
+  // a field inside the editor.
+  const typeName = () => (type.value === "__typed__" ? "My note" : (CATEGORY_LABELS[type.value] || type.value));
+  const typeBtn = document.createElement("button");
+  typeBtn.type = "button";
+  typeBtn.className = "edit-type-btn";
+  const palette = document.createElement("div");
+  palette.className = "type-palette";
+  palette.hidden = true;
+  palette.setAttribute("role", "listbox");
+  const drawPalette = () => {
+    palette.replaceChildren(...[...type.options].map((o) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "type-palette-item" + (o.value === type.value ? " on" : "");
+      b.textContent = o.textContent;
+      b.addEventListener("click", () => {
+        type.value = o.value;
+        type.dispatchEvent(new Event("change"));
+        palette.hidden = true;
+        typeBtn.focus();
+      });
+      return b;
+    }));
+  };
+  typeBtn.addEventListener("click", () => {
+    drawPalette();
+    palette.hidden = !palette.hidden;
+    if (!palette.hidden) {
+      palette.style.left = `${typeBtn.offsetLeft + typeBtn.offsetWidth + 6}px`;
+      palette.style.top = `${Math.max(0, typeBtn.offsetTop - 40)}px`;
+      palette.querySelector(".on")?.focus();
+    }
+  });
+  palette.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); palette.hidden = true; typeBtn.focus(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const items = [...palette.children];
+      const i = items.indexOf(document.activeElement);
+      items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+    }
+  });
+  const fType = { d: typeBtn, redraw: () => { typeBtn.textContent = `${typeName()} ›`; } };
+  fType.redraw();
   const fAnn  = fold(editorField("Annotation", annotation), () => `Annotation ${annotation.value.trim() ? "· " + short(annotation.value.trim()) : "›"}`);
   const fCtx  = fold(editorField("Context", context), () => `Context ${context.value.trim() ? "· " + short(context.value.trim()) : "›"}`);
   type.addEventListener("change", fType.redraw);
   annotation.addEventListener("input", fAnn.redraw);
   context.addEventListener("input", fCtx.redraw);
   more.append(fType.d, fAnn.d, fCtx.d);
+  form.appendChild(palette);
 
   // ── Footer: Delete (two clicks) · Cancel · Save ──
   const footer = document.createElement("div");
@@ -125,6 +170,13 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
     if (snapshot() !== initial && text.value.trim()) submit(); else onCancel();
   };
   setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+  // Clicking the web page (the panel loses focus) ends it the same way.
+  const stopLeave = onLeaveWindow(() => {
+    stopLeave();
+    if (!form.isConnected) return;
+    document.removeEventListener("pointerdown", outside, true);
+    if (snapshot() !== initial && text.value.trim()) submit(); else onCancel();
+  });
 
   form.addEventListener("keydown", (e) => {
     if (e.isComposing) return;  // Enter that confirms an IME composition
@@ -193,4 +245,26 @@ async function saveHighlightEdit(id, courseName, topicName, fields) {
   topic.highlights[id] = { ...note, ...fields, edited: new Date().toISOString() };
   await chrome.storage.local.set({ lazynotes });
   return topic.highlights[id];
+}
+
+
+// Calls done() when you click away into the web page (this panel loses
+// focus), unless you came back or started dragging text from the page (to
+// drop into the editor; content.js stamps "lastDrag"). Returns a remover.
+function onLeaveWindow(done) {
+  let timer = null;
+  const blur = () => {
+    const at = Date.now();
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (document.hasFocus()) return;
+      try {
+        const { lastDrag } = await chrome.storage.local.get("lastDrag");
+        if (lastDrag && lastDrag.at >= at - 200) return;   // a drag from the page: keep editing
+      } catch (_) {}
+      done();
+    }, 700);
+  };
+  window.addEventListener("blur", blur);
+  return () => { clearTimeout(timer); window.removeEventListener("blur", blur); };
 }

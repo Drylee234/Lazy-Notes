@@ -791,3 +791,6 @@ async function boot() {
 }
 
 boot();
+
+// A note's link to this same deck (side panel reuses the open tab).
+window.addEventListener("hashchange", () => { if (deck) goToSlide(slideFromHash()); });

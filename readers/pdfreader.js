@@ -1054,3 +1054,7 @@ async function boot() {
 }
 
 boot();
+
+// A note's link to this same PDF (side panel reuses the open tab): only the
+// #page changes, so jump there.
+window.addEventListener("hashchange", () => { if (pdfDoc) goToPage(initialPageFromHash()); });

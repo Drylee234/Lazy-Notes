@@ -536,3 +536,6 @@ async function boot() {
 }
 
 boot();
+
+// A note's link to this same document (side panel reuses the open tab).
+window.addEventListener("hashchange", () => { try { goToPage(pageFromHash()); } catch (_) {} });
