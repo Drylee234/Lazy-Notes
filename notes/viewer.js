@@ -178,7 +178,8 @@ async function renderCourses() {
     const query = searchEl.value.trim();
     const searching = query.length > 0;
 
-    listEl.hidden    = searching;
+    const home = document.getElementById("home-sections") || listEl;
+    home.hidden      = searching;
     resultsEl.hidden = !searching;
     if (!searching) return;
 
@@ -246,16 +247,109 @@ async function renderCourses() {
     drawSearch();
   });
 
+  // "Recent notes": the topics you last took notes in, newest first, to
+  // carry on where you left off.
+  function drawRecentNotes() {
+    const grid = document.getElementById("recent-notes-grid");
+    if (!grid) return;
+    const tops = [];
+    Object.entries(courses).forEach(([courseName, course]) => {
+      Object.entries(course.topics || {}).forEach(([topicName, topic]) => {
+        const all = [
+          ...Object.values(topic.highlights || {}).map((n) => ({ ...n, kind: "highlight" })),
+          ...Object.values(topic.notes || {}).map((n) => ({ ...n, kind: "typed" }))
+        ].filter((n) => n.timestamp);
+        if (!all.length) return;
+        const last = all.reduce((a, b) => (Date.parse(b.edited || b.timestamp) > Date.parse(a.edited || a.timestamp) ? b : a));
+        tops.push({ courseName, topicName, count: all.length, last, at: Date.parse(last.edited || last.timestamp) || 0 });
+      });
+    });
+    tops.sort((a, b) => b.at - a.at);
+    grid.replaceChildren();
+    document.querySelector(".rn-empty").hidden = tops.length > 0;
+    tops.slice(0, 6).forEach((t) => {
+      const a = document.createElement("a");
+      a.className = "rnote-card";
+      a.href = `display.html?course=${encodeURIComponent(t.courseName)}&topic=${encodeURIComponent(t.topicName)}`;
+      const head = document.createElement("div");
+      head.className = "rnote-head";
+      const topic = document.createElement("span");
+      topic.className = "rnote-topic";
+      topic.textContent = t.topicName;
+      const when = document.createElement("span");
+      when.className = "rnote-when";
+      when.textContent = timeAgo(t.at);
+      head.append(topic, when);
+      const course = document.createElement("div");
+      course.className = "rnote-course";
+      course.textContent = `${t.courseName} · ${plural(t.count, "note")}`;
+      const snip = document.createElement("div");
+      snip.className = "rnote-snip";
+      const txt = String(t.last.text || "")
+        .replace(/^\s*(#{1,3}|[-*•>]|\d+[.)])\s+/gm, "")   // line markers: headings, points, quotes
+        .replace(/\*\*|==/g, "")                         // **bold**, ==mark==
+        .replace(/(^|\s)[*_](?=\S)|(?<=\S)[*_](?=\s|$)/g, "$1")   // *italic*
+        .replace(/\s+/g, " ").trim();
+      snip.textContent = txt.length > 110 ? txt.slice(0, 107) + "…" : txt;
+      a.append(head, course, snip);
+      grid.appendChild(a);
+    });
+  }
+
   drawCourses();
+  drawRecentNotes();
   drawSearch();
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes.lazynotes) return;
     courses = changes.lazynotes.newValue?.courses ?? {};
     drawCourses();
+    drawRecentNotes();
     drawSearch();
   });
 }
+
+function timeAgo(ms) {
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  if (s < 86400 * 7) { const d = Math.floor(s / 86400); return d === 1 ? "yesterday" : `${d} days ago`; }
+  return formatWhen(new Date(ms).toISOString());
+}
+
+// ---------------------------------------------------------------------------
+// Settings (⚙ in the top bar): the same controls as the side panel's menu
+// ---------------------------------------------------------------------------
+
+(function initSettingsDialog() {
+  const btn = document.getElementById("open-settings");
+  if (!btn || !globalThis.LazySettings) return;
+  const dlg = document.createElement("dialog");
+  dlg.className = "settings-dialog";
+  dlg.setAttribute("aria-label", "Settings");
+  const head = document.createElement("div");
+  head.className = "settings-head";
+  const h = document.createElement("h2");
+  h.textContent = "Settings";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "settings-close";
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close settings");
+  close.addEventListener("click", () => dlg.close());
+  head.append(h, close);
+  dlg.appendChild(head);
+  LazySettings.build(dlg);
+  const note = document.createElement("p");
+  note.className = "settings-note";
+  note.textContent = "Saved straight away, and the same in the side panel's ⚙ menu.";
+  dlg.appendChild(note);
+  document.body.appendChild(dlg);
+  btn.addEventListener("click", () => dlg.showModal());
+  // Click on the backdrop closes it.
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+})();
 
 // ---------------------------------------------------------------------------
 // Search helpers

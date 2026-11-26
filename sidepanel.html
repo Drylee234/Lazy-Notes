@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="notes/notes.css" />
 <link rel="stylesheet" href="sidepanel/sidepanel.css" />
 <link rel="stylesheet" href="sidepanel/study.css" />
+<link rel="stylesheet" href="shared/settings.css" />
 <script src="shared/theme.js"></script>
 </head>
 <body>
@@ -24,29 +25,8 @@
     </button>
     <details id="settings">
       <summary id="settings-btn" title="Settings" aria-label="Settings">⚙</summary>
-      <div id="settings-menu">
-        <div class="set-label">Look</div>
-        <div id="theme-seg" class="seg" role="radiogroup" aria-label="Look">
-          <button type="button" data-theme-choice="auto" role="radio">Auto</button>
-          <button type="button" data-theme-choice="light" role="radio">Light</button>
-          <button type="button" data-theme-choice="dark" role="radio">Dark</button>
-        </div>
-        <div class="set-label">Save pop-up appears</div>
-        <div id="popup-seg" class="seg seg--wrap" role="radiogroup" aria-label="Save pop-up position">
-          <button type="button" data-side="above" role="radio">Above</button>
-          <button type="button" data-side="below" role="radio">Below</button>
-          <button type="button" data-side="left" role="radio">Left</button>
-          <button type="button" data-side="right" role="radio">Right</button>
-          <button type="button" data-side="split" role="radio" title="Text on the left, type and Save on the right">Split</button>
-        </div>
-        <label class="set-check"><input type="checkbox" id="doc-auto" /> Opening a document switches to the course &amp; topic it saved to last</label>
-        <label class="set-range" for="spell-level">
-          <span class="set-range-head"><span>Autocorrect</span><b id="spell-level-name">Mild</b></span>
-          <input type="range" id="spell-level" min="0" max="3" step="1" value="1" />
-          <span class="set-range-ticks"><span>Off</span><span>Mild</span><span>Strong</span><span>Toxic</span></span>
-        </label>
-        <label class="set-check"><input type="checkbox" id="pptx-auto" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
-      </div>
+      <!-- Filled by shared/settings.js -->
+      <div id="settings-menu"></div>
     </details>
   </div>
   <nav id="view-tabs" role="tablist">
@@ -271,6 +251,7 @@
 <script src="notes/note-editor.js"></script>
 <script src="sidepanel/rich-box.js"></script>
 <script src="sidepanel/study-page.js"></script>
+<script src="shared/settings.js"></script>
 <script src="sidepanel/sidepanel.js"></script>
 </body>
 </html>

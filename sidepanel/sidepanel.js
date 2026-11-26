@@ -983,44 +983,9 @@ updatePdfBanner();
 // Settings: look (Auto/Light/Dark, applied by theme.js) and auto-opening
 // .pptx downloads (bg_pptx.js).
 (function initSettings() {
-  const seg = document.getElementById("theme-seg");
-  const pptx = document.getElementById("pptx-auto");
+  // The controls themselves live in shared/settings.js (also used by All notes).
   const settings = document.getElementById("settings");
-  const mark = (t) => seg.querySelectorAll("button").forEach((b) =>
-    b.setAttribute("aria-checked", String(b.dataset.themeChoice === (t || "auto"))));
-  const docAuto = document.getElementById("doc-auto");
-  chrome.storage.local.get(["lnTheme", "pptxAutoOpen", "lnDocAutoSelect"], ({ lnTheme, pptxAutoOpen, lnDocAutoSelect }) => {
-    mark(lnTheme);
-    pptx.checked = pptxAutoOpen !== false;
-    docAuto.checked = lnDocAutoSelect !== false;
-  });
-  const popupSeg = document.getElementById("popup-seg");
-  const markSide = (v) => popupSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.side === (v || "above"))));
-  chrome.storage.local.get("lnPopupSide", ({ lnPopupSide }) => markSide(lnPopupSide));
-  popupSeg.addEventListener("click", (e) => {
-    const v = e.target.closest("button")?.dataset.side;
-    if (!v) return;
-    markSide(v);
-    chrome.storage.local.set({ lnPopupSide: v });
-  });
-  // Autocorrect strength: 0 Off · 1 Mild · 2 Strong · 3 Toxic (Backspace undoes a fix at any level).
-  const spellLevel = document.getElementById("spell-level");
-  const spellName  = document.getElementById("spell-level-name");
-  const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
-  const showLevel = () => { spellName.textContent = LEVELS[spellLevel.value]; };
-  chrome.storage.local.get(["lnAutocorrect", "lnAutocorrectLevel"], ({ lnAutocorrect, lnAutocorrectLevel }) => {
-    spellLevel.value = String(typeof lnAutocorrectLevel === "number" ? lnAutocorrectLevel : lnAutocorrect === false ? 0 : 1);
-    showLevel();
-  });
-  spellLevel.addEventListener("input", () => { showLevel(); chrome.storage.local.set({ lnAutocorrectLevel: Number(spellLevel.value) }); });
-  docAuto.addEventListener("change", () => chrome.storage.local.set({ lnDocAutoSelect: docAuto.checked }));
-  seg.addEventListener("click", (e) => {
-    const t = e.target.closest("button")?.dataset.themeChoice;
-    if (!t) return;
-    mark(t);
-    chrome.storage.local.set({ lnTheme: t });
-  });
-  pptx.addEventListener("change", () => chrome.storage.local.set({ pptxAutoOpen: pptx.checked }));
+  LazySettings.build(document.getElementById("settings-menu"));
   document.addEventListener("click", (e) => { if (!settings.contains(e.target)) settings.open = false; });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") settings.open = false; });
 })();

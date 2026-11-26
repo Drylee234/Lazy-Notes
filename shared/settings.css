@@ -1,0 +1,17 @@
+/* Lazy Notes — settings controls (shared/settings.js). Colours from theme.css. */
+.ln-settings { font-size: 12.5px; color: var(--pri); }
+.ln-settings .set-label { margin-bottom: 6px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.ln-settings .seg { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; }
+.ln-settings .seg button { flex: 1; padding: 5px 0; border: 0; background: var(--surface); color: var(--sec); font: inherit; cursor: pointer; }
+.ln-settings .seg button + button { border-left: 1px solid var(--border); }
+.ln-settings .seg button:hover { color: var(--pri); }
+.ln-settings .seg button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
+.ln-settings .seg--wrap button { font-size: 11.5px; }
+.ln-settings .set-check { display: flex; gap: 7px; align-items: flex-start; color: var(--pri); line-height: 1.35; cursor: pointer; }
+.ln-settings .set-check + .set-check { margin-top: 8px; }
+.ln-settings .set-check input { margin-top: 2px; accent-color: var(--accent); }
+.ln-settings .set-range { display: block; margin: 2px 0 12px; color: var(--pri); }
+.ln-settings .set-range-head { display: flex; justify-content: space-between; font-size: 12.5px; }
+.ln-settings .set-range-head b { color: var(--accent); font-weight: 600; }
+.ln-settings .set-range input { width: 100%; margin: 6px 0 2px; accent-color: var(--accent); }
+.ln-settings .set-range-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); }
