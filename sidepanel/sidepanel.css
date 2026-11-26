@@ -465,3 +465,10 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
    its list scrolls instead of stretching the panel. */
 #ai-view { display: none; flex: 1; min-height: 0; flex-direction: column; }
 #ai-view.visible { display: flex; }
+
+.course-doc-wrap { position: relative; }
+.course-doc-wrap .course-doc { padding-right: 28px; }
+.course-doc-x { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--dim); cursor: pointer; font-size: 11px; opacity: 0; }
+.course-doc-wrap:hover .course-doc-x, .course-doc-x:focus-visible { opacity: 1; }
+.course-doc-x:hover { background: var(--hover); color: var(--danger); }

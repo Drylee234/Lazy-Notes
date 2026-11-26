@@ -88,6 +88,9 @@
       <button id="open-doc-btn" class="open-doc-btn" type="button">Open a document…</button>
     </div>
 
+    <!-- Hidden while a document is open (its "Saving to" card above does the
+         job); Settings › More options brings it back (lnHomeCourseInDoc). -->
+    <div id="course-pick">
     <label class="field-label" for="home-course-select">Course</label>
     <select id="home-course-select" class="select">
       <option value="">Select a course</option>
@@ -106,6 +109,7 @@
     <div id="home-topic-list"></div>
 
     <button id="open-create-topic" class="add-btn" type="button">+ New topic</button>
+    </div>
 
     <!-- This course's documents (PDF / slides / Word its notes came from) -->
     <div id="course-docs" hidden>
