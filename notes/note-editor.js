@@ -10,8 +10,10 @@
 // noteEditor(note, { onSave, onCancel, onDelete }) → the form element.
 //   onSave({ text, category, annotation, context })   may return a promise
 //   onDelete() → promise of true once deleted
+//   onAiNote({ text, category }) → promise of true: save a brand-new note in
+//     the same topic (used by 📖 Define). Without it, Define isn't offered.
 // form.focusText() puts the cursor at the end of the text.
-function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
+function noteEditor(note, { onSave, onCancel, onDelete, onConvert, onAiNote }) {
   const form = document.createElement("div");
   form.className = "edit-form";
   form.addEventListener("click", (e) => e.stopPropagation());
@@ -110,6 +112,74 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
   more.append(fType.d, fAnn.d, fCtx.d);
   form.appendChild(palette);
 
+
+  // ── AI help (Settings › AI). The row only appears when the AI is on, and
+  //    nothing here saves by itself: it fills the boxes you can already see
+  //    and edit, and a second press puts things back.
+  const aiRow = document.createElement("div");
+  aiRow.className = "edit-ai";
+  aiRow.hidden = true;
+  const AIP = globalThis.LazyAIProviders;
+
+  function aiButton(label, title, run) {
+    const b = editorButton(label, "edit-btn edit-ai-btn");
+    b.title = title;
+    let before = null;          // what it said before the AI changed it
+    const reset = (ms) => setTimeout(() => { b.textContent = label; b.title = title; b.disabled = false; }, ms);
+    b.addEventListener("click", async () => {
+      if (before !== null) { before.undo(); before = null; b.textContent = label; b.title = title; return; }
+      const words = text.value.trim();
+      if (!words) { text.focus(); return; }
+      b.disabled = true;
+      b.textContent = "…";
+      const out = await run(words);
+      b.disabled = false;
+      if (out?.ok) {
+        if (out.undo) { before = { undo: out.undo }; b.textContent = "↩ Undo"; b.title = "Put it back as it was"; }
+        else { b.textContent = out.said || "Saved"; reset(3000); }
+      } else {
+        b.textContent = "didn't work";
+        b.title = out?.reason || "The AI couldn't be reached.";
+        reset(5000);
+      }
+    });
+    return b;
+  }
+
+  // ✨ Tidy — clean the highlighted words up, in place.
+  aiRow.appendChild(aiButton("✨ Tidy", "Fix broken lines and typing in the text above", async (words) => {
+    const r = await AIP.ask("tidy", words);
+    if (!r.ok) return r;
+    const was = text.value;
+    text.value = r.text;
+    fitEditorArea(text);
+    return { ok: true, undo: () => { text.value = was; fitEditorArea(text); } };
+  }));
+
+  // 💡 Explain — plain words, into your own note about this highlight.
+  aiRow.appendChild(aiButton("💡 Explain", "Explain this in plain words, into the Annotation", async (words) => {
+    const r = await AIP.ask("explain", words);
+    if (!r.ok) return r;
+    const was = annotation.value;
+    annotation.value = was.trim() ? `${was.trim()}\n${r.text}` : r.text;
+    fAnn.redraw();
+    fAnn.d.open = true;
+    fitEditorArea(annotation);
+    return { ok: true, undo: () => { annotation.value = was; fAnn.redraw(); fitEditorArea(annotation); } };
+  }));
+
+  // 📖 Define — a definition of this term, saved as its own Definition note.
+  if (onAiNote) {
+    aiRow.appendChild(aiButton("📖 Define", "Write a definition of this and keep it as its own Definition note", async (words) => {
+      const r = await AIP.ask("define", words);
+      if (!r.ok) return r;
+      const saved = await onAiNote({ text: r.text, category: "definition" });
+      return saved ? { ok: true, said: "✓ Definition saved" } : { ok: false, reason: "The note couldn't be saved." };
+    }));
+  }
+
+  if (AIP) AIP.ready().then((st) => { aiRow.hidden = !(st.on && st.hasKey); });
+
   // ── Footer: Delete (two clicks) · Cancel · Save ──
   const footer = document.createElement("div");
   footer.className = "edit-form-footer";
@@ -158,7 +228,7 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
   }
 
   footer.append(del, cancel, save);
-  form.append(text, more, footer);
+  form.append(text, more, aiRow, footer);
   // A figure: show the picture above its caption; its type stays Figure.
   if (isFigure && note.image) {
     const img = document.createElement("img");

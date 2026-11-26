@@ -688,6 +688,18 @@ async function renderDisplay() {
         close();
       },
       onCancel: close,
+      // 📖 Define: the definition becomes its own note in this topic.
+      onAiNote: async ({ text, category }) => {
+        const reply = await new Promise((r) => {
+          try {
+            chrome.runtime.sendMessage({ type: "AI_SAVE_NOTE", text, category, courseName, topicName }, (x) => {
+              void chrome.runtime.lastError;
+              r(x);
+            });
+          } catch (_) { r(null); }
+        });
+        return !!reply?.ok;
+      },
       onDelete: async () => {
         const ok = await sendDelete({ type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName });
         if (ok) close();

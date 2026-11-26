@@ -390,7 +390,7 @@ globalThis.LazySettings = (() => {
 
       function showAi() {
         chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiState", "lnAiOn"], (r) => {
-          const id = r.lnAiProvider || "gemini";
+          const id = r.lnAiProvider || AIP.DEFAULT;
           const p = AIP.get(id);
           pick.value = id;
           about.textContent = p.free;

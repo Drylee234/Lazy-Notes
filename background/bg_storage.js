@@ -191,6 +191,8 @@ export async function insertHighlight(id, payload, courseName, topicName) {
     sourceUrl:  payload.sourceUrl,
     sourceTitle: payload.sourceTitle ?? null,
     anchor:     payload.anchor ?? null,
+    // Written by an AI, not by you (📖 Define). Kept so you can always tell.
+    ...(payload.fromAi ? { fromAi: true } : {}),
     // A list saved as several points sends its own, a millisecond apart, to
     // keep their order (accepted only if it's about now).
     timestamp:  (payload.timestamp && Math.abs(Date.parse(payload.timestamp) - Date.now()) < 60000)

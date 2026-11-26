@@ -856,6 +856,11 @@ const StudyPage = (() => {
         closeHighlightEditor();
       },
       onCancel: () => closeHighlightEditor(),
+      // 📖 Define: the definition becomes its own note in this topic.
+      onAiNote: async ({ text, category }) => {
+        const reply = await send({ type: "AI_SAVE_NOTE", text, category, ...where });
+        return !!reply?.ok;
+      },
       // Type "My note": becomes one of your typed notes (annotation kept
       // as a line under it), the highlight goes.
       onConvert: async (fields) => {

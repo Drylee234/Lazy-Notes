@@ -16,7 +16,7 @@ import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
-import { handleAiTest, handleAiRun, handleAiReady } from './bg_ai.js';
+import { handleAiTest, handleAiRun, handleAiReady, handleAiSaveNote } from './bg_ai.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -69,13 +69,14 @@ const REPLY_HANDLERS = {
   UNJOIN:             handleUnjoin,
   AI_TEST:            handleAiTest,
   AI_RUN:             handleAiRun,
-  AI_READY:           handleAiReady
+  AI_READY:           handleAiReady,
+  AI_SAVE_NOTE:       handleAiSaveNote
 };
 
 // What gets counted in the usage report (actions, never their contents).
 const COUNTED = new Set(["NEW_HIGHLIGHT", "NEW_HIGHLIGHTS", "SAVE_TYPED_NOTE", "DELETE_HIGHLIGHT", "DELETE_TYPED_NOTE",
   "JOIN_TO_LAST", "UNJOIN", "CREATE_COURSE", "CREATE_TOPIC", "SEND_TO_NOTE_BOX", "TOGGLE_HIGHLIGHTER_REQUEST",
-  "OPEN_PDF_IN_READER", "SET_ARRANGEMENT", "TIDY_NOTES", "AI_RUN", "AI_TEST"]);
+  "OPEN_PDF_IN_READER", "SET_ARRANGEMENT", "TIDY_NOTES", "AI_RUN", "AI_TEST", "AI_SAVE_NOTE"]);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (COUNTED.has(message?.type)) {

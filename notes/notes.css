@@ -328,3 +328,10 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .note-table { border-collapse: collapse; font-size: 0.95em; margin: 2px 0; }
 .note-table th, .note-table td { border: 1px solid var(--border-strong); padding: 3px 8px; text-align: left; vertical-align: top; }
 .note-table th { background: var(--surface); font-weight: 650; }
+
+/* AI help in the editor (note-editor.js) — a quiet row above the footer */
+.edit-ai { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 0; }
+.edit-ai[hidden] { display: none; }
+.edit-ai-btn { font-size: 11px; padding: 3px 7px; border-color: var(--border); color: var(--sec); }
+.edit-ai-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.edit-ai-btn:disabled { opacity: .6; cursor: default; }

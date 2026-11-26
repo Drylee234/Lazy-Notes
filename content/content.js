@@ -206,6 +206,8 @@
   let categoryBtnEl     = null;
   let whereEl           = null;
   let textEditEl        = null;
+  let tidyBtnEl         = null;   // ✨ Tidy in the pop-up footer
+  let tidyBefore        = null;   // the words before the AI touched them
   let sideBox           = null;   // split layout: the text + annotation box
   let editGroup         = null;   // text box + annotation, moved between boxes
   let whereElHome       = null;
@@ -445,6 +447,9 @@
         background: transparent; color: #a5b4fc;
       }
       .lazy-notes-handoff.last { margin-right: auto; }
+      .lazy-notes-tidy { border-color: #5b4a7a; color: #d8b4fe; }
+      .lazy-notes-tidy:hover:not(:disabled) { background: #332a44; color: #e9d5ff; }
+      .lazy-notes-tidy:disabled { opacity: .6; cursor: default; }
       .lazy-notes-handoff:hover { background: #2a2a44; color: #c7d2fe; }
 
       .lazy-notes-btn {
@@ -764,6 +769,20 @@
     });
     handoffBtns[1].classList.add("last");
     handoffBtnEls = handoffBtns;
+
+    // ✨ Tidy — ask the AI to clean the highlighted words up before saving.
+    // It only changes the box you can already edit, so you see what you're
+    // saving and can put it back. Hidden unless Settings › AI is on.
+    const tidyBtn = document.createElement("button");
+    tidyBtn.type = "button";
+    tidyBtn.className = "lazy-notes-handoff lazy-notes-tidy";
+    tidyBtn.textContent = "✨ Tidy";
+    tidyBtn.title = "Ask the AI to fix broken lines and typing in these words (Alt+T)";
+    tidyBtn.style.display = "none";
+    tidyBtn.addEventListener("mousedown", (e) => e.preventDefault());
+    tidyBtn.addEventListener("click", (e) => { e.stopPropagation(); runTidy(); });
+    row5.appendChild(tidyBtn);
+    tidyBtnEl = tidyBtn;
     row5.appendChild(dismissBtn);
     row5.appendChild(saveBtn);
     container.appendChild(row5);
@@ -1087,6 +1106,13 @@
       return;
     }
 
+    // Alt+T: ✨ Tidy, without reaching for the mouse (and again to undo).
+    if (event.altKey && (event.key === "t" || event.key === "T") && aiOn && tidyBtnEl?.style.display !== "none") {
+      event.preventDefault();
+      runTidy();
+      return;
+    }
+
     // ── TYPE CHIPS ── a number saves as that type (not while typing in a
     // box: Tab out first); ←/→ move the lit chip; Tab from the text box
     // jumps to the chips.
@@ -1382,6 +1408,68 @@
     return out.join("\n").replace(/\n{3,}/g, "\n\n");
   }
 
+  // ── ✨ Tidy (background/bg_ai.js does the talking) ───────────────────────
+  let aiOn = false;
+  function refreshAi() {
+    try {
+      chrome.runtime.sendMessage({ type: "AI_READY" }, (r) => {
+        void chrome.runtime.lastError;
+        aiOn = !!(r?.on && r?.hasKey);
+        if (tidyBtnEl && popupContainer?.style.display === "block") tidyBtnEl.style.display = aiOn ? "" : "none";
+      });
+    } catch (_) { aiOn = false; }
+  }
+  try {
+    chrome.storage.onChanged.addListener((c, area) => {
+      if (area === "local" && (c.lnAiOn || c.lnAiKeys || c.lnAiProvider)) refreshAi();
+    });
+  } catch (_) { /* no storage on this page */ }
+  refreshAi();
+
+  function setTidyLabel(label, title, ms) {
+    if (!tidyBtnEl) return;
+    tidyBtnEl.textContent = label;
+    if (title) tidyBtnEl.title = title;
+    if (ms) setTimeout(() => {
+      if (!tidyBtnEl) return;
+      tidyBtnEl.textContent = "✨ Tidy";
+      tidyBtnEl.title = "Ask the AI to fix broken lines and typing in these words (Alt+T)";
+      tidyBtnEl.disabled = false;
+    }, ms);
+  }
+
+  function runTidy() {
+    if (!tidyBtnEl || !textEditEl) return;
+    // A second press puts the original words back.
+    if (tidyBefore != null) {
+      textEditEl.value = tidyBefore;
+      currentSelectedText = tidyBefore;
+      tidyBefore = null;
+      fitTextEdit();
+      setTidyLabel("✨ Tidy", "Ask the AI to fix broken lines and typing in these words (Alt+T)");
+      return;
+    }
+    const text = textEditEl.value.trim();
+    if (!text) return;
+    const before = textEditEl.value;
+    tidyBtnEl.disabled = true;
+    setTidyLabel("✨ …", "Asking the AI…");
+    chrome.runtime.sendMessage({ type: "AI_RUN", task: "tidy", text }, (r) => {
+      void chrome.runtime.lastError;
+      tidyBtnEl.disabled = false;
+      if (r?.ok && r.text) {
+        tidyBefore = before;
+        textEditEl.value = r.text;
+        currentSelectedText = r.text;
+        fitTextEdit();
+        if (popupAnchor) positionPopup();
+        setTidyLabel("↩ Undo tidy", "Put the original words back");
+      } else {
+        setTidyLabel("✨ didn't work", r?.reason || "The AI couldn't be reached.", 5000);
+      }
+    });
+  }
+
   function showPopup(rect, selectedText, paragraphElement) {
     if (!popupContainer) buildPopup();
     resetPopupState();
@@ -1394,6 +1482,14 @@
     // Readers: to their pop-up note box. Web pages: to the side panel's note box.
     const canHandOff = globalThis.LazyNotesQuick ? globalThis.LazyNotesQuick.enabled("lnQuickSelButtons") : handoffOn;
     handoffBtnEls.forEach((b) => { b.style.display = canHandOff ? "" : "none"; });
+    tidyBefore = null;
+    if (tidyBtnEl) {
+      tidyBtnEl.style.display = aiOn ? "" : "none";
+      tidyBtnEl.disabled = false;
+      tidyBtnEl.textContent = "✨ Tidy";
+      tidyBtnEl.classList.toggle("last", aiOn);
+      handoffBtnEls[1]?.classList.toggle("last", !aiOn);
+    }
     arrangePopup();
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
     positionPopup(rect);

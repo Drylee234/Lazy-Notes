@@ -6,7 +6,7 @@
 //
 // Settings (chrome.storage.local):
 //   lnAiOn        false = the AI is off everywhere (default off until a key works)
-//   lnAiProvider  "gemini" | "groq" | "anthropic" | "openrouter" | "custom"
+//   lnAiProvider  "groq" (default) | "gemini" | "anthropic" | "openrouter" | "custom"
 //   lnAiModel     model name, per provider: { providerId: name }
 //   lnAiBase      own address, for "custom"
 //   lnAiKeys      { providerId: key }   ← never synced, never exported, never reported
@@ -16,8 +16,12 @@
 //   AI_TEST  {provider?, key?, model?, base?}  → { ok, ms, model, reply?, reason? }
 //   AI_RUN   {task, text, extra?}              → { ok, text?, reason? }
 //   AI_READY  (no arguments)                   → { ok, on, provider, model, hasKey }
+//   AI_SAVE_NOTE {courseName, topicName, text, category} → { ok, id?, reason? }
 
 import '../shared/ai-providers.js';
+import { insertHighlight } from './bg_storage.js';
+import { validateHighlight } from './bg_validators.js';
+import { notifySidePanel } from './bg_sidepanel.js';
 
 const AI = globalThis.LazyAIProviders;
 const TIMEOUT_MS = 60 * 1000;   // free services are slow when they're busy
@@ -77,7 +81,7 @@ const TASKS = {
 
 async function config(override = {}) {
   const s = await chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiOn"]);
-  const provider = String(override.provider || s.lnAiProvider || "gemini");
+  const provider = String(override.provider || s.lnAiProvider || AI.DEFAULT);
   const p = AI.get(provider);
   const models = s.lnAiModel || {};
   return {
@@ -180,6 +184,26 @@ export async function handleAiRun(message) {
 export async function handleAiReady() {
   const cfg = await config();
   return { ok: true, on: cfg.on, provider: cfg.provider, model: cfg.model, hasKey: !!cfg.key };
+}
+
+// Keep an AI-written answer as a note of its own (📖 Define). It is marked
+// fromAi so you can always tell which notes you didn't write, and it replies
+// properly so a button never claims it saved something it didn't.
+export async function handleAiSaveNote(message) {
+  const payload = {
+    id: crypto.randomUUID(),
+    text: String(message?.text || "").trim(),
+    category: String(message?.category || "definition"),
+    course: message?.courseName,
+    topic: message?.topicName,
+    createdAt: Date.now(),
+    fromAi: true
+  };
+  const check = await validateHighlight(payload);
+  if (!check.valid) return { ok: false, reason: check.reason };
+  await insertHighlight(payload.id, payload, payload.course, payload.topic);
+  notifySidePanel();
+  return { ok: true, id: payload.id };
 }
 
 export const AI_TASK_NAMES = Object.keys(TASKS);

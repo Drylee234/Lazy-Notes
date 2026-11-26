@@ -40,7 +40,7 @@ globalThis.LazyAIProviders = (() => {
       base: "https://api.groq.com/openai/v1",
       keyUrl: "https://console.groq.com/keys",
       keyHint: "Free key from the Groq console — no card needed.",
-      free: "The most generous free one: roughly 30 requests a minute and 1,000 a day. Very fast. Open models, not Gemini or Claude quality.",
+      free: "Picked for you: the most generous free one — roughly 30 requests a minute and 1,000 a day, and very fast. Open models, so not quite Gemini or Claude quality.",
       models: [
         ["openai/gpt-oss-120b", "GPT-OSS 120B — best here"],
         ["openai/gpt-oss-20b", "GPT-OSS 20B — quicker"],
@@ -92,10 +92,10 @@ globalThis.LazyAIProviders = (() => {
     }
   };
 
-  const ORDER = ["gemini", "groq", "anthropic", "openrouter", "custom"];
+  const ORDER = ["groq", "gemini", "anthropic", "openrouter", "custom"];
 
   function get(id) {
-    return PROVIDERS[id] || PROVIDERS.gemini;
+    return PROVIDERS[id] || PROVIDERS.groq;
   }
 
   // Build the request: { url, headers, body }. One place, so a fix to a
@@ -178,5 +178,23 @@ globalThis.LazyAIProviders = (() => {
     return raw || `The service said no (${status}).`;
   }
 
-  return { PROVIDERS, ORDER, get, buildRequest, readReply, readError };
+  // ── for pages: ask the service worker to do the job ──
+  // (In the service worker itself these are never called; it does the work.)
+  const message = (msg, ifDead) => new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(msg, (reply) => {
+        void chrome.runtime.lastError;
+        resolve(reply || ifDead);
+      });
+    } catch (_) { resolve(ifDead); }
+  });
+
+  // { on, hasKey, provider, model } — so a page can hide its AI buttons.
+  const ready = () => message({ type: "AI_READY" }, { ok: false, on: false, hasKey: false });
+
+  // { ok, text } | { ok: false, reason }
+  const ask = (task, text, extra) =>
+    message({ type: "AI_RUN", task, text, extra }, { ok: false, reason: "Lazy Notes didn't answer. Reload the page." });
+
+  return { PROVIDERS, ORDER, DEFAULT: "groq", get, buildRequest, readReply, readError, ready, ask };
 })();
