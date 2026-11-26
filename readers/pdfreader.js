@@ -868,6 +868,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "0")                  { e.preventDefault(); setScale(fitScale("width"), { fit: "width" }); }
     return;
   }
+  if ((e.key === "s" || e.key === "S") && !e.altKey) { e.preventDefault(); setSnipping(!snipping); return; }
   if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(currentPage + 1); }
   if (e.key === "ArrowLeft"  || e.key === "PageUp")   { e.preventDefault(); goToPage(currentPage - 1); }
 });
@@ -1068,3 +1069,77 @@ boot();
 // A note's link to this same PDF (side panel reuses the open tab): only the
 // #page changes, so jump there.
 window.addEventListener("hashchange", () => { if (pdfDoc) goToPage(initialPageFromHash()); });
+
+
+// ---------------------------------------------------------------------------
+// Snip: save a figure (diagram, equation, table picture) as a note. Snip
+// (or S) → drag a box over a page → caption pop-up (figure-save.js). The
+// picture is cut from the page's own canvas at full resolution. Esc or Snip
+// again leaves; so does saving.
+// ---------------------------------------------------------------------------
+
+const snipBtn = document.getElementById("snip-btn");
+let snipping = false;
+let snipStart = null;   // { x, y, pageEl }
+let snipBox = null;
+
+function setSnipping(on) {
+  snipping = on && !!pdfDoc;
+  document.body.classList.toggle("snipping", snipping);
+  snipBtn.setAttribute("aria-pressed", String(snipping));
+  if (snipping) getSelection()?.removeAllRanges();
+  if (!snipping) { snipBox?.remove(); snipBox = null; snipStart = null; }
+}
+snipBtn.addEventListener("click", () => setSnipping(!snipping));
+new MutationObserver(() => { snipBtn.hidden = !pdfDoc; }).observe(document.getElementById("page-controls"), { attributes: true });
+
+viewerEl.addEventListener("mousedown", (e) => {
+  if (!snipping || e.button !== 0) return;
+  const pageEl = e.target.closest(".page");
+  if (!pageEl?.querySelector("canvas")) return;
+  e.preventDefault();
+  e.stopPropagation();
+  snipStart = { x: e.clientX, y: e.clientY, pageEl };
+  snipBox = document.createElement("div");
+  snipBox.className = "snip-box";
+  document.body.appendChild(snipBox);
+  drawSnip(e);
+}, true);
+
+function snipRect(e) {
+  // Kept inside the page the drag started on.
+  const pr = snipStart.pageEl.querySelector("canvas").getBoundingClientRect();
+  const cx = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const x1 = cx(Math.min(snipStart.x, e.clientX), pr.left, pr.right), x2 = cx(Math.max(snipStart.x, e.clientX), pr.left, pr.right);
+  const y1 = cx(Math.min(snipStart.y, e.clientY), pr.top, pr.bottom), y2 = cx(Math.max(snipStart.y, e.clientY), pr.top, pr.bottom);
+  return { left: x1, top: y1, right: x2, bottom: y2, width: x2 - x1, height: y2 - y1, page: pr };
+}
+
+function drawSnip(e) {
+  const r = snipRect(e);
+  Object.assign(snipBox.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+}
+
+addEventListener("mousemove", (e) => { if (snipStart) drawSnip(e); });
+addEventListener("mouseup", (e) => {
+  if (!snipStart) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const r = snipRect(e);
+  const pageEl = snipStart.pageEl;
+  snipStart = null;
+  if (r.width < 12 || r.height < 12) { snipBox?.remove(); snipBox = null; return; }   // a click, not a box
+  const canvas = pageEl.querySelector("canvas");
+  const k = canvas.width / r.page.width;   // canvas pixels per screen pixel (zoom × screen density)
+  const dataUrl = LazyFigure.fromCanvas(canvas,
+    Math.round((r.left - r.page.left) * k), Math.round((r.top - r.page.top) * k),
+    Math.round(r.width * k), Math.round(r.height * k));
+  LazyFigure.ask({
+    dataUrl, rect: r, el: pageEl, page: Number(pageEl.dataset.page),
+    onDone: () => setSnipping(false)
+  });
+}, true);
+
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && snipping && !document.querySelector(".lnf-pop")) setSnipping(false);
+});

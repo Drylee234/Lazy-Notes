@@ -794,3 +794,7 @@ boot();
 
 // A note's link to this same deck (side panel reuses the open tab).
 window.addEventListener("hashchange", () => { if (deck) goToSlide(slideFromHash()); });
+
+
+// "Save image" on a picture (diagrams, equation images): saved as a Figure note.
+LazyFigure.imageButtons(viewerEl, ".slide img", (img) => Number(img.closest(".slide")?.dataset.slide) || null);

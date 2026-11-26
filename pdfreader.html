@@ -37,6 +37,10 @@
   </div>
 
   <div class="tb-right">
+    <button id="snip-btn" class="tb-btn snip-btn" type="button" title="Save a figure (S): drag a box over a diagram or equation" aria-label="Save a figure" aria-pressed="false" hidden>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 1v11h11M1 4h11v11"/></svg>
+      <span>Snip</span>
+    </button>
     <button id="hl-toggle" class="tb-btn hl-toggle" type="button" aria-pressed="true" hidden></button>
     <button id="hl-status" class="hl-status" title="Open the Lazy Notes side panel"></button>
   </div>
@@ -78,6 +82,7 @@
 
 <script src="readers/pdfreader-host.js"></script>
 <script src="readers/docs-recent.js"></script>
+<script src="readers/figure-save.js"></script>
 <script src="content/content.js"></script>
 <script type="module" src="readers/pdfreader.js"></script>
 </body>

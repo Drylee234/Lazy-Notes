@@ -539,3 +539,7 @@ boot();
 
 // A note's link to this same document (side panel reuses the open tab).
 window.addEventListener("hashchange", () => { try { goToPage(pageFromHash()); } catch (_) {} });
+
+
+// "Save image" on a picture (diagrams, equation images): saved as a Figure note.
+LazyFigure.imageButtons(viewerEl, ".d-figure img, img", (img) => Number(img.closest("[data-page]")?.dataset.page) || null);

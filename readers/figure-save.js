@@ -165,16 +165,28 @@ globalThis.LazyFigure = (() => {
       btn.style.left = `${Math.max(4, r.right - btn.offsetWidth - 6)}px`;
       btn.style.top = `${Math.max(4, r.top + 6)}px`;
     };
-    root.addEventListener("mouseover", (e) => {
-      const img = e.target.closest?.(selector);
-      if (!img || !img.complete || (img.naturalWidth || 0) < 24) return;
-      clearTimeout(hideTimer);
-      current = img;
-      btn.style.display = "block";
-      place();
+    // Found by position, not hover events: slide pictures let the mouse
+    // through (so text under them stays selectable).
+    const hideSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { btn.style.display = "none"; current = null; }, 300); };
+    let raf = 0;
+    root.addEventListener("mousemove", (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const hit = [...root.querySelectorAll(selector)].reverse().find((img) => {
+          if (!img.complete || (img.naturalWidth || 0) < 24) return false;
+          const r = img.getBoundingClientRect();
+          return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        });
+        if (hit) {
+          clearTimeout(hideTimer);
+          current = hit;
+          btn.style.display = "block";
+          place();
+        } else if (current) hideSoon();
+      });
     });
-    const hideSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { btn.style.display = "none"; current = null; }, 250); };
-    root.addEventListener("mouseout", (e) => { if (e.target.closest?.(selector) && e.relatedTarget !== btn) hideSoon(); });
+    root.addEventListener("mouseleave", (e) => { if (e.relatedTarget !== btn) hideSoon(); });
     btn.addEventListener("mouseenter", () => clearTimeout(hideTimer));
     btn.addEventListener("mouseleave", hideSoon);
     addEventListener("scroll", () => { btn.style.display = "none"; }, true);

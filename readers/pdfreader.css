@@ -335,3 +335,15 @@ body.outline-open #viewer { margin-left: 260px; }
 .ol-item.current > .ol-line .ol-link { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 @media (max-width: 700px) { body.outline-open #viewer { margin-left: 0; } #outline { box-shadow: var(--shadow); } }
 .recent-kind.docx { background: rgba(43, 87, 154, 0.14); color: #2b579a; }
+
+/* Snip: drag a box over a page to save a figure */
+.snip-btn { display: inline-flex; align-items: center; gap: 5px; }
+.snip-btn[hidden] { display: none; }
+.snip-btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+body.snipping .page { cursor: crosshair; }
+body.snipping .textLayer { pointer-events: none; user-select: none; }
+.snip-box {
+  position: fixed; z-index: 50; pointer-events: none;
+  border: 2px solid var(--accent); background: rgba(99, 102, 241, 0.12); border-radius: 2px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.18);
+}

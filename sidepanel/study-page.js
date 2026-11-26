@@ -146,6 +146,9 @@ const StudyPage = (() => {
       "chronological"
     );
 
+    // Keep keyboard focus on the same note across a redraw (a move or indent
+    // can redraw more than once).
+    const hadFocus = noteList.contains(document.activeElement) ? document.activeElement.closest(".note")?.dataset.id : null;
     noteList.innerHTML = "";
     shown = entries;
     entries.forEach((entry) => {
@@ -153,10 +156,13 @@ const StudyPage = (() => {
       arrangeable(el, entry);
       noteList.appendChild(el);
     });
-    if (focusAfterDraw) {
-      noteList.querySelector(`[data-id="${CSS.escape(focusAfterDraw)}"]`)?.focus({ preventScroll: false });
-      focusAfterDraw = null;
+    const refocus = focusAfterDraw || hadFocus;
+    if (refocus) noteList.querySelector(`.note[data-id="${CSS.escape(refocus)}"]`)?.focus({ preventScroll: true });
+    if (focusAfterDraw && noteList.querySelector(`.note[data-id="${CSS.escape(focusAfterDraw)}"]`)) {
+      noteList.querySelector(`.note[data-id="${CSS.escape(focusAfterDraw)}"]`).scrollIntoView({ block: "nearest" });
     }
+    clearTimeout(render.focusTimer);
+    render.focusTimer = setTimeout(() => { focusAfterDraw = null; }, 800);
 
     emptyStudy.textContent = "Nothing here yet. Type a note below, or drag text here from a page.";
     emptyStudy.style.display = entries.length ? "none" : "block";
