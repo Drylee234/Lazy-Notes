@@ -35,7 +35,7 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
 
   // "My note": turn the highlight into one of your own typed notes (Study
   // tab only, where onConvert is given).
-  if (onConvert) type.add(new Option("My note (typed)", "__typed__"));
+  if (onConvert) type.add(new Option("Note (your own, typed)", "__typed__"));
 
   // Type › Annotation › Context: each folded on its own line, which says
   // what's in it; click a line to open just that one.
@@ -59,7 +59,7 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
   const short = (v) => (v.length > 28 ? v.slice(0, 27) + "…" : v);
   // Type: a small button; the choices float beside it instead of opening
   // a field inside the editor.
-  const typeName = () => (type.value === "__typed__" ? "My note" : (CATEGORY_LABELS[type.value] || type.value));
+  const typeName = () => (type.value === "__typed__" ? "Note" : (CATEGORY_LABELS[type.value] || type.value));
   const typeBtn = document.createElement("button");
   typeBtn.type = "button";
   typeBtn.className = "edit-type-btn";

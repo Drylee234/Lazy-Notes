@@ -22,7 +22,7 @@
   if (globalThis.LazyNotesQuick) return;
 
   const TYPES = [
-    { cat: "my note",    mark: "✎",   name: "My note",    key: "9" },
+    { cat: "my note",    mark: "✎",   name: "Note",       key: "9" },
     { cat: "header",     mark: "H",   name: "Header",     key: "1" },
     { cat: "sub topic",  mark: "H2",  name: "Sub topic",  key: "2" },
     { cat: "definition", mark: "Def", name: "Definition", key: "3" },
@@ -37,7 +37,7 @@
   const UNDO_MS = 6000;
 
   // Settings (all on unless switched off).
-  const SETTING_KEYS = ["lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode", "lnListHeadType"];
+  const SETTING_KEYS = ["lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode", "lnListHeadType", "lnPlainInBoxes"];
   const settings = {};
   const on = (k) => settings[k] !== false;
   chrome.storage.local.get(SETTING_KEYS, (r) => Object.assign(settings, r));
@@ -158,6 +158,9 @@
     input.placeholder = quote ? "Your note about it (optional)…" : "Type a note…";
     chips["my note"].hidden = !!quote;           // a quote is a highlight
     chips["list head"].hidden = !on("lnListHeadType");
+    // Plain: for a quote (words from the page); for your own words only when
+    // "Plain in note boxes" is on. Otherwise 0 means Note.
+    chips.generic.hidden = !quote && settings.lnPlainInBoxes !== true;
     pick(quote ? (category && chips[category] && category !== "my note" ? category : "generic") : "my note");
 
     const noTopic = !activeCourse || !activeTopic;
@@ -254,7 +257,8 @@
   chipsEl.addEventListener("keydown", (e) => {
     e.stopPropagation();
     const shown = TYPES.filter((t) => !chips[t.cat].hidden);
-    const byKey = shown.find((t) => t.key === e.key.toLowerCase());
+    const byKey = shown.find((t) => t.key === e.key.toLowerCase()) ||
+      (e.key === "0" && chips.generic.hidden && !chips["my note"].hidden ? TYPES[0] : null);
     if (byKey) { e.preventDefault(); pick(byKey.cat); save(); return; }
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       e.preventDefault();
