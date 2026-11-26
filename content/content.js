@@ -39,9 +39,15 @@
   let handoffBtnEls = [];
   let handoffOn = true;   // lnQuickSelButtons: ✎ Note / ❝ Quote in the pop-up
   let listHeadOn = true;  // lnListHeadType: the List head chip (8)
-  chrome.storage.local.get(["lnQuickSelButtons", "lnListHeadType"], (r) => {
+  let pageNumOn = true;   // lnDropPageNums: drop lone page numbers from PDF text
+  let dupWarnOn = true;   // lnDupWarn: say when these words are already saved
+  let headSplitOn = true; // lnHeadSplit: offer "Heading" + "Definition" for "Heading: words…"
+  chrome.storage.local.get(["lnQuickSelButtons", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit"], (r) => {
     handoffOn = r?.lnQuickSelButtons !== false;
     listHeadOn = r?.lnListHeadType !== false;
+    pageNumOn = r?.lnDropPageNums !== false;
+    dupWarnOn = r?.lnDupWarn !== false;
+    headSplitOn = r?.lnHeadSplit !== false;
     showListHeadChip();
   });
   // Off: hidden from the chips, the number keys and ←/→.
@@ -106,6 +112,68 @@
     headingToggleEl.style.display = "";
   }
   let joinTarget = null;     // { id, text } of the highlight "Join" would add to
+
+  // ── Guards against easy slips ────────────────────────────────────────────
+  // Page / slide numbers come along when a selection crosses a PDF page's
+  // footer: a line that is only "8" or "10". Dropped when there are other
+  // lines (a selection of just a number is kept).
+  function dropPageNumbers(text) {
+    const lines = String(text || "").replace(/\r/g, "").split("\n");
+    const words = lines.filter((l) => l.trim() && !/^\s*\d{1,3}\s*$/.test(l));
+    if (lines.length < 2 || !words.length) return String(text || "");
+    // The number and the blank lines around it go, so the sentence it cut
+    // can be joined back together.
+    const out = [];
+    lines.forEach((l) => {
+      if (/^\s*\d{1,3}\s*$/.test(l)) { while (out.length && !out[out.length - 1].trim()) out.pop(); out.push("\u0000"); return; }
+      if (!l.trim() && out[out.length - 1] === "\u0000") return;
+      out.push(l);
+    });
+    return out.filter((l) => l !== "\u0000").join("\n");
+  }
+
+  // Same words already in this topic (saved twice by mistake)?
+  let dupWarnEl = null;
+  function updateDupWarning() {
+    if (!dupWarnEl) return;
+    dupWarnEl.style.display = "none";
+    if (!dupWarnOn || !selectedCourse || !selectedTopic) return;
+    const norm = (t) => String(t || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const mine = norm(currentSelectedText);
+    if (mine.length < 4) return;
+    const topic = courseTree?.[selectedCourse]?.topics?.[selectedTopic];
+    const all = [...Object.values(topic?.highlights || {}), ...Object.values(topic?.notes || {})];
+    const same = all.some((h) => norm(h.text) === mine);
+    const inside = !same && mine.length >= 20 && all.some((h) => norm(h.text).includes(mine));
+    if (!same && !inside) return;
+    dupWarnEl.textContent = same
+      ? "⚠ Already saved in this topic · Enter saves it again"
+      : "⚠ These words are already inside a saved note · Enter saves anyway";
+    dupWarnEl.style.display = "";
+  }
+
+  // "Membrane Proteins: are the proteins inside the membrane" saved as a
+  // heading: offer the words before ":" as the heading and the rest as a
+  // Definition under it.
+  let headSplitEl = null;
+  const HEADING_TYPES = ["header", "sub topic", "list head"];
+  function headingSplit(text) {
+    const m = String(text || "").replace(/\s+/g, " ").trim().match(/^([^:：]{2,60}?)\s*[:：]\s*(.+)$/);
+    if (!m || m[2].split(" ").length < 3) return null;
+    return { head: m[1].trim(), rest: m[2].trim() };
+  }
+  function updateHeadSplit() {
+    if (!headSplitEl) return;
+    const parts = headSplitOn && HEADING_TYPES.includes(selectedCategory) && !listSplit
+      ? headingSplit(currentSelectedText) : null;
+    headSplitEl.style.display = parts ? "" : "none";
+    if (!parts) return;
+    const kind = { header: "Header", "sub topic": "Sub topic", "list head": "List head" }[selectedCategory];
+    const head = parts.head.length > 28 ? parts.head.slice(0, 28) + "…" : parts.head;
+    headSplitEl.querySelector("span").textContent = `Save “${head}” as ${kind} + the rest as Definition`;
+  }
+  const headSplitWanted = () => headSplitEl && headSplitEl.style.display !== "none" &&
+    headSplitEl.querySelector("input").checked ? headingSplit(currentSelectedText) : null;
 
   function askLastHighlight() {
     joinTarget = null;
@@ -291,6 +359,7 @@
       .lazy-notes-join-key { margin-left: auto; padding: 0 4px; border-radius: 3px; background: #3a3a44; color: #c4c4cc; font-size: 9.5px; }
       .lazy-notes-split { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 11.5px; color: #d4d4d8; cursor: pointer; }
       .lazy-notes-split input { accent-color: #6366f1; margin: 0; }
+      .lazy-notes-dup { margin: -2px 0 8px; padding: 4px 6px; border-radius: 6px; background: #3a2f12; color: #fcd34d; font-size: 11.5px; }
       .lazy-notes-chip-caption { font-size: 10.5px; color: #8e8e99; margin-bottom: 8px; }
       .lazy-notes-popup-side { width: 260px; min-width: 0; }
       .lazy-notes-popup-side .lazy-notes-text-edit { margin-bottom: 8px; }
@@ -547,6 +616,8 @@
         if (listSplit) splitToggleEl.querySelector("span").textContent =
           `Save as ${listSplit.items.length} list points${listSplit.head ? " + their heading" : ""}`;
       }
+      updateDupWarning();
+      updateHeadSplit();
       fitTextEdit();
       if (popupAnchor) positionPopup();
     });
@@ -683,6 +754,21 @@
     heading.addEventListener("mousedown", (e) => e.stopPropagation());
     join.after(heading);
     headingToggleEl = heading;
+
+    const headSplit = document.createElement("label");
+    headSplit.className = "lazy-notes-split lazy-notes-head-split";
+    headSplit.innerHTML = `<input type="checkbox" checked> <span></span>`;
+    headSplit.style.display = "none";
+    headSplit.title = "The words before “:” become the heading; the rest is saved under it as a Definition";
+    headSplit.addEventListener("mousedown", (e) => e.stopPropagation());
+    heading.after(headSplit);
+    headSplitEl = headSplit;
+
+    const dup = document.createElement("div");
+    dup.className = "lazy-notes-dup";
+    dup.style.display = "none";
+    headSplit.after(dup);
+    dupWarnEl = dup;
 
     // ── ROW 4: Annotation ─────────────────────────────────────────────────────
     const row4 = document.createElement("div");
@@ -952,6 +1038,7 @@
 
   function selectTopicOption(topicName) {
     selectedTopic = topicName;
+    updateDupWarning();
 
     if (topicBtnEl) {
       topicBtnEl.textContent = topicName || "No topics";
@@ -986,7 +1073,7 @@
       b.setAttribute("aria-checked", String(k === cat));
     });
     showChipCaption(cat);
-
+    updateHeadSplit();
 
     if (categoryBtnEl) categoryBtnEl.textContent = cat;
 
@@ -1473,7 +1560,8 @@
   function showPopup(rect, selectedText, paragraphElement) {
     if (!popupContainer) buildPopup();
     resetPopupState();
-    if (!parseList(selectedText, currentRange) && !/\t/.test(selectedText)) selectedText = joinBrokenLines(selectedText);
+    if (pageNumOn && !/	/.test(selectedText)) selectedText = dropPageNumbers(selectedText);
+    if (!parseList(selectedText, currentRange) && !/	/.test(selectedText)) selectedText = joinBrokenLines(selectedText);
 
     currentSelectedText     = selectedText;
     currentParagraphElement = paragraphElement;
@@ -1508,6 +1596,7 @@
     const guess = listSplit ? "list point" : guessType(selectedText, paragraphElement);
     const last = sessionCategoryMemory[selectedTopic];
     selectCategoryOption(guess || (last === "list point" ? last : "generic"));
+    updateDupWarning();
     setTimeout(() => chipEls[selectedCategory]?.focus(), 50);
   }
 
@@ -1644,6 +1733,22 @@
       sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null,
       anchor:     host?.anchorFor ? host.anchorFor(currentRange) : null
     };
+
+    // "Heading: words…" saved as a heading → heading + Definition under it.
+    const hs = headSplitWanted();
+    if (hs) {
+      const t0 = Date.now();
+      const sent = [
+        ...(pendingHeading && headingToggleEl?.querySelector("input").checked && pendingHeading.text !== hs.head
+          ? [{ ...payload, id: crypto.randomUUID(), text: pendingHeading.text, category: pendingHeading.category, context: null, annotation: "" }] : []),
+        { ...payload, id: crypto.randomUUID(), text: hs.head, context: null, annotation: "" },
+        { ...payload, id: crypto.randomUUID(), text: hs.rest, category: "definition" }
+      ].map((m, i) => ({ ...m, timestamp: new Date(t0 + i).toISOString() }));
+      pendingHeading = null;
+      try { chrome.runtime.sendMessage({ type: "NEW_HIGHLIGHTS", items: sent }); } catch (err) { return; }
+      showUndoToast({ ...payload, ids: sent.map((m) => m.id), message: `Saved “${hs.head}” + its definition` });
+      return;
+    }
 
     // A list saved as list points: one highlight per point (plus the line
     // above them as Plain, which shows as their heading), in order.
@@ -1870,6 +1975,9 @@
     }
     if (changes.lnPopupSide) popupSide = changes.lnPopupSide.newValue || "above";
     if (changes.lnQuickSelButtons) handoffOn = changes.lnQuickSelButtons.newValue !== false;
+    if (changes.lnDropPageNums) pageNumOn = changes.lnDropPageNums.newValue !== false;
+    if (changes.lnDupWarn) dupWarnOn = changes.lnDupWarn.newValue !== false;
+    if (changes.lnHeadSplit) headSplitOn = changes.lnHeadSplit.newValue !== false;
     if (changes.lnListHeadType) { listHeadOn = changes.lnListHeadType.newValue !== false; showListHeadChip(); }
 
     // Storage is the source of truth for on/off: extension pages (the PDF

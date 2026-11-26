@@ -1,7 +1,7 @@
 // Lazy Notes — reads a .pptx into plain slides for the slides reader:
 // titles, text, bullets, tables, pictures and speaker notes, in reading
-// order. Not a renderer: layout, themes, charts and animations are left out
-// on purpose. The point is text that can be selected and saved as notes.
+// order. Not a renderer: charts, SmartArt and animations are left out on
+// purpose; lines, arrows and plain shapes are drawn (ooxml-drawing.js). The point is text that can be selected and saved as notes.
 //
 // A .pptx is a ZIP of XML parts (Office Open XML). The ZIP is read with the
 // browser's own DecompressionStream, so there's no library to ship.
@@ -11,9 +11,12 @@
 //         | { kind: "text", paras: [{ text, level, marker }] }   marker: "•", "1." or null
 //         | { kind: "table", rows: [[{ text, colSpan, rowSpan }]], header }   header: first row is headings
 //         | { kind: "image", blob, alt }
+//         | { kind: "shape", blob }   lines, arrows and outlined/filled shapes, as SVG
 //   notes:  [{ text, level, marker }]
 //   paragraphs also carry runs: [{ text, b, i, u, color, size }] for light
 //   formatting; slides carry background ("#rrggbb" or null).
+
+import { shapeSvg, themeColours } from "./ooxml-drawing.js";
 
 const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
@@ -294,8 +297,18 @@ async function collect(tree, ctx) {
       found.push({ block, pos: block.box ?? pos, order: order++, isTitle: block.kind === "title" });
     };
 
+    // Lines, arrows and outlined/filled shapes: drawn under the text.
+    const drawShape = () => {
+      const d = shapeSvg(el, { theme: ctx.theme });
+      if (d) add({ kind: "shape", blob: new Blob([d.svg], { type: "image/svg+xml" }), box: d.box });
+    };
+
     switch (el.localName) {
+      case "cxnSp":
+        drawShape();
+        break;
       case "sp": {
+        if (!ph) drawShape();
         // A shape filled with a picture (picture placeholders, image fills).
         const fill = path(el, "spPr", "blipFill");
         if (fill) {
@@ -390,12 +403,14 @@ export async function readPptx(buffer) {
 
   const layouts = new Map();  // layout part → { layout, master } placeholder lists
   async function layoutInfo(layoutPart) {
-    if (!layoutPart) return { layout: [], master: [] };
+    if (!layoutPart) return { layout: [], master: [], theme: new Map() };
     if (!layouts.has(layoutPart)) {
       const masterPart = relOfType(await readRels(zip, layoutPart), "/slideMaster");
       const layoutRoot = await readXml(zip, layoutPart);
       const masterRoot = masterPart ? await readXml(zip, masterPart) : null;
+      const themePart = masterPart && relOfType(await readRels(zip, masterPart), "/theme");
       layouts.set(layoutPart, {
+        theme: themeColours(themePart ? await readXml(zip, themePart) : null),
         layout: placeholderList(layoutRoot),
         master: masterRoot ? placeholderList(masterRoot) : [],
         background: slideBackground(layoutRoot) ?? (masterRoot && slideBackground(masterRoot))

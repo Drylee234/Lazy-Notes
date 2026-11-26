@@ -122,7 +122,7 @@ body.notes-off .s-notes { display: none; }
   line-height: 1.2;
 }
 .s-shape { position: absolute; display: flex; flex-direction: column; box-sizing: border-box; padding: 0.4cqw 0.8cqw; }
-.s-shape--image { padding: 0; pointer-events: none; }  /* drags go through to the text */
+.s-shape--image, .s-shape--shape { padding: 0; pointer-events: none; }  /* drags go through to the text */
 /* Text always sits above pictures, so it can be selected even where a
    picture overlaps it (z-index set in pptxreader.js keeps order within each). */
 .s-shape img { width: 100%; height: 100%; object-fit: fill; display: block; user-select: none; }

@@ -2,7 +2,9 @@
 // Headings, paragraphs with light formatting (bold, italic, underline),
 // bulleted and numbered lists with their levels, links (as text), tables,
 // pictures, and page breaks. Not a renderer: fonts, colours, columns,
-// headers/footers and text boxes are left out. The point is text that can
+// headers/footers and free-floating text boxes are left out. Diagrams drawn
+// with Word shapes (lines, arrows, text-box labels, grouped pictures) come
+// out as one SVG picture (ooxml-drawing.js). The point is text that can
 // be selected and saved as notes.
 //
 // A .docx is a ZIP of XML parts (Office Open XML), read with the browser's
@@ -16,6 +18,8 @@
 //   runs: [{ text, b, i, u }]   ("\n" text = line break)
 // Pages follow the document's own page breaks: explicit ones, section
 // breaks, and the breaks Word recorded when it last laid the file out.
+
+import { drawingSvg, themeColours } from "./ooxml-drawing.js";
 
 const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
@@ -213,14 +217,46 @@ export async function readDocx(buffer) {
     pages.push({ number: pages.length + 1, blocks: [] });
   };
 
+  const theme = themeColours(await readXml(zip, "word/theme/theme1.xml"));
+
+  async function dataUrl(rId) {
+    const target = rId && rels.get(rId);
+    const type = target && IMAGE_TYPES[target.split(".").pop().toLowerCase()];
+    if (!type) return null;
+    const data = await zip.read(target);
+    if (!data) return null;
+    let bin = "";
+    for (let i = 0; i < data.length; i += 0x8000) bin += String.fromCharCode(...data.subarray(i, i + 0x8000));
+    return `data:${type};base64,${btoa(bin)}`;
+  }
+
   async function image(el) {
+    const alt = el.getElementsByTagNameNS("*", "docPr")[0]?.getAttribute("descr") || "";
+
+    // A group or drawing canvas (shapes, lines, arrows, text boxes, pictures):
+    // drawn as a whole, not just its first picture.
+    const graphicData = el.getElementsByTagNameNS("*", "graphicData")[0];
+    if (graphicData && [...graphicData.children].some((c) => ["wgp", "wpc", "grpSp"].includes(c.localName))) {
+      const extent = el.getElementsByTagNameNS("*", "extent")[0];
+      const urls = new Map();
+      for (const b of graphicData.getElementsByTagNameNS("*", "blip")) {
+        const id = b.getAttributeNS(NS_R, "embed");
+        if (id && !urls.has(id)) urls.set(id, await dataUrl(id));
+      }
+      const svg = drawingSvg(graphicData, {
+        width: Number(extent?.getAttribute("cx")) || 0, height: Number(extent?.getAttribute("cy")) || 0,
+        picture: (id) => urls.get(id) || null, theme
+      });
+      if (svg) return { kind: "image", blob: new Blob([svg], { type: "image/svg+xml" }), alt };
+    }
+
     const blip = el.getElementsByTagNameNS("*", "blip")[0];
-    const id = blip?.getAttributeNS(NS_R, "embed");
+    // Older (VML) pictures: <v:imagedata r:id="…">.
+    const id = blip?.getAttributeNS(NS_R, "embed") || el.getElementsByTagNameNS("*", "imagedata")[0]?.getAttributeNS(NS_R, "id");
     const target = id && rels.get(id);
     const type = target && IMAGE_TYPES[target.split(".").pop().toLowerCase()];
     if (!type) return null;                // EMF/WMF and friends: browsers can't show them
     const data = await zip.read(target);
-    const alt = el.getElementsByTagNameNS("*", "docPr")[0]?.getAttribute("descr") || "";
     return data ? { kind: "image", blob: new Blob([data], { type }), alt } : null;
   }
 
@@ -252,6 +288,15 @@ export async function readDocx(buffer) {
               if (!runs.some((r) => r.text.trim())) breakBefore = true;
             }
             else if (n === "drawing" || n === "pict") { const img = await image(t); if (img) images.push(img); }
+            else if (n === "AlternateContent") {
+              // Newer drawings (shape groups, canvases) come wrapped; the
+              // Choice is the DrawingML version, the Fallback older VML.
+              for (const alt of [kid(t, "Choice"), kid(t, "Fallback")]) {
+                const d = alt && [...alt.children].find((x) => x.localName === "drawing" || x.localName === "pict");
+                const img = d && await image(d);
+                if (img) { images.push(img); break; }
+              }
+            }
           }
         } else if (name === "hyperlink" || name === "smartTag" || name === "ins" || name === "fldSimple" || name === "sdtContent") {
           await walk(c);

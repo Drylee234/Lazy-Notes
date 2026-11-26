@@ -382,8 +382,29 @@
 
   const BULLET = /^\s*[•●○◦▪■□►▸▹➢➤✓✔·\uF0A7\uF0B7\uF076\uF0D8\uF0FC\uF0A8\uF06C\uF06E]\s*/;
   const POINT = /^\s*([-*]|\d{1,2}[.)]|[a-z][.)])\s+/i;
+  // Lone page / slide numbers ("8", "10") pasted along with PDF lines are
+  // dropped (Settings › More options: lnDropPageNums).
+  let dropPageNums = true;
+  try {
+    chrome.storage.local.get("lnDropPageNums", (r) => { dropPageNums = r?.lnDropPageNums !== false; });
+    chrome.storage.onChanged.addListener((c, area) => {
+      if (area === "local" && c.lnDropPageNums) dropPageNums = c.lnDropPageNums.newValue !== false;
+    });
+  } catch (_) {}
+  const PAGE_NUM = /^\s*\d{1,3}\s*$/;
   function cleanPdfText(text) {
-    const lines = String(text || "").replace(/\r/g, "").split("\n").map((l) => l.replace(/\s+$/, ""));
+    let lines = String(text || "").replace(/\r/g, "").split("\n").map((l) => l.replace(/\s+$/, ""));
+    if (dropPageNums && !/\t/.test(text) && lines.length > 1 && lines.some((l) => l.trim() && !PAGE_NUM.test(l))) {
+      const kept = [];
+      let cut = false;
+      lines.forEach((l) => {
+        if (PAGE_NUM.test(l)) { while (kept.length && !kept[kept.length - 1].trim()) kept.pop(); cut = true; return; }
+        if (!l.trim() && cut) return;
+        cut = false;
+        kept.push(l);
+      });
+      lines = kept;
+    }
     if (lines.length < 2) return lines.join("");
     const out = [];
     lines.forEach((raw) => {

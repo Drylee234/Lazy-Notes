@@ -46,6 +46,29 @@ function mdCode(raw) {
   return fence + pad + text + pad + fence;
 }
 
+// A typed note made only of "- point" / "1. point" lines: part of a list.
+const TYPED_POINT_RE = /^\s*([-*•]|\d{1,2}[.)])\s+/;
+function isTypedList(note) {
+  if (note?.kind !== "typed") return false;
+  const lines = String(note.text ?? "").split("\n").filter((l) => l.trim());
+  return lines.length > 0 && lines.every((l) => TYPED_POINT_RE.test(l));
+}
+// Highlighted points, or a typed note that is only points.
+function isPointLike(note) {
+  return (note?.category === "list point" && note.kind !== "typed") || isTypedList(note);
+}
+// Same rule as the app (notes-render.js): a Plain line right above list
+// points is their list head.
+function isPlainHead(notes, i) {
+  const n = notes[i];
+  return n.kind !== "typed" && n.category === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed";
+}
+// A list point's indent (Alt+←/→ in Study) as nesting: 2 spaces per step.
+function pointIndent(note) {
+  const n = Math.max(0, Math.min(6, parseInt(note?.indent, 10) || 0));
+  return "  ".repeat(n);
+}
+
 function mdNotes(notes, depth) {
   // depth = heading level used for "header" notes (2 inside a topic export,
   // 3 inside a course export where the topic itself is ##).
@@ -53,9 +76,9 @@ function mdNotes(notes, depth) {
   const out = [];
   let prevWasListPoint = false;
 
-  notes.forEach((note) => {
+  notes.forEach((note, i) => {
     const text = mdInline(note.text);
-    const isListPoint = note.category === "list point";
+    const isListPoint = isPointLike(note);
 
     // Blank line between blocks, but keep consecutive list points together.
     if (out.length && !(isListPoint && prevWasListPoint)) out.push("");
@@ -68,7 +91,7 @@ function mdNotes(notes, depth) {
         const lines = block.text.split("\n");
         out.push(block.quote ? lines.map((l) => `> ${l}`).join("\n") : lines.join("\n"));
       });
-      prevWasListPoint = false;
+      prevWasListPoint = isListPoint;
       return;
     }
 
@@ -76,8 +99,9 @@ function mdNotes(notes, depth) {
       case "header":     out.push(`${h(depth)} ${text}`); break;
       case "sub topic":  out.push(`${h(depth + 1)} ${text}`); break;
       case "note":       out.push(`**Note:** ${text}`); break;
+      case "summary":    out.push(`**Summary:** ${text}`); break;
       case "list head":  out.push(`${h(depth + 1)} ${text}`); break;
-      case "list point": out.push(`- ${text}`); break;
+      case "list point": out.push(`${pointIndent(note)}- ${text}`); break;
       case "definition": out.push(`**${text}**`); break;
       case "formula":    out.push(mdCode(note.text)); break;
       case "table": {
@@ -88,10 +112,10 @@ function mdNotes(notes, depth) {
       }
       // Markdown files can't hold the picture itself: say it's there.
       case "figure":     out.push(`*[Figure${note.text ? `: ${text}` : ""}${note.sourceTitle ? ` (${mdInline(note.sourceTitle)})` : ""}]*`); break;
-      default:           out.push(text);
+      default:           out.push(isPlainHead(notes, i) ? `**${text.replace(/\s*[:：]$/, "")}:**` : text);
     }
 
-    const indent = isListPoint ? "  " : "";
+    const indent = isListPoint ? pointIndent(note) + "  " : "";
     if (note.annotation) out.push(`${indent}> ${mdInline(note.annotation)}`);
 
     prevWasListPoint = isListPoint && !note.annotation;
@@ -167,7 +191,7 @@ function htmlNotes(notes, depth) {
 
   const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
 
-  notes.forEach((note) => {
+  notes.forEach((note, i) => {
     if (note.kind === "typed") {
       closeList();
       out.push(`<div class="typed">${typedNoteHtml(note.text)}</div>`);
@@ -181,7 +205,8 @@ function htmlNotes(notes, depth) {
 
     if (note.category === "list point") {
       if (!inList) { out.push("<ul>"); inList = true; }
-      out.push(`<li>${text}${ann}</li>`);
+      const ind = Math.max(0, Math.min(6, parseInt(note.indent, 10) || 0));
+      out.push(`<li${ind ? ` style="margin-left:${ind * 1.5}em"` : ""}>${text}${ann}</li>`);
       return;
     }
 
@@ -191,12 +216,15 @@ function htmlNotes(notes, depth) {
       case "header":     out.push(`<h${hd}>${text}</h${hd}>`); break;
       case "sub topic":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
       case "note":       out.push(`<p class="note-callout"><strong>Note:</strong> ${text}</p>`); break;
+      case "summary":    out.push(`<p class="summary"><strong>Summary:</strong> ${text}</p>`); break;
       case "list head":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
       case "definition": out.push(`<p class="definition"><strong>${text}</strong></p>`); break;
       case "formula":    out.push(`<pre class="formula"><code>${text}</code></pre>`); break;
       case "table":      out.push(`<table class="note-table">${parseTable(note.text).map((r, i) => `<tr>${r.map((c) => { const t = i ? "td" : "th"; const e = document.createElement("i"); e.textContent = c; return `<${t}>${e.innerHTML}</${t}>`; }).join("")}</tr>`).join("")}</table>`); break;
       case "figure":     out.push(`<figure class="figure">${/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(note.image || "") ? `<img src="${note.image}" alt="${text}">` : ""}${note.text ? `<figcaption>${text}</figcaption>` : ""}</figure>`); break;
-      default:           out.push(`<p>${text}</p>`);
+      default:           out.push(isPlainHead(notes, i)
+        ? `<p class="list-head"><strong>${text.replace(/\s*[:：]$/, "")}:</strong></p>`
+        : `<p>${text}</p>`);
     }
     if (ann) out.push(ann);
   });
