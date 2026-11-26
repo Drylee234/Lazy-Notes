@@ -460,3 +460,8 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 .course-doc-kind[data-kind="docx"] { background: #2563eb; }
 .course-doc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .course-doc-meta { flex: none; font-size: 11px; color: var(--dim); }
+
+/* AI view — the answers panel (shared/ai-panel.js) needs a bounded height so
+   its list scrolls instead of stretching the panel. */
+#ai-view { display: none; flex: 1; min-height: 0; flex-direction: column; }
+#ai-view.visible { display: flex; }
