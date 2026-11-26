@@ -639,7 +639,7 @@ const StudyPage = (() => {
   composerInput.addEventListener("keydown", (e) => {
     const at = getSelection().anchorNode;
     const atEl = at?.nodeType === Node.ELEMENT_NODE ? at : at?.parentElement;
-    if (e.key === "Tab" && !e.shiftKey && !atEl?.closest?.("li") && composerInput.value.trim()) {
+    if (e.key === "Tab" && !e.shiftKey && composerInput.value.trim()) {
       e.preventDefault();
       composerType.focus();
       return;

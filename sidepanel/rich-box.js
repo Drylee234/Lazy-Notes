@@ -15,7 +15,8 @@
 // Typing shortcuts: "- " or "* " starts a list, "1. " a numbered one, "# "
 // a heading, "> " a quote. Ctrl/⌘+B bold, Ctrl/⌘+I italic, Ctrl/⌘+Shift+H
 // highlight. Shift+Enter: new line / next point (on an empty point: leave
-// the list). Tab / Shift+Tab: indent / outdent a point. Pasting pastes plain
+// the list). Shift+Tab indents a point, Alt+Shift+Tab (or Backspace at its start) outdents;
+// Tab goes on to the "Save as" picker. Pasting pastes plain
 // text.
 
 (() => {
@@ -283,10 +284,25 @@
       const sel = getSelection();
       const li = sel.rangeCount && closestIn(sel.anchorNode, "li", box);
 
-      if (e.key === "Tab" && li) {
+      // Points: Shift+Tab indents, Alt+Shift+Tab (or Backspace at the very
+      // start of an indented point) outdents. Plain Tab is left alone: it
+      // goes to the "Save as" picker.
+      if (e.key === "Tab" && li && e.shiftKey) {
         e.preventDefault();
-        document.execCommand(e.shiftKey ? "outdent" : "indent");
+        document.execCommand(e.altKey ? "outdent" : "indent");
+        box.dispatchEvent(new Event("input", { bubbles: true }));
         return;
+      }
+      if (e.key === "Backspace" && li && !mod && !e.shiftKey && sel.isCollapsed &&
+          li.parentElement?.parentElement?.closest?.("ul, ol") && box.contains(li.parentElement.parentElement)) {
+        const r = sel.getRangeAt(0).cloneRange();
+        r.setStart(li, 0);
+        if (!r.toString().length) {
+          e.preventDefault();
+          document.execCommand("outdent");
+          box.dispatchEvent(new Event("input", { bubbles: true }));
+          return;
+        }
       }
       if (e.key === "Enter" && e.shiftKey && !mod) {
         e.preventDefault();
