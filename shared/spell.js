@@ -56,6 +56,7 @@
   // Your own words: everything in your notes. They count as spelled right,
   // and are preferred when guessing what you meant.
   const VOCAB = new Map();
+  const CAPS = new Set();
   function loadVocab() {
     if (!globalThis.chrome?.storage?.local) return;
     chrome.storage.local.get("lazynotes", ({ lazynotes }) => {
@@ -64,7 +65,9 @@
         Object.entries(c.topics || {}).forEach(([name, t]) => {
           const texts = [name, ...Object.values(t.highlights || {}).flatMap((h) => [h.text, h.annotation, h.context]),
                          ...Object.values(t.notes || {}).map((n) => n.text)];
-          texts.join(" ").toLowerCase().match(/[a-z][a-z']+/g)?.forEach((w) => VOCAB.set(w, (VOCAB.get(w) || 0) + 1));
+          const all = texts.join(" ");
+          all.toLowerCase().match(/[a-z][a-z']+/g)?.forEach((w) => VOCAB.set(w, (VOCAB.get(w) || 0) + 1));
+          all.match(/\b[A-Z]{2,}\b/g)?.forEach((w) => CAPS.add(w));   // GET, BME, ATP: your acronyms
         });
       });
     });
@@ -194,6 +197,35 @@
     return low;
   }
 
+  // ── Missing apostrophes: didnt → didn't, im → I'm. Only words that
+  //    aren't words without it ("cant", "wont", "ill", "well" stay). ──
+  const APOS = Object.fromEntries(("didn't don't doesn't isn't aren't wasn't weren't hasn't haven't hadn't " +
+    "wouldn't couldn't shouldn't mustn't needn't ain't i'm i've i'd i'll you're you've you'll you'd " +
+    "they're they've they'll they'd we've we'd she's he's it'll that's what's who's where's there's here's " +
+    "let's how's when's why's would've could've should've might've y'all").split(" ")
+    .map((w) => [w.replace(/'/g, ""), w]).filter(([bare]) => !["cant", "wont", "ill", "well", "were", "shed", "hell", "shell", "its", "lets", "whos", "id", "wed", "hed", "wheres", "hows", "whens", "whys"].includes(bare)));
+  function apostropheFix(word, atStart) {
+    const fixed = APOS[word.toLowerCase()];
+    if (!fixed) return null;
+    let out = fixed.startsWith("i'") ? "I" + fixed.slice(1) : fixed;
+    if (atStart || /^[A-Z]/.test(word) && word !== word.toUpperCase()) out = out[0].toUpperCase() + out.slice(1);
+    return out;
+  }
+
+  // ── ALL-CAPS ordinary words ("A MAN BUT") → lower case. Acronyms you use in
+  //    your notes (GET, ATP…) stay, and so does anything that isn't a common
+  //    word. Mild: small everyday words; Strong: the ~3,000 commonest;
+  //    Toxic: ~8,000, and a lone "A". ──
+  function allCapsFix(word, atStart, lvl) {
+    if (word !== word.toUpperCase() || !/[A-Z]/.test(word)) return null;
+    if (CAPS.has(word) || (word.length === 1 && (word !== "A" || lvl < 3))) return null;
+    const low = word.toLowerCase();
+    if (NAMEY.has(low)) return null;
+    const ok = SMALL.has(low) || (lvl >= 2 && (RANK.get(low) || 1e9) <= (lvl >= 3 ? 8000 : 3000));
+    if (!ok || !speller.correct(low)) return null;
+    return atStart ? low[0].toUpperCase() + low.slice(1) : low;
+  }
+
   // ── Mistaken capitals: "THe" → "The", "wATER" (caps lock) → "Water",
   //    "i" / "i'm" → "I" / "I'm". Only when the fixed word is a real word,
   //    and not acronym plurals like "IDs" / "PCs". ──
@@ -276,7 +308,12 @@
     // only treat it as a sentence start if it's also the start of its block.
     const atStart = sentenceStartAt(v.text, start) && (!v.node || !v.node.previousSibling);
     if (ignore.has(word.toLowerCase()) && word !== "i") return;
-    let fixed = capsFix(word, atStart) || midCapFix(word, atStart, level);
+    // Odd capitals inside a word ("DIDnt") first, then the other fixes on
+    // the result, so "DIDnt" ends up "didn't".
+    const mixed = /[a-z]/.test(word) && /[A-Z]/.test(word.slice(1));
+    const base = mixed ? (atStart ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word.toLowerCase()) : word;
+    let fixed = apostropheFix(base, atStart) || capsFix(word, atStart) || midCapFix(word, atStart, level) ||
+                allCapsFix(word, atStart, level);
     if (!fixed) {
       if (checkable(word, atStart, level) && misspelled(word)) {
         fixed = level >= 2 ? bestFix(word, level) : clearFix(word);
