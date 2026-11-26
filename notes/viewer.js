@@ -446,9 +446,11 @@ async function renderTopics() {
     const grid = document.getElementById("course-docs-page-list");
     if (!box) return;
     const c = (await getCourseTree())[courseName];
-    const { lnDocs = {} } = await chrome.storage.local.get("lnDocs");
-    const docs = c ? courseDocuments(courseName, c, lnDocs) : [];
+    const { lnDocs = {}, lnCourseDocHide = {} } = await chrome.storage.local.get(["lnDocs", "lnCourseDocHide"]);
+    const docs = c ? courseDocuments(courseName, c, lnDocs, lnCourseDocHide[courseName] || []) : [];
     grid.replaceChildren(...docs.map((d) => {
+      const wrap = document.createElement("div");
+      wrap.className = "course-doc-wrap";
       const a = document.createElement("a");
       a.className = "course-doc-card";
       a.href = d.open;
@@ -457,12 +459,20 @@ async function renderTopics() {
       a.children[0].dataset.kind = d.kind;
       a.children[1].textContent = d.name;
       a.children[2].textContent = [d.notes ? `${d.notes} note${d.notes === 1 ? "" : "s"}` : "opened", [...d.topics].join(", ")].filter(Boolean).join(" · ");
-      return a;
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "course-doc-x";
+      x.textContent = "✕";
+      x.title = "Remove from this course (your notes stay)";
+      x.setAttribute("aria-label", `Remove ${d.name} from this course`);
+      x.addEventListener("click", () => hideCourseDoc(courseName, d.key));   // redraws on storage change
+      wrap.append(a, x);
+      return wrap;
     }));
     box.hidden = !docs.length;
   }
   drawDocs();
-  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lazynotes || c.lnDocs)) drawDocs(); });
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lazynotes || c.lnDocs || c.lnCourseDocHide)) drawDocs(); });
   const sortSel = document.getElementById("topic-sort");
 
   wireExportButtons(async () => {

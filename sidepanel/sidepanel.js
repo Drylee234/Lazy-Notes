@@ -210,9 +210,11 @@ async function loadCourseDocs() {
   const list = document.getElementById("course-docs-list");
   if (!box) return;
   const course = selectedCourse && courseTree[selectedCourse];
-  const { lnDocs = {} } = await chrome.storage.local.get("lnDocs");
-  const docs = course ? courseDocuments(selectedCourse, course, lnDocs) : [];
+  const { lnDocs = {}, lnCourseDocHide = {} } = await chrome.storage.local.get(["lnDocs", "lnCourseDocHide"]);
+  const docs = course ? courseDocuments(selectedCourse, course, lnDocs, lnCourseDocHide[selectedCourse] || []) : [];
   list.replaceChildren(...docs.slice(0, 12).map((d) => {
+    const wrap = document.createElement("div");
+    wrap.className = "course-doc-wrap";
     const row = document.createElement("button");
     row.type = "button";
     row.className = "course-doc";
@@ -223,7 +225,16 @@ async function loadCourseDocs() {
     row.children[1].textContent = d.name;
     row.children[2].textContent = d.notes ? `${d.notes} note${d.notes === 1 ? "" : "s"}` : "opened";
     row.addEventListener("click", () => chrome.tabs.create({ url: d.open }));
-    return row;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "course-doc-x";
+    x.textContent = "✕";
+    x.title = "Remove from this course (your notes stay)";
+    x.setAttribute("aria-label", `Remove ${d.name} from ${selectedCourse}`);
+    const course0 = selectedCourse;
+    x.addEventListener("click", async () => { await hideCourseDoc(course0, d.key); loadCourseDocs(); });
+    wrap.append(row, x);
+    return wrap;
   }));
   box.hidden = docs.length === 0;
 }
@@ -945,7 +956,9 @@ async function updateReading() {
   readingNowEl.hidden = !key;
   continueEl.hidden = false;
   document.getElementById("continue-label").textContent = key ? "Other documents" : "Continue reading";
-  document.getElementById("open-doc-btn").hidden = !!key;
+  document.getElementById("open-doc-btn").hidden = false;   // also while a document is open
+  const { lnHomeCourseInDoc } = await chrome.storage.local.get("lnHomeCourseInDoc");
+  document.getElementById("course-pick").hidden = !!key && lnHomeCourseInDoc !== true;
 
   if (key) {
     const icon = document.getElementById("rn-icon");
@@ -1053,7 +1066,7 @@ document.getElementById("open-doc-btn").addEventListener("click", () =>
   chrome.tabs.create({ url: chrome.runtime.getURL("pdfreader.html") }));
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && (changes.lnDocs || changes.activeCourse || changes.activeTopic)) updateReading();
+  if (area === "local" && (changes.lnDocs || changes.activeCourse || changes.activeTopic || changes.lnHomeCourseInDoc)) updateReading();
 });
 chrome.tabs.onActivated.addListener(updateReading);
 chrome.tabs.onUpdated.addListener((_id, info, tab) => {

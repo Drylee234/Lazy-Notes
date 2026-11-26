@@ -70,6 +70,14 @@ const TASKS = {
       `Write ${extra || 5} short test-yourself questions from these notes, one per line, numbered. Each must be answerable from the notes. No answers.\n\n---\n${text}`
   },
 
+  // Which course (and topic) does a newly opened document belong to?
+  // `extra` is JSON: [{course, topics:[…], documents:[…]}].
+  suggestPlace: {
+    maxTokens: 40,
+    prompt: (text, extra) =>
+      `A student just opened a document. Which of their courses does it belong to, and which topic in that course? Use the document's title and the documents already filed in each course. Answer exactly as: Course | Topic — using the names below exactly. If no topic fits, answer: Course | none. If no course fits, answer: none.\n\nCourses:\n${extra}\n\nDocument:\n${text}`
+  },
+
   // Which of our note types does this highlight look like?
   suggestType: {
     maxTokens: 20,

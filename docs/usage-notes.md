@@ -11,6 +11,22 @@ seen → cause → what changed (commit) or what's still open.
 
 ---
 
+## 2026-11-26 · Which course a new document saves to
+
+**Reported by the owner (screenshot of the side panel Home + message)**
+- Some documents show under more than one course, and there was no way to take one out of a course.
+- A newly opened PDF opened "to the last course and topic used", so its notes landed in the wrong course.
+- The Course / Topics picker on Home is redundant while a document is open (the document card has "Saving to").
+- "Open a document…" only showed when no document was open.
+
+**Cause → change**
+- New documents inherited `activeCourse/activeTopic` (the previous document's). Now a new document starts with none and asks (box in the reader; suggests a course from the course code in the file name, else the AI if on). Skip = unfiled. Switch: `lnAskPlace`.
+- Documents list per course comes from notes' links, so a doc whose notes were saved under two courses shows in both. Each card now has ✕ "Remove from this course" (notes untouched; `lnCourseDocHide`).
+- Home hides the Course / Topics block while a document is open (`lnHomeCourseInDoc` brings it back); "Open a document…" always shown.
+- Also fixed: overlapping `lnDocs` writes in `docs-recent.js` could drop the new document's record (now queued).
+
+---
+
 ## 2026-11-26 · BME213 (Physiology): "Introduction" + "Cell and its functions"
 
 **How the owner works**

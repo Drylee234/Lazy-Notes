@@ -135,7 +135,9 @@ function typedNoteHtml(text) {
 // first: [{ key, name, kind, open, notes, lastAt, topics: Set }].
 // From each note's link (reader pages and .pdf/.pptx/.docx links), plus
 // recently opened documents that were set to this course (lnDocs).
-function courseDocuments(courseName, course, lnDocs = {}) {
+// `hidden` = keys the user removed from this course (lnCourseDocHide[course]);
+// their notes are untouched, the document just stops being listed there.
+function courseDocuments(courseName, course, lnDocs = {}, hidden = []) {
   const docs = new Map();
   const readerUrl = (p, q) => (globalThis.chrome?.runtime?.getURL ? chrome.runtime.getURL(`${p}?${q}`) : `${p}?${q}`);
   const kindOf = (u) => /pptxreader|\.pptx(\?|#|$)/i.test(u) ? "pptx" : /docxreader|\.docx(\?|#|$)/i.test(u) ? "docx"
@@ -168,6 +170,16 @@ function courseDocuments(courseName, course, lnDocs = {}) {
     add(url, d.name, d.openedAt, d.topic, 0);
   });
   return [...docs.values()]
+    .filter((d) => !hidden.includes(d.key))     // "Remove from this course" (notes stay)
     .map((d) => ({ ...d, name: d.name || decodeURIComponent(d.key.split(/[/?=]/).pop() || "Document") }))
     .sort((a, b) => b.lastAt - a.lastAt);
+}
+
+// Remove a document from a course's list (the notes stay where they are).
+async function hideCourseDoc(courseName, key) {
+  const { lnCourseDocHide = {} } = await chrome.storage.local.get("lnCourseDocHide");
+  const list = new Set(lnCourseDocHide[courseName] || []);
+  list.add(key);
+  lnCourseDocHide[courseName] = [...list];
+  await chrome.storage.local.set({ lnCourseDocHide });
 }
