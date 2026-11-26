@@ -1505,7 +1505,7 @@
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML = `
       <style>
-        :host { all: initial; position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; }
+        :host { all: initial; position: fixed; right: calc(20px + var(--ln-embed-open-w, 0px)); bottom: 20px; z-index: 2147483647; }
         .toast {
           position: relative; overflow: hidden;
           display: flex; align-items: center; gap: 12px;

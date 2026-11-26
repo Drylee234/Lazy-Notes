@@ -640,7 +640,11 @@ exportBtn.addEventListener("click", () => {
 // Messages from background
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onMessage.addListener(async (message) => {
+// Not an async listener: Chrome takes a returned promise as a reply, which
+// would answer (with nothing) messages meant for the background, e.g. the
+// pop-up's "Join" or "last highlight" questions.
+chrome.runtime.onMessage.addListener((message) => { onPanelMessage(message); });
+async function onPanelMessage(message) {
   if (message.type === "TOGGLE_HIGHLIGHTER") {
     setToggleBtn(message.active);
     return;
@@ -666,7 +670,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
     }
     return;
   }
-});
+}
 
 // ---------------------------------------------------------------------------
 // Requests from the background ("panelRequest" in storage)

@@ -41,3 +41,4 @@ body.ln-embed-open #toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
    zoom controls move to a second row instead of being overlapped. */
 body.ln-tb-narrow #toolbar { height: auto; grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
 body.ln-tb-narrow #toolbar .tb-center { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets the Undo toast sit left of the panel */
