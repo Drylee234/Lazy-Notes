@@ -298,6 +298,7 @@ globalThis.LazySettings = (() => {
         root.querySelector(".set-sync-link").textContent = url;
         let text = "", tone = "";
         if (!url || !lnSyncKey) { text = "Not set up."; tone = ""; }
+        else if (st.waking) { text = "Waking your server… free ones take about a minute."; tone = "wait"; }
         else if (st.lastError && /key|too big/i.test(st.lastError)) { text = st.lastError; tone = "bad"; }
         else if (st.lastError && st.pending) { text = `Waiting for the server… ${st.lastError.replace(/^.*— /, "")}`; tone = "wait"; }
         else if (st.pending) { text = "Changes waiting to sync…"; tone = "wait"; }

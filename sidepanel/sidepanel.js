@@ -516,6 +516,12 @@ viewTabs.forEach((tab) => {
 // they didn't ask for. Answers are scratch: they live in storage.session and
 // only reach your notes through "Keep as note".
 
+// Opening the panel means you're at the computer: anything waiting to sync
+// goes now, so you don't have to press Sync now yourself.
+try {
+  chrome.runtime.sendMessage({ type: "SYNC_IF_PENDING" }, () => { void chrome.runtime.lastError; });
+} catch (_) {}
+
 const aiView = document.getElementById("ai-view");
 const aiTab  = document.getElementById("ai-tab");
 let aiPanel  = null;

@@ -7,13 +7,19 @@ import { buildReport } from './bg_diag.js';
 //
 // Settings (shared/settings.js): lnSyncUrl, lnSyncKey.
 // State, for the settings' status line:
-//   lnSyncState = { lastOkAt, lastTryAt, lastError, pending, nextTryAt, failures, stopped }
+//   lnSyncState = { lastOkAt, lastTryAt, lastError, pending, nextTryAt,
+//                   failures, stopped, waking }
 // Server API: GET /api/health, PUT /api/snapshot (Bearer key).
 
 const ALARM_RETRY = "ln-sync-retry";
 const ALARM_SOON  = "ln-sync-soon";      // the ~20s pause after a change
 const ALARM_DAILY = "ln-sync-periodic";  // every 6 hours anyway
-const BACKOFF_MIN = [1, 5, 15, 30, 60];  // then every 60 min
+// A free host sleeps after a quiet spell and takes a while to wake, so the
+// first few retries come quickly: a cold start that missed once usually
+// answers a minute later. It only slows down once it's clearly not coming.
+const BACKOFF_MIN = [1, 2, 5, 10, 15, 30];  // then every 30 min
+const WAKE_MS     = 90 * 1000;   // a sleeping free host can take over a minute
+const WAKE_TRIES  = 2;
 const DEBOUNCE_MS = 20 * 1000;
 
 let running = false;
@@ -64,10 +70,18 @@ async function push({ manual = false } = {}) {
   again = false;
   await setState({ lastTryAt: Date.now() });
   try {
-    // Wake a sleeping host first (can take up to a minute).
-    try {
-      await fetchWithTimeout(`${cfg.url}/api/health`, {}, 60000);
-    } catch (_) {
+    // Wake a sleeping host first. One go often isn't enough: the first
+    // request is what starts it waking, and that one can time out.
+    let awake = false;
+    for (let i = 0; i < WAKE_TRIES && !awake; i++) {
+      if (i === 0) await setState({ waking: true });
+      try {
+        const r = await fetchWithTimeout(`${cfg.url}/api/health`, {}, WAKE_MS);
+        awake = r.ok;
+      } catch (_) { /* still asleep, or not there */ }
+    }
+    await setState({ waking: false });
+    if (!awake) {
       return await scheduleRetry((st.failures || 0) + 1, "Server not reachable");
     }
 
@@ -100,6 +114,7 @@ async function push({ manual = false } = {}) {
     return await setState({ pending: false, stopped: false, failures: 0, nextTryAt: null, lastError: null, lastOkAt: Date.now() });
   } finally {
     running = false;
+    setState({ waking: false });
     if (again) { again = false; markPending(); }
   }
 }
@@ -128,6 +143,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // Opening the side panel means you're here: push anything waiting, rather
+  // than sitting on it until the next alarm.
+  if (message?.type === "SYNC_IF_PENDING") {
+    getState().then((st) => {
+      if (st.pending && !st.stopped) push();
+    });
+    return;   // no reply needed; keep this listener non-async (see handoff #9)
+  }
   if (message?.type !== "SYNC_NOW") return;
   setState({ stopped: false }).then(() => push({ manual: true })).then(sendResponse, (e) => sendResponse({ lastError: String(e) }));
   return true;
