@@ -37,14 +37,37 @@
   function load() {
     if (speller || loading) return loading;
     const url = (p) => (globalThis.chrome?.runtime?.getURL ? chrome.runtime.getURL(p) : p);
-    loading = Promise.all([fetch(url("lib/dict/en.aff")), fetch(url("lib/dict/en.dic"))])
+    loading = Promise.all([fetch(url("lib/dict/en.aff")), fetch(url("lib/dict/en.dic")), fetch(url("lib/dict/en-freq.txt"))])
       .then((rs) => Promise.all(rs.map((r) => r.text())))
-      .then(([aff, dic]) => {
+      .then(([aff, dic, freq]) => {
         speller = NSpell(aff, dic);
         ignore.forEach((w) => speller.add(w));
+        freq.split("\n").forEach((w, i) => { if (w && !RANK.has(w)) RANK.set(w, i + 1); });
+        loadVocab();
       })
       .catch(() => { loading = null; });
     return loading;
+  }
+
+  // How common a word is (1 = "the"), from wordfreq's English list
+  // (lib/dict/en-freq.txt, top 60,000). Words missing from it are rare:
+  // never suggested or autocorrected to, unless you've used them yourself.
+  const RANK = new Map();
+  // Your own words: everything in your notes. They count as spelled right,
+  // and are preferred when guessing what you meant.
+  const VOCAB = new Map();
+  function loadVocab() {
+    if (!globalThis.chrome?.storage?.local) return;
+    chrome.storage.local.get("lazynotes", ({ lazynotes }) => {
+      VOCAB.clear();
+      Object.values(lazynotes?.courses || {}).forEach((c) => {
+        Object.entries(c.topics || {}).forEach(([name, t]) => {
+          const texts = [name, ...Object.values(t.highlights || {}).flatMap((h) => [h.text, h.annotation, h.context]),
+                         ...Object.values(t.notes || {}).map((n) => n.text)];
+          texts.join(" ").toLowerCase().match(/[a-z][a-z']+/g)?.forEach((w) => VOCAB.set(w, (VOCAB.get(w) || 0) + 1));
+        });
+      });
+    });
   }
 
   function remember(word) {
@@ -67,7 +90,8 @@
 
   // Short words people type that the dictionary may not know.
   const COMMON = new Set(["ok", "okay", "eg", "ie", "vs", "etc", "hi", "lol", "pls", "tbh", "idk", "ur", "u", "na", "sha", "yh", "ya"]);
-  const isWord = (w) => COMMON.has(w.toLowerCase()) || speller.correct(w) || speller.correct(w.toLowerCase()) || ignore.has(w.toLowerCase());
+  const isWord = (w) => COMMON.has(w.toLowerCase()) || (VOCAB.get(w.toLowerCase()) || 0) >= 2 ||
+    speller.correct(w) || speller.correct(w.toLowerCase()) || ignore.has(w.toLowerCase());
   const misspelled = (w) => !!speller && !isWord(w);
 
   // ── The one clear fix, or null ──
@@ -75,7 +99,7 @@
 
   function oneSlipFixes(word) {
     const w = word.toLowerCase();
-    const out = { swap: new Set(), double: new Set(), other: new Set() };
+    const out = { swap: new Set(), double: new Set(), missing: new Set(), other: new Set() };
     const test = (cand, bucket) => { if (cand !== w && speller.correct(cand)) out[bucket].add(cand); };
     for (let i = 0; i < w.length; i++) {
       const del = w.slice(0, i) + w.slice(i + 1);
@@ -83,18 +107,8 @@
       if (i < w.length - 1) test(w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2), "swap");
       for (const c of LETTERS) test(w.slice(0, i) + c + w.slice(i + 1), "other");
     }
-    for (let i = 0; i <= w.length; i++) for (const c of LETTERS) test(w.slice(0, i) + c + w.slice(i), "other");
+    for (let i = 0; i <= w.length; i++) for (const c of LETTERS) test(w.slice(0, i) + c + w.slice(i), "missing");
     return out;
-  }
-
-  function clearFix(word) {
-    const f = oneSlipFixes(word);
-    let fix = null;
-    if (f.swap.size === 1) fix = [...f.swap][0];
-    else if (f.double.size === 1 && f.swap.size === 0) fix = [...f.double][0];
-    else if (f.swap.size + f.double.size + f.other.size === 1) fix = [...f.swap, ...f.double, ...f.other][0];
-    if (!fix) return null;
-    return /^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix;
   }
 
   // Damerau-Levenshtein distance (small words only, so plain DP is fine).
@@ -109,31 +123,52 @@
     return d[a.length][b.length];
   }
 
-  // Strong / toxic: the best guess even when it isn't the only one.
-  function bestFix(word, lvl) {
-    const clear = clearFix(word);
-    if (clear) return clear;
-    const f = oneSlipFixes(word);
-    const top = speller.suggest(word)[0];
-    let fix = f.swap.size ? [...f.swap][0]
-      : f.double.size ? [...f.double][0]
-      : top && slips(top, word) <= 1 ? top
-      : lvl >= 3 && top && slips(top, word) <= 2 ? top
-      : null;
-    if (!fix) return null;
-    return /^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix;
+  // Candidate fixes, best first: [{ word, score, slips }]. Lower score is
+  // better: the kind of slip (swapped letters and doubled letters are the
+  // likeliest typos) plus how rare the word is, minus a bonus for words you
+  // use in your notes. Rare words (not in the frequency list) are dropped
+  // unless they're yours, so nothing odd that Chrome would underline.
+  function ranked(word, { far = false } = {}) {
+    const w = word.toLowerCase();
+    const f = oneSlipFixes(w);
+    const cost = new Map();
+    const add = (c, k) => { if (!cost.has(c) || cost.get(c) > k) cost.set(c, k); };
+    f.swap.forEach((c) => add(c, 0.4));
+    f.double.forEach((c) => add(c, 0.5));
+    f.missing.forEach((c) => add(c, 0.6));   // a letter left out
+    f.other.forEach((c) => add(c, 1));
+    speller.suggest(w).forEach((c) => { const n = slips(c, w); if (n <= (far ? 2 : 1)) add(c.toLowerCase(), n === 1 ? 1 : 2); });
+    VOCAB.forEach((n, c) => { if (n >= 2 && Math.abs(c.length - w.length) <= 2 && c[0] === w[0]) { const d = slips(c, w); if (d <= (far ? 2 : 1)) add(c, d === 1 ? 0.8 : 1.8); } });
+    const out = [];
+    cost.forEach((k, c) => {
+      const rank = RANK.get(c);
+      const mine = VOCAB.get(c) || 0;
+      if (!rank && !mine) return;                               // rare: skip
+      const rarity = rank ? Math.log10(rank) * 0.45 : 2;        // "the" ≈ 0, rank 50,000 ≈ 2.1
+      out.push({ word: c, slips: k >= 1.5 ? 2 : 1, score: k + rarity - Math.min(1.2, mine * 0.3) });
+    });
+    return out.sort((a, b) => a.score - b.score);
   }
 
+  const keepCase = (word, fix) => (/^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix);
+
+  // The fix to apply, or null. Mild: one slip, and clearly the best (well
+  // ahead of the next). Strong: one slip, ahead of the next. Toxic: up to
+  // two slips, the best guess.
+  function autoFix(word, lvl) {
+    const list = ranked(word, { far: lvl >= 3 });
+    const [best, next] = list;
+    if (!best) return null;
+    const gap = next ? next.score - best.score : 9;
+    if (lvl <= 1 && (best.slips > 1 || gap < 0.9)) return null;
+    if (lvl === 2 && (best.slips > 1 || gap < 0.25)) return null;
+    return keepCase(word, best.word);
+  }
+  const clearFix = (word) => autoFix(word, 1);
+  const bestFix = (word, lvl) => autoFix(word, lvl);
+
   function suggestions(word) {
-    const f = oneSlipFixes(word);
-    const list = [...f.swap, ...f.double, ...speller.suggest(word), ...f.other];
-    const seen = new Set();
-    return list.filter((s) => {
-      const k = s.toLowerCase();
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    }).slice(0, 4).map((s) => (/^[A-Z]/.test(word) ? s[0].toUpperCase() + s.slice(1) : s));
+    return ranked(word, { far: true }).slice(0, 4).map((c) => keepCase(word, c.word));
   }
 
   // ── Mistaken capitals: "THe" → "The", "wATER" (caps lock) → "Water",
@@ -146,6 +181,10 @@
     const real = (w) => speller.correct(w.toLowerCase()) || speller.correct(w);
     if (/^[A-Z]{2}[a-z]+$/.test(word) && !(word.length <= 4 && /^[A-Z]+s$/.test(word)) && real(title)) return title;
     if (/^[a-z][A-Z]{2,}$/.test(word) && real(title)) return atStart ? title : word.toLowerCase();
+    // Any other mix of capitals inside a real word ("sHe", "tHE"): lower-case
+    // it (a capital first letter only at a sentence start).
+    if (/[a-z]/.test(word) && /[A-Z]/.test(word.slice(1)) && real(word.toLowerCase()) &&
+        !(word.length <= 4 && /^[A-Z]+s$/.test(word))) return atStart ? title : word.toLowerCase();
     return null;
   }
 

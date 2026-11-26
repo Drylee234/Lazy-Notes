@@ -345,3 +345,8 @@ and Australian word list.  It is under the following copyright:
 
 Build Date: Mon Dec  7 20:19:27 EST 2020
 Wordlist Command: mk-list --accents=strip en_US 60
+
+---
+en-freq.txt: the 60,000 most common English words, in order, exported from
+wordfreq 3.1.1 (https://github.com/rspeer/wordfreq). wordfreq is Apache-2.0;
+its word frequency data is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
