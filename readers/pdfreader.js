@@ -253,6 +253,23 @@ async function loadDocument(data, name) {
   goToPage(initialPageFromHash(), false);
   LazyDocs.opened({ kind: "pdf", name: title, pages: pdfDoc.numPages, page: currentPage });
   buildOutline();
+  collectDocWords(pdfDoc, title);
+}
+
+// The PDF's words go to spell check and typing hints (readers/doc-words.js).
+// Read quietly after opening, up to 400 pages.
+async function collectDocWords(doc, title) {
+  if (!globalThis.LazyDocWords) return;
+  const parts = [];
+  for (let i = 1; i <= Math.min(doc.numPages, 400); i++) {
+    if (doc !== pdfDoc) return;   // another PDF was opened meanwhile
+    try {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      parts.push(tc.items.map((it) => it.str).join(" "));
+    } catch (_) {}
+    if (i === 20) LazyDocWords.publish(parts.join("\n"), title);   // big PDFs: a first batch early
+  }
+  if (doc === pdfDoc) LazyDocWords.publish(parts.join("\n"), title);
 }
 
 // ---------------------------------------------------------------------------
@@ -1028,6 +1045,42 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(currentPage + 1); }
   if (e.key === "ArrowLeft"  || e.key === "PageUp")   { e.preventDefault(); goToPage(currentPage - 1); }
 });
+
+// Trackpad pinch (Chrome sends it as Ctrl+wheel) zooms the pages only, not
+// the toolbar (Chrome's own page zoom would). While pinching the pages are
+// stretched as a preview around the fingers; a moment after the pinch stops
+// they're re-rendered sharp at the new zoom, with that spot kept in place.
+{
+  let pinch = null;   // { factor, x, y, timer }
+  addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();               // no Chrome page zoom
+    if (!pdfDoc) return;
+    const viewer = $("viewer");
+    if (!pinch) {
+      const r = viewer.getBoundingClientRect();
+      pinch = { factor: 1, x: e.clientX, y: e.clientY, timer: null };
+      viewer.style.transformOrigin = `${e.clientX - r.left}px ${e.clientY - r.top}px`;
+      viewer.style.willChange = "transform";
+    }
+    const target = clampScale(scale * pinch.factor * Math.exp(-e.deltaY * 0.01));
+    pinch.factor = target / scale;
+    viewer.style.transform = `scale(${pinch.factor})`;
+    clearTimeout(pinch.timer);
+    pinch.timer = setTimeout(() => {
+      const { factor, x, y } = pinch;
+      pinch = null;
+      // Where the fingers were, in the document, before zooming.
+      const docX = scrollX + x, docY = scrollY + y;
+      viewer.style.transform = "";
+      viewer.style.transformOrigin = "";
+      viewer.style.willChange = "";
+      if (Math.abs(factor - 1) < 0.01) return;
+      setScale(scale * factor);
+      scrollTo({ left: docX * factor - x, top: docY * factor - y });
+    }, 180);
+  }, { passive: false });
+}
 
 // ---------------------------------------------------------------------------
 // Start screen

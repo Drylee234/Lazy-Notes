@@ -4,6 +4,7 @@
 #viewer { gap: 22px; padding-bottom: 40vh; }
 
 .doc-page {
+  zoom: var(--ln-z, 1);   /* pinch / Ctrl+± zoom (readers/pinch-zoom.js) */
   --bg: #ffffff; --surface: #f7f7f8; --border: #e3e3e8; --border-strong: #c9c9d1;
   --pri: #16161a; --sec: #55555f; --dim: #8e8e99; --accent: #4f46e5;
   position: relative;

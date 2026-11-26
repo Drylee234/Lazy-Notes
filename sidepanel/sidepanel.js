@@ -373,8 +373,19 @@ async function loadStudyTopics() {
     "chronological"
   ).map((t) => t.name);
 
+  // "+ New topic" is always last (hover-select puts "__" actions after a divider).
+  const addNewTopicOption = () => {
+    const opt = document.createElement("option");
+    opt.value = "__create_topic__";
+    opt.textContent = "+ New topic";
+    studyTopicSelect.appendChild(opt);
+  };
+
   if (topicNames.length === 0) {
-    showStudyEmpty("No topics for this course yet.");
+    addNewTopicOption();
+    studyTopicSelect.value = "";
+    studyTopicSelect.hidden = false;
+    showStudyEmpty("No topics for this course yet. Use “+ New topic” above.");
     return;
   }
 
@@ -392,12 +403,19 @@ async function loadStudyTopics() {
     if (name === studySelectedTopic) opt.selected = true;
     studyTopicSelect.appendChild(opt);
   });
+  addNewTopicOption();
   studyTopicSelect.hidden = false;
 
   await loadNotes();
 }
 
 studyTopicSelect.addEventListener("change", async () => {
+  if (studyTopicSelect.value === "__create_topic__") {
+    studyTopicSelect.value = studySelectedTopic || "";
+    topicFromStudy = true;
+    openTopicModal(selectedCourse);
+    return;
+  }
   studySelectedTopic = studyTopicSelect.value;
   makeStudyTopicActive();
   await loadNotes();
@@ -551,10 +569,13 @@ function openTopicModal(courseName) {
   setTimeout(() => ctName.focus(), 50);
 }
 
+let topicFromStudy = false;   // the modal was opened from the Study tab's topic list
+
 function closeTopicModal() {
   createTopicModal.classList.remove("visible");
   createTopicModal.setAttribute("aria-hidden", "true");
   pendingTopicCourse = null;
+  topicFromStudy = false;
 }
 
 openCreateTopic.addEventListener("click", () => {
@@ -567,6 +588,10 @@ ctSubmit.addEventListener("click", () => {
   const name = ctName.value.trim();
   if (!name) { ctName.focus(); return; }
   if (!pendingTopicCourse) return;
+
+  // Made from the Study tab: open it there once it exists.
+  if (topicFromStudy && pendingTopicCourse === selectedCourse) studySelectedTopic = name;
+  topicFromStudy = false;
 
   chrome.runtime.sendMessage({
     type:       "CREATE_TOPIC",
@@ -689,6 +714,8 @@ async function handlePanelRequest(request) {
   await windowIdReady;
 
   if (request.windowId != null && request.windowId !== myWindowId) return;  // another window's panel
+  // Web-page requests are for Chrome's side panel, not a reader's built-in one.
+  if (new URLSearchParams(location.search).has("embedded") && request.type === "FILL_COMPOSER") return;
   chrome.storage.local.remove("panelRequest");
   if (Date.now() - request.at > 60000) return;  // stale, e.g. panel never opened
 
@@ -700,6 +727,24 @@ async function handlePanelRequest(request) {
 
   if (request.type === "SHOW_CREATE_TOPIC") {
     await showCreateTopic(request.courseName);
+    return;
+  }
+
+  // ✎ Note / ❝ Quote from a web page's save pop-up: the words go into the
+  // Study tab's note box, as your own words to edit or as a quote line.
+  if (request.type === "FILL_COMPOSER") {
+    document.querySelector('.view-tab[data-view="study"]')?.click();
+    await new Promise((r) => setTimeout(r, 60));
+    const box = document.getElementById("composer-input");
+    if (!box || box.disabled || !request.text) return;
+    if (request.mode === "quote" && box.insertQuoteAt) {
+      box.insertQuoteAt(null, request.text);
+    } else {
+      if (box.caretToEnd) box.caretToEnd(); else box.focus();
+      const sep = (box.isRich ? box.textContent : box.value).trim() ? " " : "";
+      document.execCommand("insertText", false, sep + request.text.replace(/\s+/g, " ").trim());
+    }
+    if (box.caretToEnd) box.caretToEnd(); else box.focus();
   }
 }
 

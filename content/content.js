@@ -33,6 +33,8 @@
   };
   let chipEls = {};
   let handoffBtnEls = [];
+  let handoffOn = true;   // lnQuickSelButtons: ✎ Note / ❝ Quote in the pop-up
+  chrome.storage.local.get("lnQuickSelButtons", (r) => { handoffOn = r?.lnQuickSelButtons !== false; });
   let chipCaptionEl = null;
 
   // A selection that's a list: { head, items } when 2+ lines start with a
@@ -1337,15 +1339,41 @@
     }
   }
 
+  // Text selected in a PDF comes in broken lines: join them back into
+  // sentences ("-" at a line end glues a split word), keep real line ends
+  // (after . ! ? : ;) and blank lines. Same cleanup as pasting into the note
+  // box (sidepanel/rich-box.js). Lists are left alone (they split into points).
+  const BULLET_RE = /^\s*[•●○◦▪■□►▸▹➢➤✓✔·\uF0A7\uF0B7\uF076\uF0D8\uF0FC\uF0A8\uF06C\uF06E]\s*/;
+  const POINT_RE = /^\s*([-*]|\d{1,2}[.)]|[a-z][.)])\s+/i;
+  function joinBrokenLines(text) {
+    const lines = String(text || "").replace(/\r/g, "").split("\n").map((l) => l.replace(/\s+$/, ""));
+    if (lines.length < 2) return lines.join("");
+    const out = [];
+    lines.forEach((raw) => {
+      const l = raw;
+      if (!l.trim()) { out.push(""); return; }
+      const prev = out[out.length - 1];
+      const startsPoint = POINT_RE.test(l) || BULLET_RE.test(raw);
+      if (prev && !startsPoint && !/[.!?:;]["')\]]?$/.test(prev) && prev.length > 25) {
+        out[out.length - 1] = /[A-Za-z]-$/.test(prev) && /^[a-z]/.test(l.trim())
+          ? prev.slice(0, -1) + l.trim()
+          : `${prev} ${l.trim()}`;
+      } else out.push(l.trim());
+    });
+    return out.join("\n").replace(/\n{3,}/g, "\n\n");
+  }
+
   function showPopup(rect, selectedText, paragraphElement) {
     if (!popupContainer) buildPopup();
     resetPopupState();
+    if (!parseList(selectedText, currentRange)) selectedText = joinBrokenLines(selectedText);
 
     currentSelectedText     = selectedText;
     currentParagraphElement = paragraphElement;
 
     popupContainer.style.display = "block";
-    const canHandOff = !!globalThis.LazyNotesQuick?.enabled("lnQuickSelButtons");
+    // Readers: to their pop-up note box. Web pages: to the side panel's note box.
+    const canHandOff = globalThis.LazyNotesQuick ? globalThis.LazyNotesQuick.enabled("lnQuickSelButtons") : handoffOn;
     handoffBtnEls.forEach((b) => { b.style.display = canHandOff ? "" : "none"; });
     arrangePopup();
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
@@ -1439,9 +1467,16 @@
   // if there was a selection to hand over.
   function handOff(mode) {
     const quick = globalThis.LazyNotesQuick;
-    if (!quick || !popupContainer || popupContainer.style.display !== "block") return false;
+    if (!popupContainer || popupContainer.style.display !== "block") return false;
     const text = String(currentSelectedText ?? "").trim();
     if (!text) return false;
+    if (!quick) {
+      // A web page: the side panel's note box (opened if it's closed).
+      try { chrome.runtime.sendMessage({ type: "SEND_TO_NOTE_BOX", mode, text }); } catch (_) { return false; }
+      hidePopup();
+      window.getSelection()?.removeAllRanges();
+      return true;
+    }
     const host = globalThis.LazyNotesHost;
     const base = {
       sourceUrl:   host?.sourceUrl ? host.sourceUrl(currentParagraphElement) : window.location.href,
@@ -1719,6 +1754,7 @@
       courseTree = changes.lazynotes.newValue?.courses || {};
     }
     if (changes.lnPopupSide) popupSide = changes.lnPopupSide.newValue || "above";
+    if (changes.lnQuickSelButtons) handoffOn = changes.lnQuickSelButtons.newValue !== false;
 
     // Storage is the source of truth for on/off: extension pages (the PDF
     // reader) never get the background's tab broadcasts, and this also covers

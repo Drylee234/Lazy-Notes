@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -50,6 +50,9 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnQuickSelButtons" /> ✎ Note / ❝ Quote buttons in the save pop-up</label>
       <label class="set-check"><input type="checkbox" data-key="lnQuickMenu" /> Right-click → Quick note here</label>
       <label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab</label>
+      <div class="set-label set-sub">Typing</div>
+      <label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label>
+      <label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label>
       <div class="set-label set-sub">Documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
     </details>

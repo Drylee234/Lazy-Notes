@@ -87,7 +87,7 @@
   let state = null;   // { mode, base, quote, cat, course, topic }
 
   function pick(cat) {
-    if (!state) return;
+    if (!state || !cat) return;
     state.cat = cat;
     Object.entries(chips).forEach(([c, b]) => {
       b.setAttribute("aria-checked", String(c === cat));
@@ -103,6 +103,23 @@
     input.style.overflowY = input.scrollHeight > 180 ? "auto" : "hidden";
   }
   input.addEventListener("input", () => { grow(); place(); });
+  // Typing hints (shared/spell.js) go in the footer line, not a floating
+  // bar over the chips: "→ millivolts", click or → to take it.
+  const hintEl = $(".lnq-hint");
+  input.addEventListener("ln-typing-hint", (e) => {
+    if (!e.detail) { pick(state?.cat); return; }
+    e.preventDefault();
+    hintEl.replaceChildren();
+    const k = document.createElement("kbd");
+    k.textContent = "→";
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "lnq-hint-word";
+    b.textContent = e.detail.word;
+    b.addEventListener("mousedown", (ev) => ev.preventDefault());
+    b.addEventListener("click", () => e.detail.accept());
+    hintEl.append(k, " ", b);
+  });
 
   // Next to the point (below-right), or under/over the selection, always
   // fully on screen and never over the selected words.

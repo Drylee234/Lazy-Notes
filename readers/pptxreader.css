@@ -5,6 +5,7 @@
 #viewer { gap: 20px; padding-bottom: 40vh; }
 
 .slide {
+  zoom: var(--ln-z, 1);   /* pinch / Ctrl+± zoom (readers/pinch-zoom.js) */
   /* Slides are always light, like PowerPoint, whatever the theme. */
   --bg: #ffffff; --surface: #f7f7f8; --border: #e3e3e8; --border-strong: #c9c9d1;
   --pri: #16161a; --sec: #55555f; --dim: #8e8e99; --accent: #4f46e5;

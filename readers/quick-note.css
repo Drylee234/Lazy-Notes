@@ -53,3 +53,15 @@
   box-shadow: var(--shadow); font: 13px var(--font);
 }
 .lnq-toast button { border: 0; background: none; color: var(--bg); font: 700 13px var(--font); cursor: pointer; text-decoration: underline; }
+
+/* Zoom level, shown for a moment while zooming (pinch-zoom.js) */
+.ln-zoom-bubble {
+  position: fixed; top: calc(var(--toolbar-h, 48px) + 12px); left: 50%; transform: translateX(-50%);
+  z-index: 2147483000; padding: 4px 12px; border-radius: 999px;
+  background: var(--pri); color: var(--bg); font: 600 13px var(--font); pointer-events: none;
+}
+.ln-zoom-bubble[hidden] { display: none; }
+
+/* Typing hint in the footer line (spell.js "ln-typing-hint") */
+.lnq-hint kbd { font: 11px var(--font); padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; color: var(--dim); }
+.lnq-hint-word { border: 0; background: var(--accent-soft); color: var(--accent); font: 600 12px var(--font); padding: 1px 6px; border-radius: 4px; cursor: pointer; }

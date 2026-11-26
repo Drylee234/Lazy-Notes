@@ -9,6 +9,12 @@
 //   ("lnAutocorrect" === false).
 // • Suggestions: with the caret on a misspelled word, a small bar under the
 //   box offers fixes and "Add to dictionary".
+// • Words from the document you're reading (any open Lazy Notes reader
+//   publishes them in storage.session "lnDocWords") count as spelled right
+//   and are preferred as fixes (lnDocWordsOn === false turns it off).
+// • Typing hints: while typing a word, a hint offers the full word from the
+//   document or your notes; → (at the end of the word) accepts it
+//   (lnTypingHints === false turns it off).
 // Chrome's own red underlines stay on too.
 //
 // Dictionary: Hunspell en (lib/dict, from the dictionary-en package) read by
@@ -21,6 +27,13 @@
   // 0 off · 1 mild (one clear one-slip fix) · 2 strong · 3 toxic.
   let level = 1;
   let ignore = new Set();
+  let docOn = true, hintsOn = true;
+  // The open document's words: lower case → { c: count, form: as written }.
+  const DOCW = new Map();
+  const setDocWords = (d) => {
+    DOCW.clear();
+    (d?.words || []).forEach(([form, c]) => DOCW.set(form.toLowerCase(), { c, form }));
+  };
 
   if (globalThis.chrome?.storage?.local) {
     chrome.storage.local.get(["lnAutocorrect", "lnAutocorrectLevel", "lnSpellIgnore"], (r) => {
@@ -28,9 +41,17 @@
       ignore = new Set(r.lnSpellIgnore || []);
       ignore.forEach((w) => speller?.add(w));
     });
+    chrome.storage.local.get(["lnDocWordsOn", "lnTypingHints"], (r) => {
+      docOn = r.lnDocWordsOn !== false;
+      hintsOn = r.lnTypingHints !== false;
+    });
+    chrome.storage.session?.get("lnDocWords", (r) => setDocWords(r?.lnDocWords));
     chrome.storage.onChanged.addListener((c, area) => {
+      if (area === "session" && c.lnDocWords) { setDocWords(c.lnDocWords.newValue); return; }
       if (area !== "local") return;
       if (c.lnAutocorrectLevel) level = Number(c.lnAutocorrectLevel.newValue ?? 1);
+      if (c.lnDocWordsOn) docOn = c.lnDocWordsOn.newValue !== false;
+      if (c.lnTypingHints) hintsOn = c.lnTypingHints.newValue !== false;
     });
   }
 
@@ -93,7 +114,8 @@
 
   // Short words people type that the dictionary may not know.
   const COMMON = new Set(["ok", "okay", "eg", "ie", "vs", "etc", "hi", "lol", "pls", "tbh", "idk", "ur", "u", "na", "sha", "yh", "ya"]);
-  const isWord = (w) => COMMON.has(w.toLowerCase()) || (VOCAB.get(w.toLowerCase()) || 0) >= 2 ||
+  const docCount = (w) => (docOn ? DOCW.get(w)?.c || 0 : 0);
+  const isWord = (w) => COMMON.has(w.toLowerCase()) || (VOCAB.get(w.toLowerCase()) || 0) >= 2 || docCount(w.toLowerCase()) >= 1 ||
     speller.correct(w) || speller.correct(w.toLowerCase()) || ignore.has(w.toLowerCase());
   const misspelled = (w) => !!speller && !isWord(w);
 
@@ -142,10 +164,11 @@
     f.other.forEach((c) => add(c, 1));
     speller.suggest(w).forEach((c) => { const n = slips(c, w); if (n <= (far ? 2 : 1)) add(c.toLowerCase(), n === 1 ? 1 : 2); });
     VOCAB.forEach((n, c) => { if (n >= 2 && Math.abs(c.length - w.length) <= 2 && c[0] === w[0]) { const d = slips(c, w); if (d <= (far ? 2 : 1)) add(c, d === 1 ? 0.8 : 1.8); } });
+    if (docOn) DOCW.forEach((_, c) => { if (Math.abs(c.length - w.length) <= 2 && c[0] === w[0]) { const d = slips(c, w); if (d <= (far ? 2 : 1)) add(c, d === 1 ? 0.8 : 1.8); } });
     const out = [];
     cost.forEach((k, c) => {
       const rank = RANK.get(c);
-      const mine = VOCAB.get(c) || 0;
+      const mine = (VOCAB.get(c) || 0) + docCount(c);
       if (!rank && !mine) return;                               // rare: skip
       const rarity = rank ? Math.log10(rank) * 0.45 : 2;        // "the" ≈ 0, rank 50,000 ≈ 2.1
       out.push({ word: c, slips: k >= 1.5 ? 2 : 1, score: k + rarity - Math.min(1.2, mine * 0.3) });
@@ -153,7 +176,12 @@
     return out.sort((a, b) => a.score - b.score);
   }
 
-  const keepCase = (word, fix) => (/^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix);
+  // A word the document writes with capitals (Nernst, ATPase) keeps them.
+  const keepCase = (word, fix) => {
+    const form = docOn ? DOCW.get(fix)?.form : null;
+    if (form && /[A-Z]/.test(form)) return form;
+    return /^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix;
+  };
 
   // The fix to apply, or null. Mild: one slip, and clearly the best (well
   // ahead of the next). Strong: one slip, ahead of the next. Toxic: up to
@@ -346,6 +374,14 @@
   }
 
   function onKeydown(e) {
+    if (hint && hint.field === e.target) {
+      if (e.key === "ArrowRight" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (acceptHint()) { e.preventDefault(); e.stopPropagation(); return; }
+      } else if (!["Shift", "Control", "Meta", "Alt"].includes(e.key)) {
+        clearHint();
+        if (!lastFix) hideBar();
+      }
+    }
     if (!lastFix || lastFix.field !== e.target) return;
     const undoKey = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z";
     if (e.key === "Backspace" || undoKey) {
@@ -353,6 +389,61 @@
     } else if (!["Shift", "Control", "Meta", "Alt"].includes(e.key)) {
       lastFix = null;
     }
+  }
+
+  // ── Typing hints: the rest of the word, from the document or your notes ──
+  // Shown in the bar while the caret is at the end of a word being typed
+  // (3+ letters); → accepts it, typing on ignores it.
+  let hint = null;   // { field, start, typed, word }
+
+  function bestCompletion(prefix) {
+    const p = prefix.toLowerCase();
+    let best = null, bestScore = 0;
+    const consider = (w, n, bonus) => {
+      if (w.length < p.length + 2 || !w.startsWith(p) || w === p) return;
+      const score = n * bonus + (w.length >= 6 ? 0.5 : 0);
+      if (score > bestScore) { best = w; bestScore = score; }
+    };
+    if (docOn) DOCW.forEach((d, w) => consider(w, d.c, 2));
+    VOCAB.forEach((n, w) => consider(w, n, 1));
+    if (!best) return null;
+    const form = docOn ? DOCW.get(best)?.form : null;
+    // Keep what was typed; finish it as the document writes it.
+    return prefix + (form && form.toLowerCase() === best ? form : best).slice(prefix.length);
+  }
+
+  function updateHint(field) {
+    clearHint();
+    if (!hintsOn || (!DOCW.size && !VOCAB.size)) return;
+    const v = view(field);
+    if (!v || !v.collapsed || v.empty) return;
+    const atEnd = v.caret === v.text.length || !/[A-Za-z']/.test(v.text[v.caret]);
+    if (!atEnd) return;
+    const m = v.text.slice(0, v.caret).match(/[A-Za-z][A-Za-z'-]*$/);
+    if (!m || m[0].length < 3) return;
+    const word = bestCompletion(m[0]);
+    if (!word) return;
+    hint = { field, start: v.caret - m[0].length, typed: m[0], word };
+    // A box with room of its own for the hint (the readers' pop-up note
+    // box) takes the "ln-typing-hint" event and shows it there instead.
+    if (!field.dispatchEvent(new CustomEvent("ln-typing-hint", { cancelable: true, detail: { word, accept: acceptHint } }))) return;
+    showBar(field, { hint });
+  }
+  function clearHint() {
+    if (!hint) return;
+    hint.field.dispatchEvent(new CustomEvent("ln-typing-hint", { detail: null }));
+    hint = null;
+  }
+
+  function acceptHint() {
+    const h = hint;
+    clearHint();
+    if (!h) return false;
+    const v = view(h.field);
+    if (!v || !v.collapsed || v.text.slice(h.start, v.caret) !== h.typed) return false;
+    replace(h.field, v, h.start, v.caret, h.word);
+    hideBar();
+    return true;
   }
 
   // ── Suggestion bar ──
@@ -380,7 +471,8 @@
   background: var(--surface, #f7f7f8); color: var(--pri, #16161a); }
 .ln-spell-bar button:hover { background: var(--hover, #efeff2); }
 .ln-spell-bar button.fix { color: var(--accent, #4f46e5); font-weight: 600; }
-.ln-spell-bar button.quiet { background: transparent; color: var(--dim, #8e8e99); }`;
+.ln-spell-bar button.quiet { background: transparent; color: var(--dim, #8e8e99); }
+.ln-spell-bar .k { font-size: 11px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border, #e3e3e8); color: var(--dim, #8e8e99); }`;
       document.head.appendChild(st);
     }
     return bar;
@@ -406,10 +498,15 @@
     return b;
   };
 
-  function showBar(field, { undo, word, start }) {
+  function showBar(field, { undo, word, start, hint: h }) {
     ensureBar();
     bar.replaceChildren();
-    if (undo) {
+    if (h) {
+      const k = document.createElement("span");
+      k.className = "k";
+      k.textContent = "→";
+      bar.append(k, button(h.word, "fix", () => { hint = h; acceptHint(); }));
+    } else if (undo) {
       const t = document.createElement("span");
       t.textContent = `Fixed “${undo.original}” → “${undo.fixed}”`;
       bar.append(t, button("Undo", "fix", () => { lastFix = undo; undoFix(); }));
@@ -446,14 +543,15 @@
     // Still typing this word (caret at its end, nothing after): wait.
     const typing = c === e && e === v.length && (!cur.node || !cur.node.nextSibling);
     if (!word || typing || !checkable(word, sentenceStartAt(v, s)) || !misspelled(word)) {
-      if (!lastFix) hideBar();
+      if (!lastFix && !hint) hideBar();
       return;
     }
+    clearHint();
     showBar(field, { word, start: s });
   }
 
   // ── Wiring: every textarea and text input on the page, as it's used ──
-  const isField = (el) => el && (el.tagName === "TEXTAREA" || el.classList?.contains("rich-box") ||
+  const isField = (el) => el && !el.closest?.("#toolbar") && (el.tagName === "TEXTAREA" || el.classList?.contains("rich-box") ||
     (el.tagName === "INPUT" && (el.type === "text" || el.type === "search")));
 
   document.addEventListener("focusin", (e) => {
@@ -461,7 +559,12 @@
     e.target.spellcheck = true;
     load();
   });
-  document.addEventListener("input", (e) => { if (isField(e.target)) onInput(e); }, true);
+  document.addEventListener("input", (e) => {
+    if (!isField(e.target)) return;
+    onInput(e);
+    if (!lastFix && e.inputType === "insertText" && /[A-Za-z'-]/.test(e.data || "")) updateHint(e.target);
+    else if (!lastFix && hint) { clearHint(); hideBar(); }
+  }, true);
   document.addEventListener("keydown", (e) => { if (isField(e.target)) onKeydown(e); }, true);
   document.addEventListener("selectionchange", () => {
     const el = document.activeElement;
@@ -469,7 +572,7 @@
     clearTimeout(checkCaret.t);
     checkCaret.t = setTimeout(() => checkCaret(el), 250);
   });
-  document.addEventListener("focusout", (e) => { if (isField(e.target)) { lastFix = null; hideBar(); } });
+  document.addEventListener("focusout", (e) => { if (isField(e.target)) { lastFix = null; clearHint(); hideBar(); } });
   addEventListener("scroll", () => hideBar(), true);
 
   globalThis.LazySpell = { load, isReady: () => !!speller };

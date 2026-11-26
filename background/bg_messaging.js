@@ -79,6 +79,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case "NEW_HIGHLIGHT":
       handleNewHighlight(message);
       return;
+    case "SEND_TO_NOTE_BOX":   // ✎ Note / ❝ Quote in a web page's save pop-up
+      requestSidePanel({ type: "FILL_COMPOSER", mode: message.mode, text: String(message.text || "") }, sender.tab);
+      return;
     case "NEW_HIGHLIGHTS":   // several at once (a list split into points): one after another
       (async () => { for (const h of message.items || []) await handleNewHighlight(h); })();
       return;
