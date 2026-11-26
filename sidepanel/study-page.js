@@ -542,6 +542,23 @@ const StudyPage = (() => {
     if (el && e.target === el) setActiveNote(el, { focus: false });
   });
 
+  // Ctrl/⌘+↑ from the note box: to the last note (then Enter edits it, ↑/↓
+  // walk the notes). Ctrl/⌘+↓ on a note: back to the note box.
+  composerInput.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === "ArrowUp") {
+      const els = noteEls();
+      if (!els.length) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setActiveNote(els[els.length - 1]);
+    }
+  }, true);
+  noteList.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === "ArrowDown" && e.target.classList?.contains("note") && !editing && !hlEditing) {
+      e.preventDefault();
+      composerInput.focus();
+    }
+  });
   noteList.addEventListener("keydown", (e) => {
     const el = e.target;
     if (!el.classList?.contains("note") || editing || hlEditing) return;

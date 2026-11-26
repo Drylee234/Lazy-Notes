@@ -378,7 +378,8 @@
   }
 
   // ── Settings ──
-  chrome.storage.local.get(["lnPanelMode", "lnQuickFloat"], (r) => {
+  chrome.storage.local.get(["lnPanelMode", "lnQuickFloat", "lnPanelFade"], (r) => {
+    aside.classList.toggle("ln-fade", r.lnPanelFade !== false);
     mode = modeOf(r.lnPanelMode);
     floatBtnOn = r.lnQuickFloat !== false;
     apply();
@@ -386,6 +387,7 @@
   chrome.storage.onChanged.addListener((c, area) => {
     if (area !== "local") return;
     if ("lnPanelMode" in c) { const next = modeOf(c.lnPanelMode.newValue); if (next !== "tab") slidOut = false; mode = next; apply(); }
+    if ("lnPanelFade" in c) aside.classList.toggle("ln-fade", c.lnPanelFade.newValue !== false);
     if ("lnQuickFloat" in c) { floatBtnOn = c.lnQuickFloat.newValue !== false; apply({ refit: false }); }
   });
 

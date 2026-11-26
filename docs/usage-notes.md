@@ -102,3 +102,4 @@ seen → cause → what changed (commit) or what's still open.
 - The Study list scrolls to the newest note when a highlight is sent to it.
 - Dragging text into a note box always made a quote → Settings › More options "Text dragged into a note box goes in as normal text" (`lnDropPlain`, off by default).
 - Open: "basic hover gestures" on the floating panel and "Ctrl+Up" — asked the owner what they mean.
+- Answered: Ctrl+↑ in the Study note box jumps to the last note (Enter edits it; Ctrl+↓ on a note returns to the box). "Hover gesture" = the floating box fades while the mouse is away, solid on hover/focus (`lnPanelFade`, Settings › More options).

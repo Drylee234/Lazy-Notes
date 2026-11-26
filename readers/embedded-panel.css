@@ -107,3 +107,9 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 .ln-rz-ne, .ln-rz-nw, .ln-rz-se, .ln-rz-sw { width: 14px; height: 14px; }
 .ln-rz-ne { top: 0; right: 0; cursor: nesw-resize; } .ln-rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 .ln-rz-nw { top: 0; left: 0; cursor: nwse-resize; } .ln-rz-se { bottom: 0; right: 0; cursor: nwse-resize; }
+
+/* Floating box fades while the mouse is away (and you're not typing in it);
+   solid again on hover, focus, move or resize. lnPanelFade = false: always solid. */
+#ln-embed.ln-floating.ln-fade { opacity: 0.45; transition: opacity 0.18s; }
+#ln-embed.ln-floating.ln-fade:hover, #ln-embed.ln-floating.ln-fade:focus-within,
+.ln-embed-moving #ln-embed.ln-floating.ln-fade { opacity: 1; }
