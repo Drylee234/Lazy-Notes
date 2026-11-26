@@ -60,7 +60,7 @@ export async function buildReport() {
   await flush();
   const keys = ["lnDiag", "lnSyncState", "lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen",
     "lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn",
-    "lnTypingHints", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnTidyLog", "highlighterActive"];
+    "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnTidyLog", "highlighterActive"];
   const r = await chrome.storage.local.get(keys);
   const { lazynotes } = await chrome.storage.local.get("lazynotes");
   let courses = 0, topics = 0, highlights = 0, notes = 0;

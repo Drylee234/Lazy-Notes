@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -63,6 +63,7 @@ globalThis.LazySettings = (() => {
       <div class="set-label set-sub">Typing</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label>
       <label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label>
+      <label class="set-check"><input type="checkbox" data-key="lnPunctFix" /> Fix stray punctuation as you type (“word ,next” → “word, next”, “(1791)discovered”, “produc[tion”)</label>
       <div class="set-label set-sub">Old notes</div>
       <div class="set-tidy">
         <span class="set-tidy-status">Old PDF highlights get their broken lines joined, like new ones.</span>

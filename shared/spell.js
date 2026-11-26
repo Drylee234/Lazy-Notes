@@ -28,6 +28,7 @@
   let level = 1;
   let ignore = new Set();
   let docOn = true, hintsOn = true;
+  let punctOn = true;   // lnPunctFix: tidy stray punctuation while typing
   // Fixes you've picked yourself (a suggestion clicked): applied again next
   // time you make the same slip. lnSpellLearned = { typo: fix }.
   let learned = {};
@@ -45,9 +46,10 @@
       ignore.forEach((w) => speller?.add(w));
     });
     chrome.storage.local.get("lnSpellLearned", (r) => { learned = r?.lnSpellLearned || {}; });
-    chrome.storage.local.get(["lnDocWordsOn", "lnTypingHints"], (r) => {
+    chrome.storage.local.get(["lnDocWordsOn", "lnTypingHints", "lnPunctFix"], (r) => {
       docOn = r.lnDocWordsOn !== false;
       hintsOn = r.lnTypingHints !== false;
+      punctOn = r.lnPunctFix !== false;
     });
     chrome.storage.session?.get("lnDocWords", (r) => setDocWords(r?.lnDocWords));
     chrome.storage.onChanged.addListener((c, area) => {
@@ -57,6 +59,7 @@
       if (c.lnDocWordsOn) docOn = c.lnDocWordsOn.newValue !== false;
       if (c.lnSpellLearned) learned = c.lnSpellLearned.newValue || {};
       if (c.lnTypingHints) hintsOn = c.lnTypingHints.newValue !== false;
+      if (c.lnPunctFix) punctOn = c.lnPunctFix.newValue !== false;
     });
   }
 
@@ -355,12 +358,63 @@
 
   const sentenceStartAt = (text, i) => /(^|[.!?]\s+|\n\s*)$/.test(text.slice(0, i));
 
+  // ── Stray punctuation (seen in real notes: "membrane ,plasma",
+  //    "Pergamum : discovered", "(1791)discovered", "( not yet named )",
+  //    "produc[tion", "selectively  permeable"). Fixed as you type; Ctrl+Z
+  //    undoes a fix like any typing. Off: lnPunctFix = false. ──
+  const STRAY = /([A-Za-z]{2,})[\[\]{}|\\`^~]([A-Za-z]{2,})$/;
+  function punctFix(e, field) {
+    if (!punctOn || !level || e.inputType !== "insertText") return false;
+    const ch = e.data;
+    if (!ch || ch.length !== 1) return false;
+    const v = view(field);
+    if (!v || v.empty || !v.collapsed) return false;
+    const c = v.caret;
+    if (v.text[c - 1] !== ch && !(ch === " " && v.text[c - 1] === "\u00a0")) return false;
+    const before = v.text.slice(0, c - 1);
+
+    // A space before , ; : ! ? )  →  "membrane," / "Pergamum:" / "though)"
+    if (/^[,;:!?)]$/.test(ch)) {
+      const m = before.match(/[A-Za-z0-9)\]"'’] +$/);
+      if (m && !/\n/.test(m[0])) {
+        const sp = m[0].length - 1;
+        replace(field, v, c - 1 - sp, c, ch);
+        return true;
+      }
+    }
+    if (/^[A-Za-z]$/.test(ch)) {
+      // No space after , ; : or a closing bracket  →  ", plasma" / ") discovered"
+      const needsSpace = /[A-Za-z)][,;]$/.test(before) ||
+        (/[A-Za-z]{2}:$/.test(before) && !/(https?|file|mailto):$/i.test(before)) ||
+        (/\)$/.test(before) && /\([^()]{2,}\)$/.test(before));
+      if (needsSpace) { replace(field, v, c - 1, c, " " + ch); return true; }
+      // A space just inside an opening bracket  →  "(not"
+      const open = before.match(/\( +$/);
+      if (open) { replace(field, v, c - 1 - open[0].length, c, "(" + ch); return true; }
+    }
+    if (ch === " " || /^[.,;:!?]$/.test(ch)) {
+      // A stray symbol inside a word  →  "production" (only if that's a word)
+      const m = before.match(STRAY);
+      if (m && speller && (speller.correct(m[1] + m[2]) || speller.correct((m[1] + m[2]).toLowerCase()))) {
+        replace(field, v, c - 1 - m[0].length, c - 1, m[1] + m[2], 1);
+        return true;
+      }
+    }
+    // Two spaces between words  →  one
+    if (ch === " " && /[A-Za-z,;:)] $/.test(before.replace(/\u00a0$/, " "))) {
+      replace(field, v, c - 1, c, "");
+      return true;
+    }
+    return false;
+  }
+
   // ── Autocorrect ──
   let lastFix = null;   // { field, original, fixed, sep }
 
   function onInput(e) {
     const field = e.target;
     lastFix = null;
+    if (punctFix(e, field)) return;
     if (!level || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
     const v = view(field);
     if (!v || v.empty) return;
@@ -374,6 +428,8 @@
     // only treat it as a sentence start if it's also the start of its block.
     const atStart = sentenceStartAt(v.text, start) && (!v.node || !v.node.previousSibling);
     if (ignore.has(word.toLowerCase()) && word !== "i") return;
+    // A link being typed ("https:", "www."): not a word to fix.
+    if (/^(https?|ftp|file|mailto|www)$/i.test(word) && /[:.]/.test(e.data)) return;
     // Odd capitals inside a word ("DIDnt") first, then the other fixes on
     // the result, so "DIDnt" ends up "didn't".
     const mixed = /[a-z]/.test(word) && /[A-Z]/.test(word.slice(1));

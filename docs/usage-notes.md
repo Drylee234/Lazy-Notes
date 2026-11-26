@@ -1,0 +1,42 @@
+# Usage notes — how the extension is really used
+
+Observations from the owner's real notes (exports, screen recordings), what
+went wrong, whose slip it was (the extension's or the person's), and what was
+changed because of it. Read this before "fixing" a behaviour that looks odd:
+it may exist because of something below.
+
+**Add an entry** whenever the owner shares real notes, screenshots or
+recordings, or reports a slip. Newest first. Keep each one short: what was
+seen → cause → what changed (commit) or what's still open.
+
+---
+
+## 2026-11-26 · BME213 (Physiology): "Introduction" + "Cell and its functions"
+
+**How the owner works**
+- Reads notes mostly in the extension's own views (Study tab / All notes),
+  **not** the Markdown/HTML export (yet). Export fixes matter less than what
+  the app shows and what gets saved.
+- Source: lecture PDF "PIO 201- Introduction to PHG and Blood (Lecture1).pdf",
+  read in our PDF reader.
+- Mixes highlights with lots of **typed** notes (fast, few full stops, typos).
+- Tables from slides are saved as **snips (Figure type)**, not the Table
+  type. A table that runs over a page break becomes two snips ("Table of
+  organelles…" + "Table contd"); the second starts with an orphan row.
+- Saves "Heading : definition" in one go as a heading (e.g. "Membrane
+  Proteins :are the proteins inside the membrane itself").
+
+**Slips seen → cause → change**
+
+| Seen | Cause | Change |
+|---|---|---|
+| "the **8** extracellular fluid", "…cell membrane **10**" | PDF page/slide numbers picked up with the selection | Lone 1–3 digit lines dropped on save and on paste into the note box; skipped for tables (`lnDropPageNums`) · `e3e1256` |
+| Same line saved twice ("Inside it are various organelles…") | Person (double save) | Save pop-up warns "Already saved in this topic" (`lnDupWarn`) · `e3e1256` |
+| Heading with its definition in one note | Person (saved the whole line as Sub topic) | "Heading: words…" saved as a heading → heading + Definition (`lnHeadSplit`) · `e3e1256` |
+| Course export showed only "hiii" | Unclear; maybe a 2nd course differing by caps/spaces | Creating a course/topic that differs only by caps/spaces opens the existing one · `e3e1256` |
+| Export: Plain line over points not a heading; typed "- point" broke the list; indents lost; Summary unlabelled | Extension (export didn't match the app) | Exporter matches the app · `e3e1256` |
+| "membrane ,plasma", "Pergamum : discovered", "(1791)discovered", "( not yet named )", "produc[tion", "selectively  permeable" | Person (typing fast) | Fixed while typing (`lnPunctFix`); also autocorrect no longer turns "https:" into "http:" |
+| Typos left in saved notes (Industralization, imagingj, doublehelix) | Person; spell check only works while typing | **Open idea:** underline mistakes in the Study view (switchable) |
+| Factual slip: "Luigi Giovanni" (Galvani) | Person or slide | Nothing to automate |
+| White table snips glare in dark mode | Extension look | **Open idea:** dim pictures slightly in dark mode (switchable) |
+| Table split across two snips | PDF page break | **Open idea:** "Join to last figure" stacks a snip under the previous one |
