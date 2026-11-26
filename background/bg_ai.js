@@ -6,7 +6,8 @@
 //
 // Settings (chrome.storage.local):
 //   lnAiOn        false = the AI is off everywhere (default off until a key works)
-//   lnAiProvider  "groq" (default) | "gemini" | "anthropic" | "openrouter" | "custom"
+//   lnAiProvider  "groq" (default) | "gemini" | "anthropic" | "openrouter"
+//                 | "server" (your Render server keeps the key) | "custom"
 //   lnAiModel     model name, per provider: { providerId: name }
 //   lnAiBase      own address, for "custom"
 //   lnAiKeys      { providerId: key }   ← never synced, never exported, never reported
@@ -80,10 +81,25 @@ const TASKS = {
 // ─── settings ────────────────────────────────────────────────────────────────
 
 async function config(override = {}) {
-  const s = await chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiOn"]);
+  const s = await chrome.storage.local.get([
+    "lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiOn", "lnSyncUrl", "lnSyncKey"
+  ]);
   const provider = String(override.provider || s.lnAiProvider || AI.DEFAULT);
   const p = AI.get(provider);
   const models = s.lnAiModel || {};
+
+  // "My Lazy Notes server": the AI key lives on Render, not in Chrome. The
+  // extension just talks to its own server with the sync key it already has.
+  if (p.needsServer) {
+    return {
+      on: s.lnAiOn === true,
+      provider,
+      key: String(s.lnSyncKey || "").trim(),
+      model: "on your server",
+      base: String(s.lnSyncUrl || "").trim().replace(/\/+$/, "")
+    };
+  }
+
   return {
     on: s.lnAiOn === true,
     provider,
@@ -103,9 +119,14 @@ async function setState(patch) {
 // ─── the one call ────────────────────────────────────────────────────────────
 
 async function ask(cfg, { system, prompt, maxTokens }) {
-  if (!cfg.key) return { ok: false, reason: "No key yet — paste one in Settings › AI." };
+  const viaServer = AI.get(cfg.provider).needsServer;
+  if (!cfg.base) return { ok: false, reason: viaServer
+    ? "Your server's address isn't set — fill in Settings › Sync first."
+    : "No service address — type one in Settings › AI." };
+  if (!cfg.key) return { ok: false, reason: viaServer
+    ? "Your sync key isn't set — fill in Settings › Sync first."
+    : "No key yet — paste one in Settings › AI." };
   if (!cfg.model) return { ok: false, reason: "No model chosen yet — pick one in Settings › AI." };
-  if (!cfg.base) return { ok: false, reason: "No service address — type one in Settings › AI." };
 
   const req = AI.buildRequest(cfg.provider, { ...cfg, system, prompt, maxTokens });
   const ctl = new AbortController();

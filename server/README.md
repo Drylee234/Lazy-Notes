@@ -43,5 +43,35 @@ All `/api` calls except health need `Authorization: Bearer <LAZYNOTES_KEY>`.
 | `GET /api/health` | `{"ok": true, "app": "lazy-notes"}`, no key needed |
 | `PUT /api/snapshot` | body `{"app":"lazy-notes","version":1,"sentAt":…,"data":{"lazynotes":…,"lnDocs":…}}` → `{"ok":true,"savedAt":…}` (max 30 MB) |
 | `GET /api/snapshot` | `{"savedAt":…,"data":…}`, or 404 before the first sync |
+| `POST /api/ai` | body `{"system":…,"prompt":…,"max_tokens":…}` → `{"ok":true,"text":…}` — see **AI key** below |
 
 The latest snapshot and the 5 before it are kept.
+
+## AI key on the server (so it isn't in Chrome)
+
+The extension can ask this server to do its AI jobs instead of holding an AI
+key itself. The key then lives in one place — a Render environment variable —
+works on every device you use, and can be changed without touching Chrome.
+
+Set these on the service's **Environment** tab, then **Save** (Render
+restarts it):
+
+| Variable | What to put |
+|---|---|
+| `AI_KEY` | the AI service's key (required) |
+| `AI_PROVIDER` | `groq` (the default), `gemini`, `anthropic` or `openrouter` |
+| `AI_MODEL` | a model name; left out, the provider's usual one is used |
+| `AI_BASE` | only for something else OpenAI-shaped (Mistral, Cerebras, …) |
+
+Then in the extension: **Settings › AI › Service → My Lazy Notes server**, and
+press **Test connection**. There is no key or model to type: it uses the sync
+address and sync key you already set, and the AI key never leaves Render.
+
+`POST /api/ai` needs the same `LAZYNOTES_KEY` as everything else. The
+extension still writes the jobs themselves (`background/bg_ai.js`), so this
+endpoint only adds the key and translates between the services' request
+shapes. Nothing it relays — no prompt, no note text, no key — is stored or
+logged here.
+
+A free Render service sleeps after a while, so the first AI press after a
+quiet spell waits for it to wake (up to about a minute), exactly like sync.

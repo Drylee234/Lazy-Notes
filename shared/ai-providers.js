@@ -79,6 +79,18 @@ globalThis.LazyAIProviders = (() => {
       defaultModel: "deepseek/deepseek-chat-v3.1:free"
     },
 
+    server: {
+      label: "My Lazy Notes server",
+      shape: "relay",
+      base: "",                     // uses your sync address
+      needsServer: true,
+      keyUrl: "",
+      keyHint: "No key goes in Chrome at all: your Render server keeps it and does the asking.",
+      free: "Uses the sync server you already set up. Put the AI key on Render as AI_KEY (and AI_PROVIDER, AI_MODEL) — see server/README.md. One key for every device, changed on Render without touching the extension.",
+      models: [],
+      defaultModel: ""
+    },
+
     custom: {
       label: "Other / my own",
       shape: "openai",
@@ -92,7 +104,7 @@ globalThis.LazyAIProviders = (() => {
     }
   };
 
-  const ORDER = ["groq", "gemini", "anthropic", "openrouter", "custom"];
+  const ORDER = ["groq", "gemini", "anthropic", "openrouter", "server", "custom"];
 
   function get(id) {
     return PROVIDERS[id] || PROVIDERS.groq;
@@ -114,6 +126,16 @@ globalThis.LazyAIProviders = (() => {
           ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 }
         }
+      };
+    }
+
+    // Our own server: it holds the AI key and does the shape conversion.
+    // The job itself is still built here, so there is one set of prompts.
+    if (p.shape === "relay") {
+      return {
+        url: `${root}/api/ai`,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: { system: system || "", prompt, max_tokens: maxTokens }
       };
     }
 
@@ -155,10 +177,21 @@ globalThis.LazyAIProviders = (() => {
   // Pull the words out of whatever came back.
   function readReply(id, data) {
     const p = get(id);
+    if (p.shape === "relay") return String(data?.text || "").trim();
     if (p.shape === "gemini") {
       const parts = data?.candidates?.[0]?.content?.parts || [];
       return parts.map((x) => x?.text || "").join("").trim();
     }
+    // Our own server: it holds the AI key and does the shape conversion.
+    // The job itself is still built here, so there is one set of prompts.
+    if (p.shape === "relay") {
+      return {
+        url: `${root}/api/ai`,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: { system: system || "", prompt, max_tokens: maxTokens }
+      };
+    }
+
     if (p.shape === "anthropic") {
       return (data?.content || []).filter((b) => b?.type === "text").map((b) => b.text).join("").trim();
     }
@@ -170,6 +203,11 @@ globalThis.LazyAIProviders = (() => {
     const raw = String(
       data?.error?.message || data?.error?.type || data?.message || ""
     ).slice(0, 300);
+    if (get(id).shape === "relay") {
+      if (status === 401 || status === 403) return "Your server refused the sync key — check Settings › Sync.";
+      if (status === 503) return raw || "Your server has no AI key yet. Put AI_KEY on Render.";
+      if (status === 502) return raw || "Your server couldn't reach the AI service.";
+    }
     if (status === 401 || status === 403) return `The key was refused — check you pasted all of it.${raw ? ` (${raw})` : ""}`;
     if (status === 404) return `That model name isn't there. Pick another model.${raw ? ` (${raw})` : ""}`;
     if (status === 429) return "You've used up this service's free allowance for now. Try later, or use another service.";

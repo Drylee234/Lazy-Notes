@@ -29,11 +29,14 @@ paste a key, press Test connection.
 | Google Gemini | Free, but now only about 20 requests a day on Flash. |
 | Claude (Anthropic) | Not free — a console key, billed per word. A Claude Pro plan does **not** include API access. |
 | OpenRouter | Free models (~50 a day); some of their owners may train on what you send. |
+| **My Lazy Notes server** | No key in Chrome at all: your Render server keeps it. See `server/README.md`. |
 | Other / my own | Anything OpenAI-shaped: Mistral, Cerebras, or Ollama on your own computer. |
 
-Your key stays in this Chrome: it is never synced to your server, never put in
-a backup file, and never in a problem report. All the talking happens in the
-service worker (`background/bg_ai.js`), so a key never touches a web page.
+**Where the key lives — your choice.** Either in this Chrome (never synced to
+your server, never in a backup file, never in a problem report), or not in
+Chrome at all: pick **My Lazy Notes server** and put the key on Render as
+`AI_KEY`. Either way the talking happens in the service worker
+(`background/bg_ai.js`), so a key never touches a web page.
 
 Where the buttons are: **✨ Tidy** in the save pop-up (or Alt+T), and
 **✨ Tidy · 💡 Explain · 📖 Define** in the note editor. Nothing saves by

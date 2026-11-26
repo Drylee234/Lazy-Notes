@@ -85,3 +85,6 @@
   border-radius: var(--radius-sm); background: var(--bg); color: var(--pri); font: inherit; font-size: 12px;
 }
 .ln-settings .set-ai-base-row[hidden] { display: none; }
+.ln-settings .set-ai-server { margin: 2px 0 6px; font-size: 11px; color: var(--sec); overflow-wrap: anywhere; }
+.ln-settings .set-ai-server[hidden] { display: none; }
+.ln-settings .set-field[hidden] { display: none; }

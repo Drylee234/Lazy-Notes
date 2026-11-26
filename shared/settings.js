@@ -77,6 +77,7 @@ globalThis.LazySettings = (() => {
       <label class="set-field"><span>Service</span>
         <select class="set-ai-provider"></select></label>
       <div class="set-ai-about"></div>
+      <div class="set-ai-server" hidden></div>
       <label class="set-field set-ai-base-row" hidden><span>Address</span>
         <input type="url" class="set-ai-base" placeholder="http://localhost:11434/v1" spellcheck="false" /></label>
       <label class="set-field"><span>Key</span>
@@ -365,6 +366,9 @@ globalThis.LazySettings = (() => {
       const about   = root.querySelector(".set-ai-about");
       const getKey  = root.querySelector(".set-ai-getkey");
       const keyBox  = root.querySelector(".set-ai-key");
+      const serverNote = root.querySelector(".set-ai-server");
+      const keyRow  = keyBox.closest(".set-field");
+      const modelRow = () => modelBox.closest(".set-field");
       const baseRow = root.querySelector(".set-ai-base-row");
       const baseBox = root.querySelector(".set-ai-base");
       const modelBox = root.querySelector(".set-ai-model");
@@ -389,12 +393,23 @@ globalThis.LazySettings = (() => {
       };
 
       function showAi() {
-        chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiState", "lnAiOn"], (r) => {
+        chrome.storage.local.get(["lnAiProvider", "lnAiModel", "lnAiBase", "lnAiKeys", "lnAiState", "lnAiOn", "lnSyncUrl", "lnSyncKey"], (r) => {
           const id = r.lnAiProvider || AIP.DEFAULT;
           const p = AIP.get(id);
           pick.value = id;
           about.textContent = p.free;
           baseRow.hidden = !p.needsBase;
+          // The server route needs nothing typed here: it borrows the sync
+          // address and key, and the AI key stays on Render.
+          keyRow.hidden = !!p.needsServer;
+          modelRow().hidden = !!p.needsServer;
+          serverNote.hidden = !p.needsServer;
+          if (p.needsServer) {
+            const url = (r.lnSyncUrl || "").trim();
+            serverNote.textContent = url
+              ? `Will ask ${url} — set AI_KEY, AI_PROVIDER and AI_MODEL on Render first.`
+              : "Set your server up under Sync below first, then come back.";
+          }
           if (document.activeElement !== baseBox) baseBox.value = r.lnAiBase || p.base || "";
           if (document.activeElement !== keyBox) keyBox.value = (r.lnAiKeys || {})[id] || "";
           if (document.activeElement !== modelBox) modelBox.value = (r.lnAiModel || {})[id] || p.defaultModel || "";
@@ -417,7 +432,8 @@ globalThis.LazySettings = (() => {
           }
           const st = r.lnAiState || {};
           if (Date.now() - aiToldAt < 6000) return;   // don't talk over the Test result
-          if (!keyBox.value) aiSay("No key yet.", "");
+          if (p.needsServer && !r.lnSyncKey) aiSay("Set your server up under Sync first.", "");
+          else if (!p.needsServer && !keyBox.value) aiSay("No key yet.", "");
           else if (st.lastError) aiSay(st.lastError, "bad");
           else if (st.lastOkAt) aiSay(`Working — last answered ${ago(st.lastOkAt)}${r.lnAiOn ? "" : " (still switched off)"}.`, r.lnAiOn ? "ok" : "wait");
           else aiSay("Not tested yet — press Test connection.", "wait");
@@ -447,7 +463,8 @@ globalThis.LazySettings = (() => {
 
       root.querySelector(".set-ai-test").addEventListener("click", () => {
         aiSay("Asking the service…", "wait", true);
-        chrome.runtime.sendMessage({
+        const viaServer = !!AIP.get(pick.value).needsServer;
+        chrome.runtime.sendMessage(viaServer ? { type: "AI_TEST", provider: pick.value } : {
           type: "AI_TEST",
           provider: pick.value,
           key: keyBox.value.trim(),
@@ -465,7 +482,7 @@ globalThis.LazySettings = (() => {
       });
 
       chrome.storage.onChanged.addListener((c, area) => {
-        if (area === "local" && (c.lnAiState || c.lnAiProvider || c.lnAiKeys || c.lnAiOn)) showAi();
+        if (area === "local" && (c.lnAiState || c.lnAiProvider || c.lnAiKeys || c.lnAiOn || c.lnSyncUrl)) showAi();
       });
       showAi();
     }
