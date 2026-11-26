@@ -250,12 +250,19 @@
   const toolbar = document.getElementById("toolbar");
   if (toolbar && window.ResizeObserver) {
     const need = () => [...toolbar.children].reduce((w, c) => w + c.scrollWidth, 0) + 48;
+    // Changed on the next frame, not inside the callback: changing the
+    // toolbar's layout while it's being observed makes Chrome log
+    // "ResizeObserver loop completed with undelivered notifications".
+    let raf = 0;
     new ResizeObserver(() => {
-      const narrow = toolbar.clientWidth < need();
-      if (narrow !== document.body.classList.contains("ln-tb-narrow")) {
-        document.body.classList.toggle("ln-tb-narrow", narrow);
-        document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`);
-      }
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const narrow = toolbar.clientWidth < need();
+        if (narrow !== document.body.classList.contains("ln-tb-narrow")) {
+          document.body.classList.toggle("ln-tb-narrow", narrow);
+          document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`);
+        }
+      });
     }).observe(toolbar);
   }
 
