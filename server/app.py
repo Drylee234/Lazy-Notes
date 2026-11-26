@@ -163,6 +163,18 @@ def get_snapshot():
     return jsonify(savedAt=saved_at, data=data)
 
 
+@app.get("/api/report")
+def get_report():
+    """The usage + error report from the last sync (no notes), for debugging."""
+    if not authorized():
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    latest = store.latest()
+    if not latest:
+        return jsonify(ok=False, reason="nothing synced yet"), 404
+    saved_at, data = latest
+    return jsonify(savedAt=saved_at, report=(data or {}).get("lnReport"))
+
+
 @app.errorhandler(413)
 def too_big(_e):
     return jsonify(ok=False, reason="snapshot over 30 MB"), 413

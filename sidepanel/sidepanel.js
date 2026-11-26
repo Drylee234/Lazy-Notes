@@ -1079,4 +1079,54 @@ updatePdfBanner();
   }, true);
 })();
 
+// ---------------------------------------------------------------------------
+// Sync not working? Say so, in plain words, with what to do (bg_sync.js
+// keeps lnSyncState). Shown after 2 failed tries in a row, or at once for a
+// wrong key / too big; ✕ hides it until the problem changes.
+// ---------------------------------------------------------------------------
+(function syncWarning() {
+  const box = document.getElementById("sync-warn");
+  if (!box) return;
+  const text = box.querySelector(".sync-warn-text");
+  const why = (err) => {
+    if (/wrong sync key/i.test(err)) return "the sync key in Settings doesn't match LAZYNOTES_KEY on your server.";
+    if (/too big/i.test(err)) return "your notes are over the server's 30 MB limit (big figures?).";
+    if (/server error \(5/i.test(err)) return "the server had a problem (is its database connected? check DATABASE_URL on Render).";
+    if (/server error/i.test(err)) return `the server refused it (${err.replace(/ —.*$/, "")}).`;
+    if (/not reachable/i.test(err)) return navigator.onLine === false
+      ? "you're offline. It'll sync when you're back."
+      : "the server didn't answer (it may be asleep or down, or the address in Settings is wrong).";
+    return err.replace(/ —.*$/, "") + ".";
+  };
+  let hiddenFor = null;
+  async function show() {
+    const { lnSyncState: st = {}, lnSyncUrl, lnSyncKey } = await chrome.storage.local.get(["lnSyncState", "lnSyncUrl", "lnSyncKey"]);
+    const err = st.lastError || "";
+    const bad = lnSyncUrl && lnSyncKey && err && !/isn't set up/.test(err) && (st.stopped || (st.failures || 0) >= 2);
+    if (!bad || hiddenFor === err.replace(/ —.*$/, "")) { box.hidden = true; return; }
+    const retry = err.match(/will retry at (.+)$/)?.[1];
+    text.textContent = `⚠ Sync isn't working: ${why(err)}${retry ? ` Next try ${retry}.` : ""}`;
+    box.hidden = false;
+  }
+  box.querySelector(".sync-warn-retry").addEventListener("click", () => {
+    text.textContent = "Syncing… (a sleeping server can take a minute)";
+    chrome.runtime.sendMessage({ type: "SYNC_NOW" }, () => { void chrome.runtime.lastError; show(); });
+  });
+  box.querySelector(".sync-warn-fix").addEventListener("click", () => {
+    const settings = document.getElementById("settings");
+    settings.open = true;
+    const sync = settings.querySelector(".set-sync:not(.set-more)");
+    if (sync) { sync.open = true; sync.scrollIntoView({ block: "nearest" }); }
+  });
+  box.querySelector(".sync-warn-x").addEventListener("click", async () => {
+    const { lnSyncState: st = {} } = await chrome.storage.local.get("lnSyncState");
+    hiddenFor = (st.lastError || "").replace(/ —.*$/, "");
+    box.hidden = true;
+  });
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey)) show(); });
+  addEventListener("online", show);
+  addEventListener("offline", show);
+  show();
+})();
+
 init();

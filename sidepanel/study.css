@@ -52,8 +52,8 @@
 
 /* The page's margin (see notes.css): the side panel's notes start 8px in. */
 #note-list .note,
-#note-list .note--list-point { padding-left: calc(8px + var(--indent, 18px)); }
-#note-list .note--list-point::before { left: calc(8px + 22px); }
+#note-list .note--list-point { padding-left: calc(8px + var(--indent, 18px) + var(--group-px, 0px)); }
+#note-list .note--list-point::before { left: calc(8px + 22px + var(--group-px, 0px)); }
 
 #note-list .note--page[draggable="true"] { cursor: grab; }
 #note-list .note.dragging { opacity: 0.5; }
@@ -388,9 +388,11 @@ body:has(#study-view.visible) #study-dock { display: block; }
   padding: 1px 2px; border-radius: 6px; background: var(--bg); box-shadow: 0 0 0 1px var(--border);
   opacity: 0; pointer-events: none; transform: translateX(-4px); transition: opacity .12s, transform .12s;
 }
-#note-list .note:hover > .note-tools,
+/* Only when the mouse is in the note's left margin (study-page.js sets
+   .tools-near), or the note has keyboard focus: not over the words. */
+#note-list .note.tools-near > .note-tools,
 #note-list .note:focus-visible > .note-tools,
-#note-list .note:focus-within > .note-tools { opacity: 1; pointer-events: auto; transform: none; }
+#note-list .note-tools:focus-within { opacity: 1; pointer-events: auto; transform: none; }
 #note-list .note-handle {
   display: inline-grid; place-items: center; width: 14px; height: 20px; cursor: grab;
   color: var(--dim); font-size: 11px; letter-spacing: -2px; user-select: none; touch-action: none;
@@ -416,8 +418,8 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 
 /* Indented notes: 18px per level on top of their type's own margin; list
    points change bullet per level (• ◦ ▪). */
-#note-list .note[data-nest] { padding-left: calc(8px + var(--indent, 18px) + var(--nest-px, 0px)); }
-#note-list .note--list-point[data-nest]::before { left: calc(8px + 22px + var(--nest-px, 0px)); }
+#note-list .note[data-nest] { padding-left: calc(8px + var(--indent, 18px) + var(--nest-px, 0px) + var(--group-px, 0px)); }
+#note-list .note--list-point[data-nest]::before { left: calc(8px + 22px + var(--nest-px, 0px) + var(--group-px, 0px)); }
 #note-list .note--list-point[data-nest="1"]::before { background: transparent; box-shadow: inset 0 0 0 1.3px var(--sec); }
 #note-list .note--list-point[data-nest="2"]::before,
 #note-list .note--list-point[data-nest="3"]::before { border-radius: 1px; }

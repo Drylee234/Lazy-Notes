@@ -461,16 +461,17 @@
       const st = document.createElement("style");
       st.id = "ln-spell-style";
       st.textContent = `
-.ln-spell-bar { position: fixed; z-index: 2147483000; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-  max-width: calc(100vw - 16px); padding: 4px 6px; border-radius: 8px; border: 1px solid var(--border, #e3e3e8);
-  background: var(--bg, #fff); color: var(--sec, #55555f); box-shadow: var(--shadow, 0 4px 20px rgba(0,0,0,.1));
-  font: 12px/1.3 var(--font, system-ui, sans-serif); }
+.ln-spell-bar { position: fixed; z-index: 2147483000; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  max-width: calc(100vw - 16px); padding: 6px 8px; border-radius: 10px; border: 1.5px solid var(--accent, #4f46e5);
+  background: var(--bg, #fff); color: var(--sec, #55555f); box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  font: 13.5px/1.3 var(--font, system-ui, sans-serif); animation: ln-spell-in .14s ease-out; }
+@keyframes ln-spell-in { from { opacity: 0; transform: translateY(4px); } }
 .ln-spell-bar[hidden] { display: none; }
 .ln-spell-bar .w { color: var(--dim, #8e8e99); text-decoration: line-through; margin-right: 2px; }
-.ln-spell-bar button { border: 0; border-radius: 5px; padding: 3px 7px; font: inherit; cursor: pointer;
+.ln-spell-bar button { border: 0; border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
   background: var(--surface, #f7f7f8); color: var(--pri, #16161a); }
 .ln-spell-bar button:hover { background: var(--hover, #efeff2); }
-.ln-spell-bar button.fix { color: var(--accent, #4f46e5); font-weight: 600; }
+.ln-spell-bar button.fix { color: var(--accent, #4f46e5); font-weight: 650; background: var(--accent-soft, rgba(79,70,229,.08)); }
 .ln-spell-bar button.quiet { background: transparent; color: var(--dim, #8e8e99); }
 .ln-spell-bar .k { font-size: 11px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border, #e3e3e8); color: var(--dim, #8e8e99); }`;
       document.head.appendChild(st);

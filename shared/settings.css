@@ -63,3 +63,5 @@
 .ln-settings .set-more .set-sub { margin-top: 10px; text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--sec); }
 .ln-settings .set-more .seg { margin-bottom: 4px; }
 .ln-settings .set-tidy-status { display: block; font-size: 11.5px; color: var(--sec); margin-bottom: 6px; }
+.ln-settings .set-report-row { align-items: center; margin-top: 6px; }
+.ln-settings .set-report-status { font-size: 11.5px; color: var(--sec); }

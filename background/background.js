@@ -1,5 +1,6 @@
 // Lazy Notes — Background Service Worker (thin entry point)
 
+import './bg_diag.js';
 import './bg_storage.js';
 import './bg_validators.js';
 import './bg_highlights.js';

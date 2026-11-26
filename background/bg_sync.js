@@ -1,3 +1,4 @@
+import { buildReport } from './bg_diag.js';
 // Lazy Notes — sync your notes to your own server, so the phone site can
 // read them. The server is often asleep (free hosts) or off, so this is
 // patient and quiet: changes are marked pending, pushed after a short pause,
@@ -70,8 +71,10 @@ async function push({ manual = false } = {}) {
       return await scheduleRetry((st.failures || 0) + 1, "Server not reachable");
     }
 
-    const { lazynotes = null, lnDocs = {} } = await chrome.storage.local.get(["lazynotes", "lnDocs"]);
-    const body = JSON.stringify({ app: "lazy-notes", version: 1, sentAt: new Date().toISOString(), data: { lazynotes, lnDocs } });
+    const { lazynotes = null, lnDocs = {}, lnSendReports } = await chrome.storage.local.get(["lazynotes", "lnDocs", "lnSendReports"]);
+    // Usage + error report (no note text, no key) rides along unless it's switched off.
+    const lnReport = lnSendReports === false ? null : await buildReport().catch(() => null);
+    const body = JSON.stringify({ app: "lazy-notes", version: 1, sentAt: new Date().toISOString(), data: { lazynotes, lnDocs, lnReport } });
     let res;
     try {
       res = await fetchWithTimeout(`${cfg.url}/api/snapshot`, {

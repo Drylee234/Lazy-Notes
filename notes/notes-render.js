@@ -157,6 +157,17 @@ function fillPageText(el, note) {
 // "Viscosity: resistance to flow" / "Viscosity - resistance to flow" ->
 // { term, rest }, or null when the text isn't written as term + meaning.
 function splitTerm(text) {
+  // "Man :" (or just "Man") on its own line, the meaning on the next lines.
+  const lines = String(text ?? "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 2) {
+    // Only when it's clearly a term: it ends with ":" (or a dash), or it's
+    // at most 3 words (a wrapped PDF line is usually longer).
+    const marked = /[:：\-–—]\s*$/.test(lines[0]);
+    const head = lines[0].replace(/\s*[:：\-–—]\s*$/, "");
+    if (head && head.length <= 60 && (marked || head.split(/\s+/).length <= 3) && !/[.!?]$/.test(head)) {
+      return { term: head, rest: squashSpaces(lines.slice(1).join(" ")) };
+    }
+  }
   const m = squashSpaces(text).match(/^([^:\-–—]{1,60}?)\s*(?::|\s[-–—]\s)\s*(.+)$/);
   return m && m[2].length > 1 ? { term: m[1], rest: m[2] } : null;
 }
@@ -304,6 +315,15 @@ const LnFold = (() => {
     const kids = noteChildren(parent);
     const els = new Map([...container.querySelectorAll(".note[data-id]")].map((el) => [el.dataset.id, el]));
     const hiddenBy = (id) => { for (let a = parent.get(id); a; a = parent.get(a)) if (folded.has(a)) return a; return null; };
+    // One step in for each sub topic it's under (and a sub topic's own
+    // points under a list head keep their bullet indent on top).
+    const cat = new Map(notes.map((n) => [String(n.id), n.kind === "typed" ? "typed" : n.category]));
+    els.forEach((el, id) => {
+      let subs = 0;
+      for (let a = parent.get(id); a; a = parent.get(a)) if (cat.get(a) === "sub topic") subs++;
+      if (subs) el.style.setProperty("--group-px", `${subs * 18}px`);
+      else el.style.removeProperty("--group-px");
+    });
     els.forEach((el, id) => {
       el.querySelectorAll(".fold-btn, .fold-count").forEach((x) => x.remove());
       el.classList.toggle("note--folded-away", !!hiddenBy(id));
@@ -343,3 +363,10 @@ const LnFold = (() => {
   const isFolded = (id) => folded.has(String(id));
   return { apply, set, isFolded };
 })();
+
+// Settings › More options › "Indent notes under sub topics" (lnGroupIndent).
+if (globalThis.chrome?.storage?.local) {
+  const setGroupIndent = (on) => document.documentElement.classList.toggle("ln-no-group-indent", on === false);
+  chrome.storage.local.get("lnGroupIndent", (r) => setGroupIndent(r?.lnGroupIndent));
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnGroupIndent) setGroupIndent(c.lnGroupIndent.newValue); });
+}

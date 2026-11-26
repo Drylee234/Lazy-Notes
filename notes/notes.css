@@ -3,7 +3,7 @@
 
 .note {
   position: relative;
-  padding: 6px 10px 6px 12px;
+  padding: 3px 10px 3px 12px;
   margin: 0 -10px 2px -12px;
   border-radius: var(--radius-sm);
   outline: none;
@@ -17,7 +17,10 @@
    everything else is written inside a margin; sub topics sit half-way.
    Spacing says how things relate: room before a new section, points of a
    list kept tight together. */
-.note { --indent: 18px; padding-left: calc(12px + var(--indent)); margin-top: 6px; }
+.note { --indent: 18px; padding-left: calc(12px + var(--indent) + var(--group-px, 0px)); margin-top: 2px; }
+/* Under a sub topic everything sits one step further in (LnFold.apply sets
+   --group-px; Settings › More options can turn it off). */
+:root.ln-no-group-indent .note { --group-px: 0px !important; }
 .note:first-child { margin-top: 0; }
 
 .note--header { --indent: 0px; margin-top: 20px; }
@@ -37,7 +40,7 @@
 .note--list-point::before {
   content: "";
   position: absolute;
-  left: calc(12px + 22px);
+  left: calc(12px + 22px + var(--group-px, 0px));
   top: calc(2px + 0.78em - 2.5px);
   width: 5px;
   height: 5px;

@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnGroupIndent", "lnSendReports"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -50,6 +50,8 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnQuickSelButtons" /> ✎ Note / ❝ Quote buttons in the save pop-up</label>
       <label class="set-check"><input type="checkbox" data-key="lnQuickMenu" /> Right-click → Quick note here</label>
       <label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab</label>
+      <div class="set-label set-sub">Notes</div>
+      <label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label>
       <div class="set-label set-sub">Saving</div>
       <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>
       <div class="set-label set-sub">Typing</div>
@@ -66,6 +68,12 @@ globalThis.LazySettings = (() => {
       <div class="set-label set-sub">Documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
     </details>
+    <div class="set-label set-backup-label">Problems</div>
+    <label class="set-check"><input type="checkbox" data-key="lnSendReports" /> Send usage &amp; error reports with sync (never your notes or key)</label>
+    <div class="set-backup set-report-row">
+      <button type="button" class="set-btn set-report-copy" title="Copy a report of recent errors and what was used, to paste to whoever helps you">Copy problem report</button>
+      <span class="set-report-status"></span>
+    </div>
     <div class="set-label set-backup-label">Backup</div>
     <div class="set-backup">
       <button type="button" class="set-btn set-export">Download backup</button>
@@ -289,6 +297,19 @@ globalThis.LazySettings = (() => {
       if (area === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey)) showSync();
     });
     showSync();
+
+    // ── Problem report (background/bg_diag.js) ──
+    const reportStatus = root.querySelector(".set-report-status");
+    root.querySelector(".set-report-copy").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "DIAG_REPORT" }, async (report) => {
+        void chrome.runtime.lastError;
+        if (!report || report.error) { reportStatus.textContent = "Couldn't make the report."; return; }
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(report, null, 1));
+          reportStatus.textContent = `Copied (${report.errors.length} error${report.errors.length === 1 ? "" : "s"}). Paste it in the chat.`;
+        } catch (_) { reportStatus.textContent = "Couldn't copy: click inside the panel first, then try again."; }
+      });
+    });
 
     // ── Old notes: joined lines (background/bg_tidy.js) ──
     const tidyStatus = root.querySelector(".set-tidy-status");

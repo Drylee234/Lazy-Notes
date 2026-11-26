@@ -11,12 +11,19 @@
 <link rel="stylesheet" href="sidepanel/sidepanel.css" />
 <link rel="stylesheet" href="sidepanel/study.css" />
 <link rel="stylesheet" href="shared/settings.css" />
+<script src="shared/diag.js"></script>
 <script src="shared/theme.js"></script>
 </head>
 <body>
 
 <!-- ── Header ── -->
 <header id="header">
+  <div id="sync-warn" role="alert" hidden>
+    <span class="sync-warn-text"></span>
+    <button type="button" class="sync-warn-retry">Retry</button>
+    <button type="button" class="sync-warn-fix">Fix</button>
+    <button type="button" class="sync-warn-x" aria-label="Hide" title="Hide until it changes">✕</button>
+  </div>
   <div id="brand-row">
     <span id="brand"><img class="logo" src="icons/logo.svg" alt="" width="20" height="20" />Lazy Notes</span>
     <button id="toggle-btn" type="button" aria-pressed="false">

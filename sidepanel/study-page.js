@@ -495,6 +495,20 @@ const StudyPage = (() => {
     // (Delete, Alt+arrows, Enter), so Tab skips them.
     noteList.querySelectorAll(".note button, .note a").forEach((b) => { b.tabIndex = -1; });
   }
+  // The ⋮⋮ ⇤ ⇥ card shows only while the mouse is in a note's left margin
+  // (where it sits), so it never covers the words you're reading.
+  let toolsNear = null;
+  noteList.addEventListener("mousemove", (e) => {
+    const el = e.target.closest?.(".note[data-id]");
+    const near = el && !document.body.classList.contains("is-reordering") &&
+      (e.clientX - el.getBoundingClientRect().left < 34 || e.target.closest(".note-tools")) ? el : null;
+    if (near === toolsNear) return;
+    toolsNear?.classList.remove("tools-near");
+    near?.classList.add("tools-near");
+    toolsNear = near;
+  });
+  noteList.addEventListener("mouseleave", () => { toolsNear?.classList.remove("tools-near"); toolsNear = null; });
+
   noteList.addEventListener("focusin", (e) => {
     const el = e.target.closest?.(".note[data-id]");
     if (el && e.target === el) setActiveNote(el, { focus: false });

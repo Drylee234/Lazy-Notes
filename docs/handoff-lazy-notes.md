@@ -62,6 +62,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | 15 | Typing-hint bar floated over the pop-up box's type chips | Hint shown in the box's own footer line (no overlap) |
 | 17 | Tidy joined lines in notes typed in the Study box but saved as Plain; highlight text showed without line breaks; Shift+Enter gave blank lines | Typed-as-type notes never tidied (and restored); .note-text keeps line breaks; one Shift+Enter = one line |
 | 18 | Study note box's Save-as was a plain dropdown (number only selected) | Tab shows numbered chips like the save pop-up; a number saves at once; ←/→ move; Enter saves; Shift+Tab/Esc back |
+| 19 | Hover tools (⋮⋮ ⇤ ⇥) covered the words; notes too far apart; suggestion strip too small | Tools only when the mouse is in a note's left margin (or keyboard focus); 2px between notes; strip 13.5px with accent border |
 | 16 | Fold button in the left margin, under the Study tab's drag handle / indent buttons | Fold button right after the heading's words |
 
 ## 6. Decisions
@@ -110,7 +111,9 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Zoom: slides/Word 50%–300%, snaps to 100% within 3%; Ctrl+= ×1.15; pinch factor exp(−deltaY·0.01). PDF Ctrl+= ×1.2.
 - Storage keys (chrome.storage.local): lazynotes (courses → topics → {highlights{id}, notes{id}}; fields incl. order, indent, image), activeCourse, activeTopic, highlighterActive, lastDrag, lnDocs, lnTheme, lnPopupSide, lnAutocorrectLevel (0 Off/1 Mild/2 Strong/3 Toxic), lnSpellIgnore, lnDocAutoSelect, pptxAutoOpen, lnLastBackup, lnSyncUrl, lnSyncKey, lnSyncState, panelRequest (types SHOW_CREATE_COURSE, SHOW_CREATE_TOPIC, FILL_COMPOSER).
 - Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 2); joins broken PDF lines in old highlights from a page/document only (never typed notes, never notes typed in a note box and saved as a type [no sourceUrl/anchor] — v2 put those back; not figures; lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
-- More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret.
+- Reports (background/bg_diag.js + shared/diag.js on every page): lnDiag {errors: last 100 {t, where, msg, stack}, usage: {day: {action: n}} 30 days}; sent with each sync as data.lnReport (no note text, no key) unless lnSendReports = false; server GET /api/report (Bearer key) returns it; Settings › Problems › Copy problem report (message DIAG_REPORT).
+- Sync warning: side panel banner after 2 failed tries in a row (or wrong key / too big), plain-words reason + Retry / Fix (opens Settings sync) / ✕ (hidden until the error changes).
+- More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret, lnGroupIndent (notes under a sub topic one step in, --group-px 18px each), lnSendReports.
 - chrome.storage.session: lnDocWords {title, words:[[form,count]…] top 8000}, lnPanelWindow (pop-out window id).
 - localStorage (per extension origin): ln-embed-<page> (panel open/width), ln-zoom-<page> (slides/Word zoom), ln-folded (folded head ids, last 3000), ln-pdf-fit.
 - IndexedDB: lazynotes-pdfs, lazynotes-slides, lazynotes-docs (store "files").

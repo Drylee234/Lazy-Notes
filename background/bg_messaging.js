@@ -12,6 +12,7 @@ import {
 } from './bg_courses.js';
 import { requestSidePanel } from './bg_sidepanel.js';
 import { tidyOldNotes, undoTidy } from './bg_tidy.js';
+import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
@@ -67,7 +68,17 @@ const REPLY_HANDLERS = {
   UNJOIN:             handleUnjoin
 };
 
+// What gets counted in the usage report (actions, never their contents).
+const COUNTED = new Set(["NEW_HIGHLIGHT", "NEW_HIGHLIGHTS", "SAVE_TYPED_NOTE", "DELETE_HIGHLIGHT", "DELETE_TYPED_NOTE",
+  "JOIN_TO_LAST", "UNJOIN", "CREATE_COURSE", "CREATE_TOPIC", "SEND_TO_NOTE_BOX", "TOGGLE_HIGHLIGHTER_REQUEST",
+  "OPEN_PDF_IN_READER", "SET_ARRANGEMENT", "TIDY_NOTES"]);
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (COUNTED.has(message?.type)) {
+    countUsage(message.type === "NEW_HIGHLIGHT"
+      ? `save:${message.category || "?"}${message.sourceUrl ? "" : ":typed"}${/pdfreader|pptxreader|docxreader/.test(sender?.url || "") ? ":reader" : ""}`
+      : message.type);
+  }
   const replyHandler = REPLY_HANDLERS[message.type];
   if (replyHandler) {
     replyHandler(message)
