@@ -23,7 +23,8 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
 
   const type = document.createElement("select");
   type.setAttribute("aria-label", "Type");
-  Object.entries(CATEGORY_LABELS).forEach(([value, label]) => {
+  const offered = PICK_TYPES.includes(note.category) ? PICK_TYPES : [...PICK_TYPES, note.category];
+  offered.map((v) => [v, CATEGORY_LABELS[v] || v]).forEach(([value, label]) => {
     const opt = document.createElement("option");
     opt.value = value;
     opt.textContent = label;

@@ -12,9 +12,14 @@ const CATEGORY_LABELS = {
   "list head":  "List head",
   "list point": "List point",
   "summary":    "Summary",
-  "generic":    "Generic",
-  "note":       "Note"
+  "generic":    "Plain",       // was "Generic"
+  "note":       "Important"    // was "Note"
 };
+
+// The types offered when saving or changing one, in pick order (number keys
+// 1-7, Plain = 0). "list head" is no longer offered (a line right above list
+// points gets its look automatically) but old ones still show.
+const PICK_TYPES = ["header", "sub topic", "definition", "formula", "list point", "note", "summary", "generic"];
 
 // A short readable name for where a note came from.
 function sourceLabel(note) {
@@ -51,6 +56,7 @@ function renderNote(note, { compact = false, page = false } = {}) {
   if (compact) el.classList.add("note--compact");
   if (page) el.classList.add("note--page");
   el.dataset.id = note.id ?? "";
+  el.dataset.colon = /[:：]\s*$/.test(note.text || "") ? "1" : "";
   el.tabIndex = 0;
 
   const text = document.createElement("div");

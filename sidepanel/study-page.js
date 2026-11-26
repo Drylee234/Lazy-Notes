@@ -21,7 +21,7 @@ const StudyPage = (() => {
   const HIGHLIGHT_TYPE = "application/x-lazy-notes-highlight";
 
   // Same choices, and the same "keep the context" rule, as the in-page popup.
-  const TYPES = ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"];
+  const TYPES = PICK_TYPES;
   const CONTEXT_TYPES = ["definition", "formula", "summary"];
 
   // content.js notes where dragged text came from ("lastDrag"); older than
@@ -58,7 +58,7 @@ const StudyPage = (() => {
     type.title = "Save as";
     type.setAttribute("aria-label", "Save as");
     type.add(new Option("My note", ""));
-    ["header", "sub topic", "definition", "formula", "list head", "list point", "summary", "generic", "note"]
+    PICK_TYPES
       .forEach((t) => type.add(new Option(CATEGORY_LABELS[t] || t, t)));
     type.addEventListener("mousedown", (e) => e.stopPropagation());
     bar.appendChild(type);

@@ -8,17 +8,55 @@
 
   const REINIT_EVENT = "lazy-notes-reinit";
 
+  // Pick order = number keys 1-7, Plain = 0. Stored names are unchanged
+  // ("note" shows as Important, "generic" as Plain).
   const CATEGORIES = [
     "header",
     "sub topic",   // a heading inside a header's section
     "definition",
     "formula",
-    "list head",
     "list point",
+    "note",        // Important: something to remember, stands out
     "summary",
-    "generic",     // a stray fact or aside: just the words, no structure
-    "note"         // something urgent to remember: stands out wherever shown
+    "generic"      // Plain: just the words
   ];
+  // Compact chips: a short mark, the full name on hover and in the caption.
+  const CHIP = {
+    "header":     { mark: "H",   name: "Header",     key: "1" },
+    "sub topic":  { mark: "H2",  name: "Sub topic",  key: "2" },
+    "definition": { mark: "Def", name: "Definition", key: "3" },
+    "formula":    { mark: "ƒx",  name: "Formula",    key: "4" },
+    "list point": { mark: "•",   name: "List point", key: "5" },
+    "note":       { mark: "!",   name: "Important",  key: "6" },
+    "summary":    { mark: "Σ",   name: "Summary",    key: "7" },
+    "generic":    { mark: "¶",   name: "Plain",      key: "0" }
+  };
+  let chipEls = {};
+  let chipCaptionEl = null;
+
+  // A first guess at the type from the words and where they were selected.
+  // Only pre-picks: Enter accepts it, a number or a click overrides it.
+  function guessType(text, el) {
+    const t = String(text || "").trim();
+    const words = t.split(/\s+/).length;
+    const tag = el?.closest?.("h1, h2, h3, h4, h5, h6, li, .s-title")?.tagName?.toLowerCase() || "";
+    if (/^(note|nb|important|remember|exam|warning|tip)\b[:\s-]/i.test(t)) return "note";
+    if (/[=≈≠≤≥∑∫√±×÷∝∂]/.test(t) && words <= 25) return "formula";
+    if (/^(in summary|to summari[sz]e|in conclusion|overall|in short)\b/i.test(t)) return "summary";
+    if (/^[^.:;]{1,50}?\s*(:|\s[-–—]\s)\s*\S/.test(t) && words >= 3) return "definition";
+    if (/^[A-Za-z][\w\s'()-]{0,40}\s(is|are|refers to|means|is defined as)\s(a|an|the)?\s?\S/i.test(t) && words <= 40) return "definition";
+    if (tag === "li" || /^\s*([-•*▪◦]|\d+[.)]|[a-z][.)])\s/.test(t)) return "list point";
+    if (/^h[12]$/.test(tag) || tag === "div" && el.closest(".s-title")) return "header";
+    if (/^h[3-6]$/.test(tag)) return "sub topic";
+    if (words <= 8 && !/[.!?]$/.test(t) && /^[A-Z0-9]/.test(t)) {
+      const fs = parseFloat(getComputedStyle(el?.nodeType === 1 ? el : el?.parentElement || document.body).fontSize) || 16;
+      const base = parseFloat(getComputedStyle(document.body).fontSize) || 16;
+      if (fs >= base * 1.4) return "header";
+      if (fs >= base * 1.15) return "sub topic";
+    }
+    if (words > 60) return "summary";
+    return null;
+  }
 
   const contextRequiredCategories = [
     "definition",
@@ -119,6 +157,21 @@
         transition: width 0.15s ease;
       }
 
+      .lazy-notes-chips { display: flex; flex-wrap: wrap; gap: 4px 4px; margin: 6px 0 4px; }
+      .lazy-notes-chip {
+        position: relative; min-width: 25px; height: 27px; padding: 0 5px; border-radius: 7px;
+        border: 1px solid #3a3a44; background: #26262d; color: #e4e4e7; cursor: pointer;
+        font: 600 12px/1 inherit; font-family: inherit; display: inline-flex; align-items: center; justify-content: center;
+      }
+      .lazy-notes-chip:hover { background: #30303a; border-color: #50505c; }
+      .lazy-notes-chip:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 1px; }
+      .lazy-notes-chip.on { background: #4f46e5; border-color: #6d65f0; color: #fff; }
+      .lazy-notes-chip-key {
+        position: absolute; top: -5px; right: -4px; min-width: 11px; height: 11px; padding: 0 2px; border-radius: 3px;
+        background: #3a3a44; color: #c4c4cc; font-size: 8.5px; line-height: 11px; text-align: center;
+      }
+      .lazy-notes-chip.on .lazy-notes-chip-key { background: #fff; color: #4f46e5; }
+      .lazy-notes-chip-caption { font-size: 10.5px; color: #8e8e99; margin-bottom: 8px; }
       .lazy-notes-popup-side { width: 260px; min-width: 0; }
       .lazy-notes-popup-side .lazy-notes-text-edit { margin-bottom: 8px; }
       .lazy-notes-fold { cursor: pointer; color: #a1a1aa; user-select: none; margin-bottom: 0 !important; }
@@ -429,6 +482,43 @@
     row3.appendChild(categoryBtn);
     row3.appendChild(categoryMenu);
     container.appendChild(row3);
+    row3.style.display = "none";   // the dropdown stays for its keyboard code; chips replace it
+
+    // Type chips: click one to save as that type, or press its number.
+    // The lit one is what Enter saves as.
+    const chipRow = document.createElement("div");
+    chipRow.className = "lazy-notes-chips";
+    chipRow.setAttribute("role", "radiogroup");
+    chipRow.setAttribute("aria-label", "Type");
+    chipEls = {};
+    CATEGORIES.forEach((cat) => {
+      const c = CHIP[cat];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lazy-notes-chip";
+      b.setAttribute("role", "radio");
+      b.title = `${c.name} (${c.key})`;
+      b.setAttribute("aria-label", c.name);
+      b.innerHTML = `<span class="lazy-notes-chip-mark"></span><span class="lazy-notes-chip-key"></span>`;
+      b.firstChild.textContent = c.mark;
+      b.lastChild.textContent = c.key;
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectCategoryOption(cat);
+        sendHighlight();
+        hidePopup();
+      });
+      b.addEventListener("mouseenter", () => showChipCaption(cat));
+      b.addEventListener("mouseleave", () => showChipCaption(selectedCategory));
+      chipEls[cat] = b;
+      chipRow.appendChild(b);
+    });
+    const caption = document.createElement("div");
+    caption.className = "lazy-notes-chip-caption";
+    chipCaptionEl = caption;
+    container.insertBefore(chipRow, row4Placeholder(container, row3));
+    chipRow.after(caption);
 
     // ── ROW 4: Annotation ─────────────────────────────────────────────────────
     const row4 = document.createElement("div");
@@ -684,12 +774,24 @@
     }
   }
 
-  function selectCategoryOption(cat) {
-    selectedCategory = cat;
+  function showChipCaption(cat) {
+    if (!chipCaptionEl) return;
+    const c = CHIP[cat] || CHIP.generic;
+    chipCaptionEl.textContent = `${c.name} · Enter saves · 1–7, 0 = type`;
+  }
 
-    if (selectedTopic) {
-      sessionCategoryMemory[selectedTopic] = cat;
-    }
+  // Where the chip row goes: right after the hidden category row.
+  function row4Placeholder(container, row3) { return row3.nextSibling; }
+
+  function selectCategoryOption(cat) {
+    if (!CHIP[cat]) cat = cat === "list head" ? "list point" : "generic";
+    selectedCategory = cat;
+    Object.entries(chipEls).forEach(([k, b]) => {
+      b.classList.toggle("on", k === cat);
+      b.setAttribute("aria-checked", String(k === cat));
+    });
+    showChipCaption(cat);
+
 
     if (categoryBtnEl) categoryBtnEl.textContent = cat;
 
@@ -806,6 +908,41 @@
       else if (isTopicOpen)    shutMenu(topicMenuEl);
       else if (isCategoryOpen) shutMenu(categoryMenuEl);
       else hidePopup();
+      return;
+    }
+
+    // ── TYPE CHIPS ── a number saves as that type (not while typing in a
+    // box: Tab out first); ←/→ move the lit chip; Tab from the text box
+    // jumps to the chips.
+    const typing = active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT");
+    if (!typing && inPopup(active) && /^[0-7]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const cat = CATEGORIES.find((c) => CHIP[c].key === event.key);
+      if (cat) {
+        event.preventDefault();
+        selectCategoryOption(cat);
+        sendHighlight();
+        hidePopup();
+        return;
+      }
+    }
+    if (active?.classList?.contains("lazy-notes-chip") && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+      event.preventDefault();
+      const i = CATEGORIES.indexOf(selectedCategory);
+      const next = CATEGORIES[(i + (event.key === "ArrowRight" ? 1 : -1) + CATEGORIES.length) % CATEGORIES.length];
+      selectCategoryOption(next);
+      chipEls[next]?.focus();
+      return;
+    }
+    if (active === textEditEl && event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault();
+      chipEls[selectedCategory]?.focus();
+      return;
+    }
+    // Enter on a chip: save as the lit type.
+    if (active?.classList?.contains("lazy-notes-chip") && event.key === "Enter") {
+      event.preventDefault();
+      sendHighlight();
+      hidePopup();
       return;
     }
 
@@ -1051,7 +1188,12 @@
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
     positionPopup(rect);
 
-    setTimeout(() => categoryBtnEl?.focus(), 50);
+    // A clear guess wins; otherwise Plain. (The last saved type is kept
+    // for list points, since those usually come in a row.)
+    const guess = guessType(selectedText, paragraphElement);
+    const last = sessionCategoryMemory[selectedTopic];
+    selectCategoryOption(guess || (last === "list point" ? last : "generic"));
+    setTimeout(() => chipEls[selectedCategory]?.focus(), 50);
   }
 
   function hidePopup() {
@@ -1133,6 +1275,7 @@
     }
 
     lastUsedTopic = selectedTopic;
+    sessionCategoryMemory[selectedTopic] = selectedCategory;   // remembered only once saved
 
     const includeContext = contextRequiredCategories.includes(selectedCategory);
 

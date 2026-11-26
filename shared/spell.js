@@ -171,6 +171,29 @@
     return ranked(word, { far: true }).slice(0, 4).map((c) => keepCase(word, c.word));
   }
 
+  // ── A capital in the middle of a sentence ("the rock Is hard"): lower it.
+  //    Mild: small everyday words only. Strong: the ~1,500 commonest words.
+  //    Toxic: the ~5,000 commonest. Words often used as names stay. ──
+  const SMALL = new Set(("the a an is are was were be been being am and or but nor of to in on at by for from with " +
+    "into onto over under about as than then so if it its this that these those there here they them their " +
+    "we our you your he him his she her i me my not no also very more most some any all each both such " +
+    "has have had do does did can could would should might must which who whom whose what when where why how " +
+    "just only even still too because while after before since until between through during against without").split(" "));
+  const NAMEY = new Set(("will may june april august bill mark rose grace jack frank art sun earth god moon march " +
+    "sat sun mon tue wed thu fri christmas english french african america bob pat dawn faith joy hope").split(" "));
+  function midCapFix(word, atStart, lvl) {
+    if (atStart || !/^[A-Z][a-z']+$/.test(word)) return null;
+    const low = word.toLowerCase();
+    if (NAMEY.has(low) || ignore.has(word.toLowerCase() + "^")) return null;
+    if (SMALL.has(low)) return low;
+    if (lvl < 2) return null;
+    const rank = RANK.get(low);
+    if (!rank || rank > (lvl >= 3 ? 5000 : 1500)) return null;
+    // Not one you write capitalised in your notes (a name or a term).
+    if ((VOCAB.get(low) || 0) === 0 && RANK.has(low) && !speller.correct(low)) return null;
+    return low;
+  }
+
   // ── Mistaken capitals: "THe" → "The", "wATER" (caps lock) → "Water",
   //    "i" / "i'm" → "I" / "I'm". Only when the fixed word is a real word,
   //    and not acronym plurals like "IDs" / "PCs". ──
@@ -253,7 +276,7 @@
     // only treat it as a sentence start if it's also the start of its block.
     const atStart = sentenceStartAt(v.text, start) && (!v.node || !v.node.previousSibling);
     if (ignore.has(word.toLowerCase()) && word !== "i") return;
-    let fixed = capsFix(word, atStart);
+    let fixed = capsFix(word, atStart) || midCapFix(word, atStart, level);
     if (!fixed) {
       if (checkable(word, atStart, level) && misspelled(word)) {
         fixed = level >= 2 ? bestFix(word, level) : clearFix(word);

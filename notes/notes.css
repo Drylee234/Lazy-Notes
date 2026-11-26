@@ -270,3 +270,9 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .edit-folds { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 2px 10px; }
 .edit-fold[open] { flex-basis: 100%; order: 1; }
 .edit-fold > summary { margin-left: 0; }
+
+/* A plain line right above list points reads as their list head: bold with
+   a colon (old "List head" notes look the same). */
+.note--generic:has(+ .note--list-point) .note-text { font-weight: 650; }
+.note--generic:not([data-colon="1"]):has(+ .note--list-point) .note-text > :last-child::after,
+.note--generic:not([data-colon="1"]):has(+ .note--list-point) .note-text:not(:has(*))::after { content: ":"; }
