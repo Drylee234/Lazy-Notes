@@ -347,3 +347,12 @@ body.snipping .textLayer { pointer-events: none; user-select: none; }
   border: 2px solid var(--accent); background: rgba(99, 102, 241, 0.12); border-radius: 2px;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.18);
 }
+
+/* Keyboard caret in the PDF text (drawn: the text layer is transparent) */
+#pdf-caret {
+  position: absolute; z-index: 40; width: 2px; margin-left: -1px; border-radius: 1px;
+  background: var(--accent); pointer-events: none;
+}
+#pdf-caret[hidden] { display: none; }
+#pdf-caret.blink { animation: pdf-caret-blink 1.05s steps(1) infinite; }
+@keyframes pdf-caret-blink { 50% { opacity: 0; } }

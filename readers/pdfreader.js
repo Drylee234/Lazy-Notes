@@ -854,6 +854,118 @@ $("zoom-mode").addEventListener("change", (e) => {
   e.target.blur();
 });
 
+// ---------------------------------------------------------------------------
+// Keyboard caret: click in the text to drop a caret, then arrows move it
+// (Ctrl = by word, Up/Down = by line, Home/End = line ends), Shift+arrows
+// select, Enter opens the save pop-up, Esc clears. The text layer is
+// transparent, so the caret is drawn here. With no caret in the text, the
+// arrow keys turn pages as before.
+// ---------------------------------------------------------------------------
+
+const caretEl = document.createElement("div");
+caretEl.id = "pdf-caret";
+caretEl.hidden = true;
+document.body.appendChild(caretEl);
+
+function selectionInText() {
+  const sel = getSelection();
+  if (!sel.rangeCount || !sel.focusNode) return null;
+  const el = sel.focusNode.nodeType === 1 ? sel.focusNode : sel.focusNode.parentElement;
+  return el?.closest?.(".textLayer") ? sel : null;
+}
+
+function drawCaret() {
+  const sel = selectionInText();
+  if (!sel || snipping) { caretEl.hidden = true; return; }
+  // The caret's spot as a point inside text: when the focus sits between
+  // elements (end of a line, a <br>), use the end of the text just before it
+  // or the start of the text just after it.
+  let node = sel.focusNode, off = sel.focusOffset;
+  if (node.nodeType === 1) {
+    const textIn = (n, last) => {
+      if (!n) return null;
+      if (n.nodeType === 3 && n.nodeValue.length) return n;
+      const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+      let t = null, x;
+      while ((x = w.nextNode())) { if (x.nodeValue.length) { t = x; if (!last) break; } }
+      return t;
+    };
+    let prev = node.childNodes[off - 1], next = node.childNodes[off];
+    while (prev && prev.nodeName === "BR") prev = prev.previousSibling;
+    const before = textIn(prev, true), after = textIn(next, false);
+    if (after) { node = after; off = 0; }
+    else if (before) { node = before; off = before.nodeValue.length; }
+    else { caretEl.hidden = true; return; }
+  }
+  // Measure a real character (an empty point at a line's end can be
+  // reported on the next line): the one before the caret, else the one after.
+  const r = document.createRange();
+  let atEnd = false;
+  try {
+    if (off > 0) { r.setStart(node, off - 1); r.setEnd(node, off); atEnd = true; }
+    else if (node.nodeValue?.length) { r.setStart(node, 0); r.setEnd(node, 1); }
+    else { r.setStart(node, off); r.collapse(true); }
+  } catch (_) { caretEl.hidden = true; return; }
+  const cr = r.getClientRects();
+  let rect = cr[cr.length - 1] || r.getBoundingClientRect();
+  if (rect && (rect.width || rect.height)) rect = { left: atEnd ? rect.right : rect.left, top: rect.top, height: rect.height };
+  if (!rect || (!rect.height && !rect.width)) {
+    const b = node.parentElement?.getBoundingClientRect();
+    if (!b?.height) { caretEl.hidden = true; return; }
+    rect = { left: off > 0 ? b.right : b.left, top: b.top, height: b.height };
+  }
+  if (rect.height > 80) { caretEl.hidden = true; return; }   // never a page-tall bar
+  caretEl.style.left = `${rect.left + scrollX}px`;
+  caretEl.style.top = `${rect.top + scrollY}px`;
+  caretEl.style.height = `${rect.height}px`;
+  caretEl.hidden = false;
+  caretEl.classList.remove("blink");
+  void caretEl.offsetWidth;          // restart the blink after each move
+  caretEl.classList.add("blink");
+}
+document.addEventListener("selectionchange", drawCaret);
+addEventListener("resize", drawCaret);
+addEventListener("scroll", drawCaret, { passive: true });
+
+const CARET_MOVES = {
+  ArrowLeft:  ["backward", "character"], ArrowRight: ["forward", "character"],
+  ArrowUp:    ["backward", "line"],      ArrowDown:  ["forward", "line"],
+  Home:       ["backward", "lineboundary"], End:     ["forward", "lineboundary"]
+};
+
+document.addEventListener("keydown", (e) => {
+  if (!pdfDoc || snipping || e.altKey || e.metaKey && !/^Arrow/.test(e.key)) return;
+  const t = e.target;
+  if (t.closest?.(".lazy-notes-popup, .lnf-pop") || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable) return;
+  if (document.querySelector(".lazy-notes-popup")?.style.display === "block") return;
+  const sel = selectionInText();
+  if (!sel) return;
+
+  const move = CARET_MOVES[e.key];
+  if (move) {
+    e.preventDefault();
+    e.stopImmediatePropagation();    // not also a page turn
+    const [dir, unit] = move;
+    const by = (e.ctrlKey || e.metaKey) && unit === "character" ? "word" : unit;
+    sel.modify(e.shiftKey ? "extend" : "move", dir, by);
+    drawCaret();
+    // Keep the caret on screen.
+    const c = caretEl.getBoundingClientRect();
+    if (c.top < 60 || c.bottom > innerHeight - 20) scrollBy({ top: c.top < 60 ? c.top - 120 : c.bottom - innerHeight + 120 });
+    return;
+  }
+  if (e.key === "Enter" && !sel.isCollapsed && sel.toString().trim()) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    document.dispatchEvent(new CustomEvent("lazy-notes-keyboard-select"));
+    return;
+  }
+  if (e.key === "Escape") {
+    sel.removeAllRanges();
+    caretEl.hidden = true;
+  }
+}, true);
+
 // Keyboard: ←/→ pages, Ctrl/Cmd +/−/0 zoom. Leave keys alone while typing or
 // while the save popup is open.
 document.addEventListener("keydown", (e) => {

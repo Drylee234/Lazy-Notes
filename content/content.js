@@ -1719,6 +1719,22 @@
   document.addEventListener(REINIT_EVENT, onReinit);
   document.dispatchEvent(new CustomEvent(REINIT_EVENT, { detail: instanceId }));
 
+  // A reader page's keyboard selection (the PDF reader's caret: Shift+arrows,
+  // then Enter) opens the save pop-up just like letting go of the mouse.
+  document.addEventListener("lazy-notes-keyboard-select", () => {
+    if (dead || shutDownIfOrphaned() || !highlighterActive) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const text = selection.toString().trim();
+    if (!text) return;
+    const range = selection.getRangeAt(0);
+    currentRange = range.cloneRange();
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    popupMouse = null;
+    showPopup(rect, text, findContextElement(selection.anchorNode));
+  });
+
   // ---------------------------------------------------------------------------
   // Init
   // ---------------------------------------------------------------------------
