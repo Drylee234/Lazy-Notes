@@ -13,6 +13,7 @@ import {
 import { requestSidePanel } from './bg_sidepanel.js';
 import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
+import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -59,7 +60,10 @@ const REPLY_HANDLERS = {
   DELETE_TOPIC:       handleDeleteTopic,
   DELETE_HIGHLIGHT:   handleDeleteHighlight,
   SAVE_TYPED_NOTE:    handleSaveTypedNote,
-  DELETE_TYPED_NOTE:  handleDeleteTypedNote
+  DELETE_TYPED_NOTE:  handleDeleteTypedNote,
+  GET_LAST_HIGHLIGHT: handleGetLast,
+  JOIN_TO_LAST:       handleJoinToLast,
+  UNJOIN:             handleUnjoin
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

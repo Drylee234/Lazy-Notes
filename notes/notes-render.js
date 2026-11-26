@@ -13,7 +13,8 @@ const CATEGORY_LABELS = {
   "list point": "List point",
   "summary":    "Summary",
   "generic":    "Plain",       // was "Generic"
-  "note":       "Important"    // was "Note"
+  "note":       "Important",   // was "Note"
+  "figure":     "Figure"       // a snipped picture (readers' Snip / Save image)
 };
 
 // The types offered when saving or changing one, in pick order (number keys
@@ -59,9 +60,21 @@ function renderNote(note, { compact = false, page = false } = {}) {
   el.dataset.colon = /[:：]\s*$/.test(note.text || "") ? "1" : "";
   el.tabIndex = 0;
 
+  // A figure: the picture, with its caption (the note's text) under it.
+  if (note.category === "figure" && note.image) {
+    const img = document.createElement("img");
+    img.className = "note-figure";
+    img.src = note.image;
+    img.alt = note.text || "Figure";
+    img.loading = "lazy";
+    img.draggable = false;
+    el.appendChild(img);
+  }
+
   const text = document.createElement("div");
   text.className = "note-text";
-  if (page) fillPageText(text, note);
+  if (note.category === "figure") text.textContent = note.text || "";
+  else if (page) fillPageText(text, note);
   else if (note.category === "definition" && splitTerm(note.text)) fillTermDefinition(text, splitTerm(note.text), false);
   else text.textContent = note.text;
   // A list head introduces its points: show it with a colon (display only).

@@ -380,3 +380,53 @@ body:has(#study-view.visible) #study-dock { display: block; }
 .ann-toggle:hover { color: var(--pri); }
 .ann-toggle[hidden], #drop-card-annotation[hidden] { display: none; }
 .dock-choice kbd { margin-left: 4px; padding: 0 4px; border: 1px solid var(--border-strong); border-radius: 3px; font: 600 10px system-ui; color: var(--dim); }
+
+/* ── Arranging notes: ⋮⋮ handle + ⇤ ⇥, shown on hover / focus ── */
+#note-list { position: relative; }
+#note-list .note-tools {
+  position: absolute; left: -2px; top: 4px; z-index: 2; display: flex; align-items: center; gap: 1px;
+  padding: 1px 2px; border-radius: 6px; background: var(--bg); box-shadow: 0 0 0 1px var(--border);
+  opacity: 0; pointer-events: none; transform: translateX(-4px); transition: opacity .12s, transform .12s;
+}
+#note-list .note:hover > .note-tools,
+#note-list .note:focus-visible > .note-tools,
+#note-list .note:focus-within > .note-tools { opacity: 1; pointer-events: auto; transform: none; }
+#note-list .note-handle {
+  display: inline-grid; place-items: center; width: 14px; height: 20px; cursor: grab;
+  color: var(--dim); font-size: 11px; letter-spacing: -2px; user-select: none; touch-action: none;
+}
+#note-list .note-handle:hover { color: var(--pri); }
+#note-list .note-indent {
+  width: 18px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent;
+  color: var(--dim); font-size: 11px; cursor: pointer;
+}
+#note-list .note-indent:hover { background: var(--hover); color: var(--pri); }
+@media (hover: none) { #note-list .note-tools { opacity: 1; pointer-events: auto; transform: none; } }
+
+/* While dragging: the note dims, a line shows where it will land. */
+body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-select: none !important; }
+#note-list .note.reordering { opacity: 0.35; }
+#note-list .note.reordering > .note-tools { opacity: 1; }
+.reorder-line {
+  position: absolute; left: 0; right: 0; height: 3px; margin-top: -1px; z-index: 5;
+  border-radius: 2px; background: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); pointer-events: none;
+}
+.reorder-line::before { content: ""; position: absolute; left: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.reorder-line.same { opacity: 0.35; }
+
+/* Indented notes: 18px per level on top of their type's own margin; list
+   points change bullet per level (• ◦ ▪). */
+#note-list .note[data-nest] { padding-left: calc(8px + var(--indent, 18px) + var(--nest-px, 0px)); }
+#note-list .note--list-point[data-nest]::before { left: calc(8px + 22px + var(--nest-px, 0px)); }
+#note-list .note--list-point[data-nest="1"]::before { background: transparent; box-shadow: inset 0 0 0 1.3px var(--sec); }
+#note-list .note--list-point[data-nest="2"]::before,
+#note-list .note--list-point[data-nest="3"]::before { border-radius: 1px; }
+
+/* "Moved · Undo" */
+#arrange-toast {
+  display: flex; align-items: center; gap: 4px; width: fit-content; margin: 0 auto 8px; padding: 5px 6px 5px 12px;
+  border-radius: 999px; background: var(--pri); color: var(--bg); font-size: 12px; box-shadow: var(--shadow);
+}
+#arrange-toast[hidden] { display: none; }
+#arrange-toast button { border: 0; border-radius: 999px; padding: 3px 9px; background: transparent; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+#arrange-toast button:hover { background: rgba(127,127,127,.2); }

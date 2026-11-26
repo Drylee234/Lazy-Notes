@@ -312,7 +312,7 @@ async function buildOutline() {
     link.addEventListener("click", () => { if (page) goToPage(page); });
     line.append(twisty, link);
     row.appendChild(line);
-    if (page) outlineItems.push({ page, el: row });
+    if (page) outlineItems.push({ page, el: row, title, depth });
     return row;
   };
 
@@ -340,6 +340,16 @@ async function buildOutline() {
     for (let n = 1; n <= pdfDoc.numPages; n++) outlineList.appendChild(makeItem(`Page ${n}`, n, 0, 0));
   }
   outlineItems.sort((a, b) => a.page - b.page);
+  // The section a page is in, for the save pop-up's "Add heading" (only
+  // when the PDF has a real outline, not the Pages fallback):
+  // { title, depth } of the last outline entry starting on or before it.
+  const real = !!outline?.length;
+  globalThis.LazyNotesReader.sectionAt = (pageNum) => {
+    if (!real) return null;
+    let hit = null;
+    for (const it of outlineItems) { if (it.page <= pageNum) hit = it; else break; }
+    return hit && hit.title ? { title: hit.title.trim(), depth: hit.depth } : null;
+  };
   outlineBtn.hidden = false;
   let open = false;
   try { open = localStorage.getItem("ln-pdf-outline") === "1"; } catch (_) {}

@@ -80,6 +80,8 @@ function mdNotes(notes, depth) {
       case "list point": out.push(`- ${text}`); break;
       case "definition": out.push(`**${text}**`); break;
       case "formula":    out.push(mdCode(note.text)); break;
+      // Markdown files can't hold the picture itself: say it's there.
+      case "figure":     out.push(`*[Figure${note.text ? `: ${text}` : ""}${note.sourceTitle ? ` (${mdInline(note.sourceTitle)})` : ""}]*`); break;
       default:           out.push(text);
     }
 
@@ -186,6 +188,7 @@ function htmlNotes(notes, depth) {
       case "list head":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
       case "definition": out.push(`<p class="definition"><strong>${text}</strong></p>`); break;
       case "formula":    out.push(`<pre class="formula"><code>${text}</code></pre>`); break;
+      case "figure":     out.push(`<figure class="figure">${/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(note.image || "") ? `<img src="${note.image}" alt="${text}">` : ""}${note.text ? `<figcaption>${text}</figcaption>` : ""}</figure>`); break;
       default:           out.push(`<p>${text}</p>`);
     }
     if (ann) out.push(ann);
@@ -219,6 +222,9 @@ function htmlDocument(title, body) {
   h2 { margin-top: 32px; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; }
   blockquote { margin: 4px 0 12px; padding-left: 12px; border-left: 3px solid #ddd; color: #555; }
   pre.formula { background: #f5f5f5; padding: 8px 12px; border-radius: 6px; white-space: pre-wrap; }
+  figure.figure { margin: 12px 0; }
+  figure.figure img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
+  figure.figure figcaption { font-size: 0.9em; color: #666; font-style: italic; margin-top: 4px; }
   footer { margin-top: 48px; font-size: 13px; color: #555; }
   footer h2 { font-size: 14px; }
   a { color: #3b5bdb; word-break: break-all; }

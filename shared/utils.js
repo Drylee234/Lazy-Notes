@@ -4,11 +4,17 @@
 
 // highlights: array of { id, text, category, timestamp, ... }
 // by: "chronological" | "category" | "date"
+// Where a note sits in its topic: its own "order" once moved (Study tab
+// drag / Alt+arrows), else its time, so untouched notes keep time order.
+function noteOrder(n) {
+  return typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0);
+}
+
 function sortHighlights(highlights, by) {
   const list = [...highlights];
 
   if (by === "chronological") {
-    return list.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    return list.sort((a, b) => noteOrder(a) - noteOrder(b));
   }
 
   if (by === "category") {

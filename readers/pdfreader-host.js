@@ -36,6 +36,12 @@ globalThis.LazyNotesReader = {
 };
 
 globalThis.LazyNotesHost = {
+  // The PDF outline section the selection is in: { title, depth } or null.
+  sectionFor(el) {
+    const page = this.pageOf(el);
+    return page && globalThis.LazyNotesReader.sectionAt ? globalThis.LazyNotesReader.sectionAt(page) : null;
+  },
+
   // Page number of the element the selection started in.
   pageOf(el) {
     const page = el?.closest?.(".page");

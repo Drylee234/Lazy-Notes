@@ -295,3 +295,12 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 }
 .type-palette-item:hover, .type-palette-item:focus-visible { background: var(--hover); outline: none; }
 .type-palette-item.on { color: var(--accent); font-weight: 600; }
+
+/* Figures: a snipped picture with its caption under it */
+.note--figure .note-figure {
+  display: block; max-width: 100%; max-height: 420px; margin: 2px 0 4px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border); background: #fff;
+}
+.note--figure .note-text { font-size: 0.9em; color: var(--sec); font-style: italic; }
+.note--figure .note-text:empty { display: none; }
+.edit-form .edit-figure { display: block; max-width: 100%; max-height: 260px; margin-bottom: 6px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #fff; }

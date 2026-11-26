@@ -66,6 +66,61 @@
     return items.length >= 2 ? { head: head.replace(/[:：]\s*$/, ""), items } : null;
   }
   let listSplit = null;      // the parsed list for the open pop-up, or null
+  let joinBtnEl = null;
+  let headingToggleEl = null;
+  let pendingHeading = null;   // { text, category } offered for this save
+
+  // The PDF section this selection is in, if its heading isn't in the topic
+  // yet: offered as "Add heading … first" (ticked).
+  function offerHeading(el) {
+    pendingHeading = null;
+    if (!headingToggleEl) return;
+    headingToggleEl.style.display = "none";
+    const sec = globalThis.LazyNotesHost?.sectionFor?.(el);
+    if (!sec?.title || !selectedCourse || !selectedTopic) return;
+    const norm = (t) => String(t || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const topic = courseTree?.[selectedCourse]?.topics?.[selectedTopic];
+    const have = Object.values(topic?.highlights || {}).some((h) => norm(h.text) === norm(sec.title));
+    if (have) return;
+    pendingHeading = { text: sec.title, category: sec.depth > 0 ? "sub topic" : "header" };
+    headingToggleEl.querySelector("input").checked = true;
+    headingToggleEl.querySelector("span").textContent =
+      `Add ${pendingHeading.category === "header" ? "heading" : "sub-heading"} “${sec.title}” first`;
+    headingToggleEl.style.display = "";
+  }
+  let joinTarget = null;     // { id, text } of the highlight "Join" would add to
+
+  function askLastHighlight() {
+    joinTarget = null;
+    if (joinBtnEl) joinBtnEl.style.display = "none";
+    if (!selectedCourse || !selectedTopic) return;
+    try {
+      chrome.runtime.sendMessage({ type: "GET_LAST_HIGHLIGHT", courseName: selectedCourse, topicName: selectedTopic }, (r) => {
+        if (chrome.runtime.lastError || !r?.ok || !joinBtnEl) return;
+        joinTarget = r;
+        const tail = r.text.replace(/\s+/g, " ").trim();
+        joinBtnEl.textContent = `⤴ Join to “…${tail.length > 28 ? tail.slice(-28) : tail}”`;
+        joinBtnEl.title = "Add these words to the end of your last highlight (J)";
+        joinBtnEl.insertAdjacentHTML("beforeend", ' <span class="lazy-notes-join-key">J</span>');
+        joinBtnEl.style.display = "";
+        if (popupAnchor) positionPopup();
+      });
+    } catch (_) {}
+  }
+
+  function joinToLast() {
+    const text = String(currentSelectedText || "").trim();
+    if (!joinTarget || !text) return;
+    const course = selectedCourse, topic = selectedTopic;
+    hidePopup();
+    try {
+      chrome.runtime.sendMessage({ type: "JOIN_TO_LAST", courseName: course, topicName: topic, text }, (r) => {
+        if (chrome.runtime.lastError || !r?.ok) return;
+        showUndoToast({ course, topic, message: "Joined to your last highlight",
+          onUndo: () => chrome.runtime.sendMessage({ type: "UNJOIN", courseName: course, topicName: topic, id: r.id, before: r.before }) });
+      });
+    } catch (_) {}
+  }
   let splitToggleEl = null;
 
   // A first guess at the type from the words and where they were selected.
@@ -205,6 +260,13 @@
         background: #3a3a44; color: #c4c4cc; font-size: 8.5px; line-height: 11px; text-align: center;
       }
       .lazy-notes-chip.on .lazy-notes-chip-key { background: #fff; color: #4f46e5; }
+      .lazy-notes-join {
+        display: flex; align-items: center; gap: 6px; width: 100%; margin: -4px 0 8px; padding: 4px 6px;
+        border: 1px dashed #3a3a44; border-radius: 6px; background: transparent; color: #a1a1aa;
+        font: 11.5px inherit; font-family: inherit; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden;
+      }
+      .lazy-notes-join:hover { color: #f0f0f0; border-color: #6d65f0; }
+      .lazy-notes-join-key { margin-left: auto; padding: 0 4px; border-radius: 3px; background: #3a3a44; color: #c4c4cc; font-size: 9.5px; }
       .lazy-notes-split { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 11.5px; color: #d4d4d8; cursor: pointer; }
       .lazy-notes-split input { accent-color: #6366f1; margin: 0; }
       .lazy-notes-chip-caption { font-size: 10.5px; color: #8e8e99; margin-bottom: 8px; }
@@ -568,6 +630,25 @@
     split.addEventListener("mousedown", (e) => e.stopPropagation());
     caption.after(split);
     splitToggleEl = split;
+
+    // "Join to last": the words carry on the previous highlight (a sentence
+    // split across columns or pages). Shown only when there's one.
+    const join = document.createElement("button");
+    join.type = "button";
+    join.className = "lazy-notes-join";
+    join.style.display = "none";
+    join.addEventListener("mousedown", (e) => e.preventDefault());
+    join.addEventListener("click", (e) => { e.stopPropagation(); joinToLast(); });
+    split.after(join);
+    joinBtnEl = join;
+
+    const heading = document.createElement("label");
+    heading.className = "lazy-notes-split lazy-notes-heading";
+    heading.innerHTML = `<input type="checkbox" checked> <span></span>`;
+    heading.style.display = "none";
+    heading.addEventListener("mousedown", (e) => e.stopPropagation());
+    join.after(heading);
+    headingToggleEl = heading;
 
     // ── ROW 4: Annotation ─────────────────────────────────────────────────────
     const row4 = document.createElement("div");
@@ -974,6 +1055,11 @@
         return;
       }
     }
+    if (!typing && inPopup(active) && (event.key === "j" || event.key === "J") && joinTarget && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      joinToLast();
+      return;
+    }
     if (active?.classList?.contains("lazy-notes-chip") && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
       event.preventDefault();
       const i = CATEGORIES.indexOf(selectedCategory);
@@ -1239,6 +1325,8 @@
 
     // A clear guess wins; otherwise Plain. (The last saved type is kept
     // for list points, since those usually come in a row.)
+    askLastHighlight();
+    offerHeading(paragraphElement);
     listSplit = parseList(selectedText, currentRange);
     if (splitToggleEl) {
       splitToggleEl.style.display = listSplit ? "" : "none";
@@ -1359,8 +1447,23 @@
 
     // A list saved as list points: one highlight per point (plus the line
     // above them as Plain, which shows as their heading), in order.
+    const withHeading = pendingHeading && headingToggleEl?.querySelector("input").checked
+      && !(pendingHeading.category === selectedCategory && pendingHeading.text === currentSelectedText)
+      ? [{ text: pendingHeading.text, category: pendingHeading.category }] : [];
+    pendingHeading = null;
+    if (withHeading.length && !(listSplit && selectedCategory === "list point" && splitToggleEl?.querySelector("input").checked)) {
+      const t0 = Date.now();
+      const sent = [
+        { ...payload, id: crypto.randomUUID(), text: withHeading[0].text, category: withHeading[0].category, context: null, annotation: "", timestamp: new Date(t0).toISOString() },
+        { ...payload, timestamp: new Date(t0 + 1).toISOString() }
+      ];
+      try { chrome.runtime.sendMessage({ type: "NEW_HIGHLIGHTS", items: sent }); } catch (err) { return; }
+      showUndoToast({ ...payload, ids: sent.map((m) => m.id), message: `Saved with heading “${withHeading[0].text}”` });
+      return;
+    }
     if (listSplit && selectedCategory === "list point" && splitToggleEl?.querySelector("input").checked) {
       const parts = [
+        ...withHeading,
         ...(listSplit.head ? [{ text: listSplit.head, category: "generic" }] : []),
         ...listSplit.items.map((t) => ({ text: t, category: "list point" }))
       ];
@@ -1430,9 +1533,9 @@
         <button type="button" title="Undo (Ctrl+Z)">Undo</button>
         <div class="bar"></div>
       </div>`;
-    root.querySelector(".msg").textContent = saved.count
+    root.querySelector(".msg").textContent = saved.message ?? (saved.count
       ? `Saved ${saved.count} points to ${saved.course} › ${saved.topic}`
-      : `Saved to ${saved.course} › ${saved.topic}`;
+      : `Saved to ${saved.course} › ${saved.topic}`);
 
     // Countdown that pauses while hovered (the bar pauses with it).
     let left = UNDO_MS, startedAt = Date.now(), timer = setTimeout(close, left);
@@ -1449,6 +1552,7 @@
 
     function undo() {
       close();
+      if (saved.onUndo) { try { saved.onUndo(); } catch (_) {} return; }
       try {
         (saved.ids || [saved.id]).forEach((id) =>
           chrome.runtime.sendMessage({ type: "DELETE_HIGHLIGHT", id, courseName: saved.course, topicName: saved.topic }));

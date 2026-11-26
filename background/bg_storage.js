@@ -183,8 +183,9 @@ export async function insertHighlight(id, payload, courseName, topicName) {
   if (!topic.highlights) topic.highlights = {};
 
   topic.highlights[id] = {
-    text:       payload.text,
+    text:       payload.text ?? "",
     category:   payload.category,
+    ...(payload.category === "figure" && payload.image ? { image: payload.image } : {}),   // figures: data URL
     annotation: payload.annotation ?? null,
     context:    payload.context ?? null,
     sourceUrl:  payload.sourceUrl,

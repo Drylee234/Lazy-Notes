@@ -13,11 +13,16 @@ export const CATEGORIES = [
   "list point",
   "summary",
   "generic",
-  "note"
+  "note",
+  "figure"   // a picture snipped from a PDF/slide/document; text = its caption
 ];
 
 export async function validateHighlight(payload) {
-  if (!payload || !payload.text || !payload.text.trim()) {
+  const isFigure = payload?.category === "figure";
+  if (isFigure && !/^data:image\/(png|jpeg|webp);base64,/.test(payload.image || "")) {
+    return { valid: false, reason: "Figure has no image." };
+  }
+  if (!payload || (!isFigure && (!payload.text || !payload.text.trim()))) {
     return { valid: false, reason: "Highlight text is empty." };
   }
 

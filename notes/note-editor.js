@@ -16,7 +16,8 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
   form.className = "edit-form";
   form.addEventListener("click", (e) => e.stopPropagation());
 
-  const text       = editorArea(note.text, "Highlighted text", "Text");
+  const isFigure   = note.category === "figure";   // a picture: only its caption is text
+  const text       = editorArea(note.text, isFigure ? "Caption (optional)" : "Highlighted text", isFigure ? "Caption" : "Text");
   const annotation = editorArea(note.annotation, "Your own note about this (optional)", "Annotation");
   const context    = editorArea(note.context, "Surrounding text (optional)", "Context");
   text.classList.add("edit-text");
@@ -145,7 +146,7 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
       annotation: annotation.value.trim() || null,
       context:    context.value.trim() || null
     };
-    if (!fields.text) {    // emptying the text isn't how to delete: that's Delete
+    if (!fields.text && !isFigure) {    // emptying the text isn't how to delete: that's Delete
       text.focus();
       return;
     }
@@ -158,6 +159,15 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
 
   footer.append(del, cancel, save);
   form.append(text, more, footer);
+  // A figure: show the picture above its caption; its type stays Figure.
+  if (isFigure && note.image) {
+    const img = document.createElement("img");
+    img.className = "note-figure edit-figure";
+    img.src = note.image;
+    img.alt = "";
+    form.prepend(img);
+    fType.d.hidden = true;
+  }
 
   // Clicking anywhere else ends editing: saves if something changed,
   // otherwise just closes. (Dropdown lists and the Study dock don't count.)

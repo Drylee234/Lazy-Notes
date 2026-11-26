@@ -94,6 +94,8 @@ const StudyPage = (() => {
   let hlEditing     = null;    // { id } while a highlight's editor is open
   let renderSkipped = false;   // a redraw waited for an edit to close
   let scrollToId    = null;    // just saved: bring it into view on the next draw
+  let shown         = [];      // the notes as drawn, in order: [{ kind, id, order, indent, ... }]
+  let focusAfterDraw = null;   // keep focus on a note moved/indented with the keyboard
 
   // ---------------------------------------------------------------------------
   // Page
@@ -145,9 +147,16 @@ const StudyPage = (() => {
     );
 
     noteList.innerHTML = "";
+    shown = entries;
     entries.forEach((entry) => {
-      noteList.appendChild(entry.kind === "typed" ? typedNoteEl(entry) : highlightEl(entry));
+      const el = entry.kind === "typed" ? typedNoteEl(entry) : highlightEl(entry);
+      arrangeable(el, entry);
+      noteList.appendChild(el);
     });
+    if (focusAfterDraw) {
+      noteList.querySelector(`[data-id="${CSS.escape(focusAfterDraw)}"]`)?.focus({ preventScroll: false });
+      focusAfterDraw = null;
+    }
 
     emptyStudy.textContent = "Nothing here yet. Type a note below, or drag text here from a page.";
     emptyStudy.style.display = entries.length ? "none" : "block";
@@ -178,6 +187,7 @@ const StudyPage = (() => {
 
     const where = { ...target };
     el.addEventListener("dragstart", (e) => {
+      if (e.target.closest?.(".note-tools")) { e.preventDefault(); return; }   // the ⋮⋮ handle reorders instead
       e.dataTransfer.setData(HIGHLIGHT_TYPE, JSON.stringify({ id: note.id, text: note.text, ...where }));
       e.dataTransfer.setData("text/plain", note.text);
       e.dataTransfer.effectAllowed = "copyMove";
@@ -190,7 +200,7 @@ const StudyPage = (() => {
     el.title = "Click to edit";
     const edit = () => openHighlightEditor(el, note, where);
     el.addEventListener("click", (e) => {
-      if (!e.target.closest("button, a")) edit();
+      if (!e.target.closest("button, a, .note-tools")) edit();
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target === el) {
@@ -209,7 +219,7 @@ const StudyPage = (() => {
 
     const edit = () => openEditor(el, note, where);
     el.addEventListener("click", (e) => {
-      if (!e.target.closest("button, a, textarea, .rich-box, .format-bar")) edit();
+      if (!e.target.closest("button, a, textarea, .rich-box, .format-bar, .note-tools")) edit();
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target === el) {
@@ -218,6 +228,191 @@ const StudyPage = (() => {
       }
     });
     return el;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Arranging: drag ⋮⋮ to reorder, ⇤ ⇥ (or Tab / Shift+Tab) to indent,
+  // Alt+↑ / Alt+↓ to move. Stored as "order" / "indent" on each note
+  // (bg_arrange.js); untouched notes keep their time order (noteOrder).
+  // ---------------------------------------------------------------------------
+
+  const NEST_PX = 18;
+  const kindOf = (n) => (n.kind === "typed" ? "typed" : "highlight");
+
+  function arrangeable(el, note) {
+    const nest = Math.max(0, Math.min(3, note.indent || 0));
+    if (nest) {
+      el.dataset.nest = String(nest);
+      el.style.setProperty("--nest-px", `${nest * NEST_PX}px`);
+    }
+    const tools = document.createElement("span");
+    tools.className = "note-tools";
+    const handle = document.createElement("span");
+    handle.className = "note-handle";
+    handle.textContent = "⋮⋮";
+    handle.title = "Drag to move (or Alt+↑ / Alt+↓)";
+    handle.setAttribute("aria-hidden", "true");
+    const btn = (label, title, delta) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "note-indent";
+      b.textContent = label;
+      b.title = title;
+      b.setAttribute("aria-label", title);
+      b.addEventListener("click", (e) => { e.stopPropagation(); indentBy(note, delta); });
+      return b;
+    };
+    tools.append(handle, btn("⇤", "Outdent (Shift+Tab)", -1), btn("⇥", "Indent (Tab)", 1));
+    el.prepend(tools);
+    handle.addEventListener("mousedown", (e) => e.preventDefault());   // no native drag / text selection
+    handle.addEventListener("pointerdown", (e) => startReorder(e, el, note));
+  }
+
+  function send2(items, done) {
+    if (!target) return;
+    chrome.runtime.sendMessage({ type: "SET_ARRANGEMENT", ...target, items }, (reply) => {
+      if (chrome.runtime.lastError || !reply?.ok) showError(`Couldn't arrange: ${reply?.reason || chrome.runtime.lastError?.message || "unknown error"}`);
+      else done?.();
+    });
+  }
+
+  // Indent by ±1 (0-3). Undo puts it back.
+  function indentBy(note, delta) {
+    const from = note.indent || 0;
+    const to = Math.max(0, Math.min(3, from + delta));
+    if (to === from) return;
+    focusAfterDraw = note.id;
+    send2([{ kind: kindOf(note), id: note.id, indent: to }], () =>
+      arrangeToast(to > from ? "Indented" : "Outdented", [{ kind: kindOf(note), id: note.id, indent: from }]));
+  }
+
+  // Put `note` at index `to` of the list without it. Order = between its new
+  // neighbours; if they're too close to split, the whole topic is renumbered
+  // (in the same single write). Undo restores every order changed.
+  function moveTo(note, to) {
+    const rest = shown.filter((n) => n !== note);
+    to = Math.max(0, Math.min(rest.length, to));
+    const was = shown.indexOf(note);
+    if (to === was) return;
+    const prev = rest[to - 1], next = rest[to];
+    const o = (n) => noteOrder(n);
+    let items;
+    let order = prev && next ? (o(prev) + o(next)) / 2 : prev ? o(prev) + 1000 : o(next) - 1000;
+    const before = shown.map((n) => ({ kind: kindOf(n), id: n.id, order: o(n) }));
+    if (prev && next && (o(next) - o(prev) < 0.01 || order === o(prev) || order === o(next))) {
+      const list = [...rest.slice(0, to), note, ...rest.slice(to)];
+      const base = o(list[0]);
+      items = list.map((n, i) => ({ kind: kindOf(n), id: n.id, order: base + i * 1000 }));
+    } else {
+      items = [{ kind: kindOf(note), id: note.id, order }];
+    }
+    const undo = before.filter((b) => items.some((i) => i.id === b.id && i.kind === b.kind));
+    focusAfterDraw = note.id;
+    send2(items, () => arrangeToast("Moved", undo));
+  }
+
+  // ── Dragging by the handle: an insertion line follows the mouse; the
+  //    panel scrolls near its edges; Esc or dropping in place cancels. ──
+  let drag = null;
+  function startReorder(e, el, note) {
+    if (e.button !== 0 || editing || hlEditing) return;
+    e.preventDefault();
+    const line = document.createElement("div");
+    line.className = "reorder-line";
+    noteList.appendChild(line);
+    drag = { el, note, line, index: shown.indexOf(note), y: e.clientY, raf: null };
+    el.classList.add("reordering");
+    document.body.classList.add("is-reordering");
+    e.target.setPointerCapture?.(e.pointerId);
+    const move = (ev) => { drag.y = ev.clientY; placeLine(); };
+    const up = () => finish(true);
+    const key = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); finish(false); } };
+    const finish = (commit) => {
+      if (!drag) return;
+      cancelAnimationFrame(drag.raf);
+      const to = drag.index;
+      el.classList.remove("reordering");
+      document.body.classList.remove("is-reordering");
+      line.remove();
+      document.removeEventListener("pointermove", move, true);
+      document.removeEventListener("pointerup", up, true);
+      document.removeEventListener("keydown", key, true);
+      drag = null;
+      if (commit && to != null) moveTo(note, to);
+    };
+    document.addEventListener("pointermove", move, true);
+    document.addEventListener("pointerup", up, true);
+    document.addEventListener("keydown", key, true);
+    const tick = () => {                       // auto-scroll near the edges
+      if (!drag) return;
+      const r = scroller.getBoundingClientRect();
+      const edge = 48;
+      const dy = drag.y < r.top + edge ? -Math.ceil((r.top + edge - drag.y) / 4)
+               : drag.y > r.bottom - edge ? Math.ceil((drag.y - (r.bottom - edge)) / 4) : 0;
+      if (dy) { scroller.scrollTop += dy; placeLine(); }
+      drag.raf = requestAnimationFrame(tick);
+    };
+    drag.raf = requestAnimationFrame(tick);
+    placeLine();
+  }
+
+  // Index among the other notes where the dragged one would land, and the
+  // line drawn there (between two notes).
+  function placeLine() {
+    if (!drag) return;
+    const others = [...noteList.querySelectorAll(":scope > .note")].filter((n) => n !== drag.el);
+    let to = others.length;
+    for (let i = 0; i < others.length; i++) {
+      const r = others[i].getBoundingClientRect();
+      if (drag.y < r.top + r.height / 2) { to = i; break; }
+    }
+    drag.index = to;
+    const listTop = noteList.getBoundingClientRect().top;
+    const ref = others[to];
+    const y = ref ? ref.getBoundingClientRect().top - 2
+                  : (others.at(-1)?.getBoundingClientRect().bottom ?? listTop) + 1;
+    drag.line.style.top = `${y - listTop + noteList.scrollTop}px`;
+    const same = shown.indexOf(drag.note) === to;   // dropping here changes nothing
+    drag.line.classList.toggle("same", same);
+  }
+
+  // Keyboard, on a focused note (not while editing): Alt+↑/↓ moves, Tab /
+  // Shift+Tab indents.
+  noteList.addEventListener("keydown", (e) => {
+    const el = e.target;
+    if (!el.classList?.contains("note") || editing || hlEditing) return;
+    const note = shown.find((n) => String(n.id) === el.dataset.id);
+    if (!note) return;
+    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault();
+      moveTo(note, shown.indexOf(note) + (e.key === "ArrowUp" ? -1 : 1));
+    } else if (e.key === "Tab" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      const to = Math.max(0, Math.min(3, (note.indent || 0) + (e.shiftKey ? -1 : 1)));
+      if (to === (note.indent || 0)) return;   // nothing to do: let Tab move focus as usual
+      e.preventDefault();
+      indentBy(note, e.shiftKey ? -1 : 1);
+    }
+  });
+
+  // "Moved · Undo" for a few seconds; Undo puts the old values back.
+  let toastTimer = null;
+  function arrangeToast(what, undoItems) {
+    let t = document.getElementById("arrange-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "arrange-toast";
+      t.setAttribute("role", "status");
+      document.getElementById("study-dock").prepend(t);
+    }
+    t.replaceChildren(document.createTextNode(what));
+    const u = document.createElement("button");
+    u.type = "button";
+    u.textContent = "Undo";
+    u.addEventListener("click", () => { t.hidden = true; send2(undoItems); });
+    t.append(" · ", u);
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
   }
 
   // "×", then "Delete?" for 4s, so a stray click can't lose a note. kind is
