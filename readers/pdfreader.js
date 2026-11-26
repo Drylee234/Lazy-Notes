@@ -259,17 +259,23 @@ async function loadDocument(data, name) {
 // The PDF's words go to spell check and typing hints (readers/doc-words.js).
 // Read quietly after opening, up to 400 pages.
 async function collectDocWords(doc, title) {
-  if (!globalThis.LazyDocWords) return;
-  const parts = [];
+  if (!globalThis.LazyDocWords && !globalThis.LazyDocText) return;
+  const parts = [];   // one entry per page, kept so the text can be published too
+  const share = () => {
+    globalThis.LazyDocWords?.publish(parts.join("\n"), title);
+    globalThis.LazyDocText?.publish(parts, title);
+  };
   for (let i = 1; i <= Math.min(doc.numPages, 400); i++) {
     if (doc !== pdfDoc) return;   // another PDF was opened meanwhile
     try {
       const tc = await (await doc.getPage(i)).getTextContent();
-      parts.push(tc.items.map((it) => it.str).join(" "));
-    } catch (_) {}
-    if (i === 20) LazyDocWords.publish(parts.join("\n"), title);   // big PDFs: a first batch early
+      // Line ends kept (hasEOL), so broken words like "mitochon-\ndrion" can
+      // be joined back together when the text is published.
+      parts.push(tc.items.map((it) => (it.hasEOL ? it.str + "\n" : it.str + " ")).join("").replace(/[ \t]+\n/g, "\n").trim());
+    } catch (_) { parts.push(""); }
+    if (i === 20) share();   // big PDFs: a first batch early
   }
-  if (doc === pdfDoc) LazyDocWords.publish(parts.join("\n"), title);
+  if (doc === pdfDoc) share();
 }
 
 // ---------------------------------------------------------------------------

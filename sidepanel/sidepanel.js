@@ -501,11 +501,65 @@ viewTabs.forEach((tab) => {
     const view = tab.dataset.view;
     homeView.classList.toggle("visible", view === "home");
     studyView.classList.toggle("visible", view === "study");
+    aiView?.classList.toggle("visible", view === "ai");
+    if (view === "ai") mountAiPanel();
     
     // Switch the footer depending on which tab is active
     updateFooterCount();
   });
 });
+
+// ---------------------------------------------------------------------------
+// AI answers (shared/ai-panel.js)
+// ---------------------------------------------------------------------------
+// The tab only exists once the AI is set up, so nobody meets an empty feature
+// they didn't ask for. Answers are scratch: they live in storage.session and
+// only reach your notes through "Keep as note".
+
+const aiView = document.getElementById("ai-view");
+const aiTab  = document.getElementById("ai-tab");
+let aiPanel  = null;
+
+function mountAiPanel() {
+  if (aiPanel || !aiView || !globalThis.LazyAIPanel) return;
+  aiPanel = LazyAIPanel.mount(aiView, {
+    onKeep: async (entry) => {
+      const { activeCourse, activeTopic } = await chrome.storage.local.get(["activeCourse", "activeTopic"]);
+      if (!activeCourse || !activeTopic) return false;   // the panel says "Not saved"
+      const reply = await new Promise((done) => {
+        try {
+          chrome.runtime.sendMessage({
+            type: "AI_SAVE_NOTE",
+            text: entry.text,
+            category: /quiz/.test(entry.task) ? "generic" : /summarise/.test(entry.task) ? "summary" : "note",
+            courseName: activeCourse,
+            topicName: activeTopic
+          }, (r) => { void chrome.runtime.lastError; done(r); });
+        } catch (_) { done(null); }
+      });
+      return !!reply?.ok;
+    }
+  });
+  globalThis.LazyAIAnswers = aiPanel;   // so other parts of the panel can add to it
+}
+
+// Show the tab only while the AI is switched on and has a key.
+function refreshAiTab() {
+  if (!aiTab || !globalThis.LazyAIProviders) return;
+  LazyAIProviders.ready().then((st) => {
+    const on = !!(st.on && st.hasKey);
+    aiTab.hidden = !on;
+    if (on) mountAiPanel();
+    // If the AI goes off while you're looking at it, fall back to Home.
+    if (!on && aiView?.classList.contains("visible")) {
+      document.querySelector('.view-tab[data-view="home"]')?.click();
+    }
+  });
+}
+chrome.storage.onChanged.addListener((c, area) => {
+  if (area === "local" && (c.lnAiOn || c.lnAiKeys || c.lnAiProvider)) refreshAiTab();
+});
+refreshAiTab();
 
 // ---------------------------------------------------------------------------
 // Toggle button

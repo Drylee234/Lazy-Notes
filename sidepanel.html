@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="sidepanel/sidepanel.css" />
 <link rel="stylesheet" href="sidepanel/study.css" />
 <link rel="stylesheet" href="shared/settings.css" />
+<link rel="stylesheet" href="shared/ai-panel.css" />
 <script src="shared/diag.js"></script>
 <script src="shared/theme.js"></script>
 </head>
@@ -40,6 +41,7 @@
   <nav id="view-tabs" role="tablist">
     <button class="view-tab active" data-view="home" role="tab">Home</button>
     <button class="view-tab" data-view="study" role="tab">Study</button>
+    <button class="view-tab" data-view="ai" role="tab" id="ai-tab" hidden>&#10024; AI</button>
   </nav>
 </header>
 
@@ -52,6 +54,10 @@
 
 <!-- ── Body ── -->
 <main id="body">
+
+  <!-- AI VIEW — long answers from the AI (shared/ai-panel.js). Scratch, not
+       notes: they live for this browser session only until you keep one. -->
+  <section id="ai-view"></section>
 
   <!-- HOME VIEW -->
   <section id="home-view" class="visible">
@@ -276,6 +282,7 @@
 <script src="sidepanel/rich-box.js"></script>
 <script src="sidepanel/study-page.js"></script>
 <script src="shared/ai-providers.js"></script>
+<script src="shared/ai-panel.js"></script>
 <script src="shared/settings.js"></script>
 <script src="sidepanel/sidepanel.js"></script>
 </body>

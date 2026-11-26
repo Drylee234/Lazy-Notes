@@ -15,7 +15,9 @@
 //
 // Messages:
 //   AI_TEST  {provider?, key?, model?, base?}  → { ok, ms, model, reply?, reason? }
-//   AI_RUN   {task, text, extra?}              → { ok, text?, reason? }
+//   AI_RUN   {task, text, extra?}              → { ok, text?, reason?, note? }
+//            a "…Doc" task may leave text out and send {scope, page} instead:
+//            the open document's own words are read from storage.session
 //   AI_READY  (no arguments)                   → { ok, on, provider, model, hasKey }
 //   AI_SAVE_NOTE {courseName, topicName, text, category} → { ok, id?, reason? }
 
@@ -68,6 +70,28 @@ const TASKS = {
     maxTokens: 1500,
     prompt: (text, extra) =>
       `Write ${extra || 5} short test-yourself questions from these notes, one per line, numbered. Each must be answerable from the notes. No answers.\n\n---\n${text}`
+  },
+
+  // Ask your own question about a part of the document. `extra` is the
+  // question. The words are the only source it is allowed to use.
+  ask: {
+    maxTokens: 1200,
+    prompt: (text, extra) =>
+      `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${extra || "What does this mean?"}\n\n--- passage ---\n${text}`
+  },
+
+  // The document itself, not the notes taken from it: the notes are an
+  // abridged version, so summarising them would summarise a summary.
+  summariseDoc: {
+    maxTokens: 2000,
+    prompt: (text, extra) =>
+      `Summarise this part of a lecture document for a student${extra ? ` (${extra})` : ""}. Give the main points as single lines, no numbering, no heading, at most 10 lines. Use only what is here.\n\n---\n${text}`
+  },
+
+  quizDoc: {
+    maxTokens: 2000,
+    prompt: (text, extra) =>
+      `Write ${extra || 5} test-yourself questions a lecturer might ask from this document, one per line, numbered. Each must be answerable from the document. No answers.\n\n---\n${text}`
   },
 
   // Which course (and topic) does a newly opened document belong to?
@@ -191,22 +215,72 @@ export async function handleAiTest(message) {
     : out;
 }
 
+// The document the readers published (readers/doc-words.js publishes
+// chrome.storage.session.lnDocPages). A "…Doc" job can leave `text` out and
+// name a scope instead, and we fetch it here — one place, so every caller
+// gets the same honest message when a document is too big to hold whole.
+async function documentText({ scope = "all", page = 1 } = {}) {
+  let store = null;
+  try {
+    ({ lnDocPages: store } = await chrome.storage.session.get("lnDocPages"));
+  } catch (_) { /* no session storage on this browser */ }
+
+  const pages = store?.pages || [];
+  if (!pages.length) return { ok: false, reason: "No document is open, so there's nothing to read." };
+
+  const total = store.totalPages || pages.length;
+  let from = 1, to = pages.length, note = "";
+
+  if (scope === "page") {
+    const want = Math.max(1, Number(page) || 1);
+    if (want > pages.length) {
+      note = `Page ${want} isn't in what we could read, so this is pages 1–${pages.length} instead.`;
+    } else {
+      from = to = want;
+    }
+  }
+  if (store.trimmed && scope !== "page") {
+    note = `This document is too big to send all of it, so this is pages ${from}–${to} of ${total}.`;
+  }
+
+  const picked = pages.slice(from - 1, to);
+  const text = pages.length > 1
+    ? picked.map((t, i) => `[Page ${from + i}]\n${t}`).join("\n\n")
+    : picked.join("\n\n");
+
+  return { ok: true, text, title: store.title || "", from, to, total, note };
+}
+
 export async function handleAiRun(message) {
   const job = TASKS[message?.task];
   if (!job) return { ok: false, reason: `There's no AI job called "${message?.task}".` };
 
-  const text = String(message.text || "").trim();
+  // A document job with no text of its own reads what the reader published.
+  let note = "";
+  let text = String(message.text || "").trim();
+  if (!text && /Doc$/.test(message.task)) {
+    const doc = await documentText({ scope: message.scope, page: message.page });
+    if (!doc.ok) return doc;
+    text = doc.text;
+    note = doc.note;
+  }
   if (!text) return { ok: false, reason: "Nothing was sent to work on." };
-  if (text.length > 60000) return { ok: false, reason: "That's too much text at once. Pick fewer notes." };
+  const LIMIT = /Doc$/.test(message.task) ? 240000 : 60000;   // ~40k words for a document
+  if (text.length > LIMIT) return { ok: false, reason: /Doc$/.test(message.task)
+    ? "That document is too long to send in one go. Use This page, or pick a section."
+    : "That's too much text at once. Pick fewer notes." };
 
   const cfg = await config();
   if (!cfg.on) return { ok: false, reason: "The AI is switched off. Turn it on in Settings › AI." };
 
-  return ask(cfg, {
+  const out = await ask(cfg, {
     system: SYSTEM,
     prompt: job.prompt(text, message.extra),
     maxTokens: job.maxTokens
   });
+  // Say so when we couldn't send the whole document: a summary of half a
+  // lecture that claims to be the whole one would be worse than useless.
+  return note && out.ok ? { ...out, note } : out;
 }
 
 // So a page can grey out its AI buttons without doing a request.
