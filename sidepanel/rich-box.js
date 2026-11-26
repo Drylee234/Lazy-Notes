@@ -262,10 +262,12 @@
       return `> ${text}`;
     };
 
-    // Plain-text paste.
+    // Plain-text paste. Text copied from a PDF comes in broken lines: join
+    // them back into sentences ("-" at a line end glues a split word), keep
+    // real line ends (after . ! ? :) and turn bullets into "- " points.
     box.addEventListener("paste", (e) => {
       e.preventDefault();
-      const t = e.clipboardData.getData("text/plain");
+      const t = cleanPdfText(e.clipboardData.getData("text/plain"));
       if (t) document.execCommand("insertText", false, t);
     });
 
@@ -307,7 +309,37 @@
     box.addEventListener("input", (e) => {
       if (e.inputType !== "insertText" || e.data !== " ") return;
       const sel = getSelection();
-      if (!sel.rangeCount || closestIn(sel.anchorNode, "li", box)) return;
+      if (!sel.rangeCount) return;
+      // At the start of a point: "- " / "* " makes this level bullets,
+      // "1. " makes it numbered (e.g. bullets under a numbered point).
+      const li = closestIn(sel.anchorNode, "li", box);
+      if (li) {
+        const node0 = sel.anchorNode;
+        if (node0.nodeType !== Node.TEXT_NODE) return;
+        const typed = node0.nodeValue.slice(0, sel.anchorOffset).replace(/\u00a0/g, " ");
+        if (li.textContent.replace(/\u00a0/g, " ").indexOf(typed) !== 0) return;
+        const want = /^[-*•] $/.test(typed) ? "UL" : /^1[.)] $/.test(typed) ? "OL" : null;
+        if (!want) return;
+        const r = document.createRange();
+        r.setStart(node0, 0);
+        r.setEnd(node0, sel.anchorOffset);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        document.execCommand("delete");
+        const list = li.parentElement;
+        if (list.tagName !== want) {
+          const swap = document.createElement(want);
+          while (list.firstChild) swap.appendChild(list.firstChild);
+          list.replaceWith(swap);
+          const c = document.createRange();
+          c.setStart(li, 0);
+          c.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(c);
+        }
+        box.dispatchEvent(new Event("input", { bubbles: true }));
+        return;
+      }
       const block = blockOf(sel.anchorNode, box);
       const node = sel.anchorNode;
       if (!block || node.nodeType !== Node.TEXT_NODE) return;
@@ -330,6 +362,26 @@
 
     updateEmpty();
     return box;
+  }
+
+  const BULLET = /^\s*[•●○◦▪■□►▸▹➢➤✓✔·\uF0A7\uF0B7\uF076\uF0D8\uF0FC\uF0A8\uF06C\uF06E]\s*/;
+  const POINT = /^\s*([-*]|\d{1,2}[.)]|[a-z][.)])\s+/i;
+  function cleanPdfText(text) {
+    const lines = String(text || "").replace(/\r/g, "").split("\n").map((l) => l.replace(/\s+$/, ""));
+    if (lines.length < 2) return lines.join("");
+    const out = [];
+    lines.forEach((raw) => {
+      let l = raw.replace(BULLET, (m) => (m.trim() ? "- " : ""));
+      if (!l.trim()) { out.push(""); return; }
+      const prev = out[out.length - 1];
+      const startsPoint = POINT.test(l) || BULLET.test(raw);
+      if (prev && !startsPoint && !/[.!?:;]["')\]]?$/.test(prev) && prev.length > 25) {
+        out[out.length - 1] = /[A-Za-z]-$/.test(prev) && /^[a-z]/.test(l.trim())
+          ? prev.slice(0, -1) + l.trim()
+          : `${prev} ${l.trim()}`;
+      } else out.push(l.trim() ? l.replace(/^\s+/, (m) => (startsPoint ? m : "")) : l);
+    });
+    return out.join("\n").replace(/\n{3,}/g, "\n\n");
   }
 
   // ── Formatting commands (bar + shortcuts) ─────────────────────────────────

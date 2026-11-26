@@ -65,6 +65,24 @@ const StudyPage = (() => {
     return box;
   })();
   const composerType = $("composer-type");
+  // Tab order: picker → notes → note box → (once there's text) Save as.
+  // The bar's buttons and the send button are mouse/shortcut only.
+  document.querySelectorAll("#composer-bar .fb-btn, #composer-save").forEach((b) => { b.tabIndex = -1; });
+  const syncTypeTab = () => { composerType.tabIndex = composerInput.value.trim() ? 0 : -1; };
+  composerInput.addEventListener("input", syncTypeTab);
+  composerInput.addEventListener("focus", syncTypeTab);
+  syncTypeTab();
+  // Numbers pick the type here too (same keys as the save pop-up): 1 Header,
+  // 2 Sub topic, 3 Definition, 4 Formula, 5 List point, 6 Important,
+  // 7 Summary, 0 Plain, 9 My note. Enter then saves.
+  const TYPE_KEYS = { "1": "header", "2": "sub topic", "3": "definition", "4": "formula",
+                      "5": "list point", "6": "note", "7": "summary", "0": "generic", "9": "" };
+  composerType.addEventListener("keydown", (e) => {
+    if (e.key in TYPE_KEYS && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      composerType.value = TYPE_KEYS[e.key];
+    }
+  });
   composerType.addEventListener("keydown", async (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -156,8 +174,15 @@ const StudyPage = (() => {
       arrangeable(el, entry);
       noteList.appendChild(el);
     });
+    rovingAfterRender();
     const refocus = focusAfterDraw || hadFocus;
-    if (refocus) noteList.querySelector(`.note[data-id="${CSS.escape(refocus)}"]`)?.focus({ preventScroll: true });
+    if (refocus) {
+      // The focused note may be gone (deleted from the keyboard): go to the
+      // one that took its place.
+      const target = noteList.querySelector(`.note[data-id="${CSS.escape(refocus)}"]`)
+        || (activeNoteId && noteList.querySelector(`.note[data-id="${CSS.escape(activeNoteId)}"]`));
+      target?.focus({ preventScroll: true });
+    }
     if (focusAfterDraw && noteList.querySelector(`.note[data-id="${CSS.escape(focusAfterDraw)}"]`)) {
       noteList.querySelector(`.note[data-id="${CSS.escape(focusAfterDraw)}"]`).scrollIntoView({ block: "nearest" });
     }
@@ -205,8 +230,22 @@ const StudyPage = (() => {
     el.appendChild(deleteButton(note, where, "highlight"));
     el.title = "Click to edit";
     const edit = () => openHighlightEditor(el, note, where);
+    // One click edits; a double-click quotes it into the note box instead
+    // (so the single click waits a moment to see if a second one comes).
+    let clickTimer = null;
     el.addEventListener("click", (e) => {
-      if (!e.target.closest("button, a, .note-tools")) edit();
+      if (e.target.closest("button, a, .note-tools")) return;
+      if (e.detail > 1) return;
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(edit, 230);
+    });
+    el.addEventListener("dblclick", (e) => {
+      if (e.target.closest("button, a, .note-tools")) return;
+      clearTimeout(clickTimer);
+      getSelection()?.removeAllRanges();
+      const box = editing?.input || composerInput;
+      if (box.disabled) return;
+      box.insertQuoteAt(null, note.text);
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target === el) {
@@ -382,21 +421,61 @@ const StudyPage = (() => {
     drag.line.classList.toggle("same", same);
   }
 
-  // Keyboard, on a focused note (not while editing): Alt+↑/↓ moves, Tab /
-  // Shift+Tab indents.
+  // Keyboard on the notes (one Tab stop for the whole list; Tab moves on to
+  // the note box): ↑/↓ go between notes, Home/End to the ends, Enter or
+  // Space edits, Delete asks then deletes (press again), Alt+↑/↓ moves a
+  // note, Alt+→/← indents / outdents it.
+  let activeNoteId = null;
+  function noteEls() { return [...noteList.querySelectorAll(":scope > .note, :scope .note[data-id]")].filter((n, i, a) => a.indexOf(n) === i); }
+  function setActiveNote(el, { focus = true } = {}) {
+    if (!el) return;
+    noteEls().forEach((n) => { n.tabIndex = n === el ? 0 : -1; });
+    activeNoteId = el.dataset.id;
+    if (focus) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
+  }
+  // After every redraw: keep a single Tab stop, on the last active note.
+  function rovingAfterRender() {
+    const els = noteEls();
+    if (!els.length) return;
+    const keep = els.find((n) => n.dataset.id === activeNoteId) || els[0];
+    els.forEach((n) => { n.tabIndex = n === keep ? 0 : -1; });
+    // The small buttons and links inside notes have keys of their own
+    // (Delete, Alt+arrows, Enter), so Tab skips them.
+    noteList.querySelectorAll(".note button, .note a").forEach((b) => { b.tabIndex = -1; });
+  }
+  noteList.addEventListener("focusin", (e) => {
+    const el = e.target.closest?.(".note[data-id]");
+    if (el && e.target === el) setActiveNote(el, { focus: false });
+  });
+
   noteList.addEventListener("keydown", (e) => {
     const el = e.target;
     if (!el.classList?.contains("note") || editing || hlEditing) return;
     const note = shown.find((n) => String(n.id) === el.dataset.id);
-    if (!note) return;
+    const els = noteEls();
+    const i = els.indexOf(el);
     if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      if (!note) return;
       e.preventDefault();
       moveTo(note, shown.indexOf(note) + (e.key === "ArrowUp" ? -1 : 1));
-    } else if (e.key === "Tab" && !e.altKey && !e.ctrlKey && !e.metaKey) {
-      const to = Math.max(0, Math.min(3, (note.indent || 0) + (e.shiftKey ? -1 : 1)));
-      if (to === (note.indent || 0)) return;   // nothing to do: let Tab move focus as usual
+    } else if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      if (!note) return;
       e.preventDefault();
-      indentBy(note, e.shiftKey ? -1 : 1);
+      indentBy(note, e.key === "ArrowRight" ? 1 : -1);
+    } else if (!e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      setActiveNote(els[Math.max(0, Math.min(els.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]);
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      setActiveNote(e.key === "Home" ? els[0] : els[els.length - 1]);
+    } else if (e.key === " ") {
+      e.preventDefault();
+      el.click();
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      const next = els[i + 1] || els[i - 1];
+      if (next) activeNoteId = next.dataset.id;
+      el.querySelector(".typed-delete")?.click();   // first press: "Delete?", second: deletes
     }
   });
 
@@ -560,7 +639,7 @@ const StudyPage = (() => {
   composerInput.addEventListener("keydown", (e) => {
     const at = getSelection().anchorNode;
     const atEl = at?.nodeType === Node.ELEMENT_NODE ? at : at?.parentElement;
-    if (e.key === "Tab" && !e.shiftKey && !atEl?.closest?.("li")) {
+    if (e.key === "Tab" && !e.shiftKey && !atEl?.closest?.("li") && composerInput.value.trim()) {
       e.preventDefault();
       composerType.focus();
       return;
@@ -1189,3 +1268,24 @@ document.addEventListener("keydown", (e) => {
     }
   }
 }, true);
+
+
+// Course › Topic picker: one Tab stop, ← / → between the two dropdowns.
+(() => {
+  const picker = document.getElementById("study-picker");
+  if (!picker) return;
+  const buttons = () => [...picker.querySelectorAll(".hs:not([hidden]) .hs-button")];
+  const sync = () => buttons().forEach((b, i) => { if (!b.closest(".hs--open")) b.tabIndex = i === 0 ? 0 : -1; });
+  new MutationObserver(sync).observe(picker, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+  sync();
+  picker.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const bs = buttons();
+    const i = bs.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    const next = bs[Math.max(0, Math.min(bs.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)))];
+    bs.forEach((b) => { b.tabIndex = b === next ? 0 : -1; });
+    next.focus();
+  });
+})();
