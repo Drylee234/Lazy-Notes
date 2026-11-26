@@ -101,7 +101,9 @@
 
   const BULLETS = ["•", "◦", "▪", "▫"];
 
-  function noteHtml(n, next) {
+  function noteHtml(n, next, prev) {
+    // The source shows only where it changes, not under every note.
+    const showSrc = !prev || (prev.sourceTitle || prev.sourceUrl) !== (n.sourceTitle || n.sourceUrl);
     const indent = Math.max(0, Math.min(3, n.indent || 0));
     const style = `style="--indent:${indent * 18}px;--bullet:'${BULLETS[indent]}'"`;
     if (n.kind === "typed") return `<div class="note typed" ${style}>${typedHtml(n.text)}</div>`;
@@ -124,9 +126,9 @@
       if (cat === "note") text = `<span class="callout">Important:</span> ${text}`;
       body = `<span class="note-text"><span class="hl">${text}</span></span>`;
       if (cat === "formula" && n.context) body += `<div class="context">${esc(n.context)}</div>`;
-      if (listHead && cat === "generic") return `<div class="${cls} list-head-auto" ${style}>${body}${meta(n)}</div>`;
+      if (listHead && cat === "generic") return `<div class="${cls} list-head-auto" ${style}>${body}${showSrc ? meta(n) : ""}</div>`;
     }
-    return `<div class="${cls}" ${style}>${body}${n.annotation ? `<div class="annot">${esc(n.annotation)}</div>` : ""}${meta(n)}</div>`;
+    return `<div class="${cls}" ${style}>${body}${n.annotation ? `<div class="annot">${esc(n.annotation)}</div>` : ""}${showSrc ? meta(n) : ""}</div>`;
   }
 
   function meta(n) {
@@ -202,7 +204,7 @@
     if (!t) { view.innerHTML = `<div class="empty">This topic isn't in the last sync.</div>`; return; }
     const notes = topicNotes(t);
     view.innerHTML = notes.length
-      ? `<div class="notes">${notes.map((n, i) => noteHtml(n, notes[i + 1])).join("")}</div>`
+      ? `<div class="notes">${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>`
       : `<div class="empty">No notes in this topic yet.</div>`;
     window.scrollTo(0, 0);
   }
@@ -215,6 +217,9 @@
         const hay = `${n.text || ""} ${n.annotation || ""}`.toLowerCase();
         if (words.every((w) => hay.includes(w))) hits.push({ cn, tn, n });
       })));
+    // Typed notes' formatting marks aren't shown in a snippet.
+    const plain = (t) => String(t).replace(/^\s*(#{1,3}|[-*•>]|\d+[.)])\s+/gm, "").replace(/\*\*|==/g, "")
+      .replace(/(^|\s)[*_](?=\S)|(?<=\S)[*_](?=\s|$)/g, "$1").replace(/\s+/g, " ").trim();
     const mark = (s) => {
       let h = esc(s.length > 160 ? s.slice(0, 157) + "…" : s);
       words.forEach((w) => { h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"), "<mark>$1</mark>"); });
@@ -223,7 +228,7 @@
     view.innerHTML = hits.length ? `<div class="section-title">${hits.length} match${hits.length === 1 ? "" : "es"}</div><ul class="list">${hits.slice(0, 100).map((h) => `
       <li><a class="row" href="#/course/${enc(h.cn)}/topic/${enc(h.tn)}"><span class="row-main">
         <div class="row-meta">${esc(h.cn)} › ${esc(h.tn)}</div>
-        <div class="row-snip">${mark(String(h.n.text || h.n.annotation || ""))}</div>
+        <div class="row-snip">${mark(plain(h.n.text || h.n.annotation || ""))}</div>
       </span></a></li>`).join("")}</ul>` : `<div class="empty">No notes match “${esc(q)}”.</div>`;
   }
 

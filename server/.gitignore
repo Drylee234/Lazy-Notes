@@ -1,0 +1,3 @@
+lazynotes.db
+*.db
+__pycache__/
