@@ -132,6 +132,32 @@
     while (n && n !== root && n.parentNode !== root) n = n.parentNode;
     return n && n !== root ? n : null;
   }
+  // Two spaces at the start of the line, as text, so an indent survives being
+  // saved and read back. The browser's own indent wraps the line in a
+  // <blockquote>, which this box saves as a "> " quote — that would quietly
+  // turn your note into a quotation. Alt+Shift+Tab takes the step back off.
+  const INDENT_STEP = "\u00a0\u00a0";
+  function indentLine(box, out) {
+    const sel = getSelection();
+    if (!sel.rangeCount) return;
+    const node = sel.anchorNode;
+    let block = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    while (block && block !== box && !/^(P|DIV|H3|H4|H5)$/.test(block.tagName)) {
+      block = block.parentElement;
+    }
+    if (!block) block = box;
+
+    const first = block.firstChild;
+    if (out) {
+      if (first?.nodeType === Node.TEXT_NODE && first.textContent.startsWith(INDENT_STEP)) {
+        first.textContent = first.textContent.slice(INDENT_STEP.length);
+      }
+      return;
+    }
+    if (first?.nodeType === Node.TEXT_NODE) first.textContent = INDENT_STEP + first.textContent;
+    else block.insertBefore(document.createTextNode(INDENT_STEP), first || null);
+  }
+
   const closestIn = (node, sel, root) => {
     const el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
     const hit = el?.closest?.(sel);
@@ -284,12 +310,25 @@
       const sel = getSelection();
       const li = sel.rangeCount && closestIn(sel.anchorNode, "li", box);
 
-      // Points: Shift+Tab indents, Alt+Shift+Tab (or Backspace at the very
-      // start of an indented point) outdents. Plain Tab is left alone: it
-      // goes to the "Save as" picker.
-      if (e.key === "Tab" && li && e.shiftKey) {
+      // Shift+Tab indents, Alt+Shift+Tab (or Backspace at the very start of
+      // an indented point) outdents. Plain Tab is left alone: it goes to the
+      // "Save as" picker.
+      //
+      // This used to need the cursor to be inside a bullet. On an ordinary
+      // line nothing happened, the browser moved focus instead, and it looked
+      // like Shift+Tab was changing the type. It now indents whatever line
+      // you're on, list or not, and never lets the key escape to the picker.
+      if (e.key === "Tab" && e.shiftKey) {
         e.preventDefault();
-        document.execCommand(e.altKey ? "outdent" : "indent");
+        e.stopPropagation();
+        if (li) {
+          document.execCommand(e.altKey ? "outdent" : "indent");
+        } else {
+          // Not in a list. The browser's own indent wraps the line in a
+          // <blockquote>, which this box saves as a "> " quote — so your
+          // note would quietly become a quotation. Indent the words instead.
+          indentLine(box, e.altKey);
+        }
         box.dispatchEvent(new Event("input", { bubbles: true }));
         return;
       }

@@ -27,6 +27,26 @@ seen → cause → what changed (commit) or what's still open.
 
 ---
 
+## 2026-11-26 (evening) · first real use of the AI, reported live
+
+**Slips seen → cause → change**
+
+| Seen | Cause | Change |
+|---|---|---|
+| "Uncaught TypeError: Cannot read properties of undefined (reading 'local')" on an open page | Extension: a page open when the extension reloads keeps a dead `content.js` — `chrome` is there but `chrome.storage` is gone, and five places touched it at start-up | All storage access goes through guarded helpers; an orphaned script goes quiet · `(orphan fix)` |
+| "no doc was open yet it reads last input" | Extension: the document text store lives in session storage, which outlives the reader tab, so the AI would read a document closed an hour ago and call it "this document" | Reader clears it on close; a document job also checks a reader is really open · `(stale doc fix)` |
+| Sync needed pressing "Sync now" by hand | Extension: one 60s wake attempt against a free host that sleeps — the first request is what starts it waking and nearly always times out | Two 90s wake attempts, faster retry ladder, opening the side panel pushes what's waiting, "Waking your server…" status · `ceccdc1` |
+| "the indenting isnt working both tab and sift tab change type" | Extension: Shift+Tab only indented inside a bullet; on an ordinary line the browser moved focus instead and it looked like the type changed | Shift+Tab indents any line and never reaches the type picker |
+| Model box still shown while meaning to use the server | Person: Service was still Groq (the model shown was Groq's default) | Nothing to change — the box does hide on "My Lazy Notes server" |
+
+**Still open (asked for, not built yet)**
+- Ask about the open PDF straight from the AI tab, with a choice of asking about the document vs the selection.
+- A quick way back to edit the last note you typed (check the existing Tab path first; else Ctrl+↑).
+- "+ Open a document" wanted at the top left; a parallel session moved it, owner says the position still hasn't changed.
+- AI connection reported as still not working; owner is tracking it themselves.
+
+---
+
 ## 2026-11-26 · BME213 (Physiology): "Introduction" + "Cell and its functions"
 
 **How the owner works**
