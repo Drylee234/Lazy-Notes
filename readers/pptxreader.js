@@ -229,10 +229,11 @@ function renderDeck() {
     } else {
       el.style.background = cardBackground;
       el.style.color = ink;
-      slide.blocks.forEach((b) => body.appendChild(renderBlock(b)));
+      // Lines and arrows mean nothing without the slide's layout.
+      slide.blocks.forEach((b) => { if (b.kind !== "shape") body.appendChild(renderBlock(b)); });
     }
 
-    if (!slide.blocks.length) {
+    if (!slide.blocks.some((b) => b.kind !== "shape")) {
       const empty = document.createElement("p");
       empty.className = "slide-empty";
       empty.textContent = "No text on this slide.";
@@ -277,16 +278,17 @@ function placeBlock(block) {
     top: `${(y / deck.height) * 100}%`,
     width: `${(w / deck.width) * 100}%`,
     height: `${(h / deck.height) * 100}%`,
-    zIndex: String((block.z ?? 0) + (block.kind === "image" ? 0 : 1000))
+    zIndex: String((block.z ?? 0) + (block.kind === "image" || block.kind === "shape" ? 0 : 1000))
   });
 
-  if (block.kind === "image") {
+  if (block.kind === "image" || block.kind === "shape") {
     const img = document.createElement("img");
     const url = URL.createObjectURL(block.blob);
     imageUrls.push(url);
     img.src = url;
-    img.alt = block.alt;
+    img.alt = block.alt || "";
     img.draggable = false;
+    if (block.kind === "shape") img.className = "s-drawn";   // no "Save image" on a lone line
     wrap.appendChild(img);
     return wrap;
   }
@@ -797,4 +799,4 @@ window.addEventListener("hashchange", () => { if (deck) goToSlide(slideFromHash(
 
 
 // "Save image" on a picture (diagrams, equation images): saved as a Figure note.
-LazyFigure.imageButtons(viewerEl, ".slide img", (img) => Number(img.closest(".slide")?.dataset.slide) || null);
+LazyFigure.imageButtons(viewerEl, ".slide img:not(.s-drawn)", (img) => Number(img.closest(".slide")?.dataset.slide) || null);

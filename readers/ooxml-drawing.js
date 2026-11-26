@@ -1,11 +1,13 @@
-// Lazy Notes — Word drawings (groups, drawing canvases, lines, arrows, text
-// boxes) as one SVG picture, for the document reader.
+// Lazy Notes — Office drawings (lines, connectors with arrowheads, shapes,
+// text boxes, groups, drawing canvases) as SVG, for the Word and slides
+// readers.
 //
 // A diagram in Word is often not one picture but a group of shapes: straight
 // lines and connectors with arrowheads, rectangles/ellipses, text boxes for
 // the labels, and maybe pictures. docx-parse.js used to keep only the first
 // picture in a drawing, so the lines and arrows vanished. This draws the
-// whole thing.
+// whole thing. The slides reader uses shapeSvg() for single shapes: its
+// text boxes are already laid out as text, but lines and arrows weren't drawn.
 //
 // drawingSvg(graphicData, { width, height, picture, theme }) → SVG text, or null
 //   graphicData  the a:graphicData of a w:drawing
@@ -366,4 +368,22 @@ export function themeColours(themeRoot) {
     if (hex) map.set(c.localName, hex);
   }
   return map;
+}
+
+// One shape on its own (a slide's line, connector, arrow or box), for the
+// slides reader: { svg, box } with box the area it covers in EMU — the
+// shape's own box grown a little so line ends and arrowheads aren't cut.
+// null when the shape draws nothing (no outline, no fill).
+export function shapeSvg(sp, { theme }) {
+  const b = xfrmOf(kid(sp, "spPr"));
+  if (!b.has) return null;
+  const ctx = { theme, picture: () => null, defs: new Map(), drawn: 0 };
+  const body = shape(sp, ctx, 1);
+  if (!ctx.drawn) return null;
+  const lineW = Math.max(3175, num(kid(kid(sp, "spPr"), "ln"), "w", 9525));
+  const pad = lineW * 8;
+  const box = { x: b.x - pad, y: b.y - pad, w: b.w + pad * 2, h: b.h + pad * 2 };
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.x} ${box.y} ${box.w} ${box.h}" preserveAspectRatio="none" overflow="visible">` +
+              `<defs>${[...ctx.defs.values()].join("")}</defs>${body}</svg>`;
+  return { svg, box };
 }

@@ -4,7 +4,7 @@
 // pictures, and page breaks. Not a renderer: fonts, colours, columns,
 // headers/footers and free-floating text boxes are left out. Diagrams drawn
 // with Word shapes (lines, arrows, text-box labels, grouped pictures) come
-// out as one SVG picture (docx-drawing.js). The point is text that can
+// out as one SVG picture (ooxml-drawing.js). The point is text that can
 // be selected and saved as notes.
 //
 // A .docx is a ZIP of XML parts (Office Open XML), read with the browser's
@@ -19,7 +19,7 @@
 // Pages follow the document's own page breaks: explicit ones, section
 // breaks, and the breaks Word recorded when it last laid the file out.
 
-import { drawingSvg, themeColours } from "./docx-drawing.js";
+import { drawingSvg, themeColours } from "./ooxml-drawing.js";
 
 const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
