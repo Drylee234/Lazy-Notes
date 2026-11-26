@@ -8,6 +8,7 @@ import './bg_context_menus.js';
 import './bg_messaging.js';
 import './bg_sidepanel.js';
 import './bg_pptx.js';
+import './bg_sync.js';
 import './bg_arrange.js';
 
 import { refreshCourseContextMenuItems } from './bg_context_menus.js';

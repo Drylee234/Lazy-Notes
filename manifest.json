@@ -13,7 +13,8 @@
     "downloads",
     "activeTab",
     "scripting",
-    "commands"
+    "commands",
+    "alarms"
   ],
 
   "host_permissions": [

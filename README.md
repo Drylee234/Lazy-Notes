@@ -15,4 +15,11 @@ to convert raw highlights into notes
 | `lib/` | Third-party code: PDF.js, nspell and the English dictionary. |
 | `icons/` | Extension icons and logo. |
 | `docs/` | Notes for continuing work (handoff file). |
-| `server/` | An old optional Flask backend; the extension doesn't use it. |
+| `server/` | Optional sync server + read-only mobile site (see `server/README.md`). |
+
+## Server
+
+`server/` is an optional sync server: the extension sends it a copy of your
+notes, and it shows them read-only on your phone. Run it locally with
+`LAZYNOTES_KEY=… python server/app.py` (port 8787) or deploy it free on Render
+with `render.yaml`. See `server/README.md`.

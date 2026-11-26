@@ -1,0 +1,23 @@
+# Lazy Notes sync server + mobile reader on Render (free plan).
+# Free web services sleep after ~15 minutes idle and wake on the next
+# request (takes up to a minute), which is why the extension retries.
+services:
+  - type: web
+    name: lazy-notes
+    runtime: python
+    plan: free
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /api/health
+    envVars:
+      - key: LAZYNOTES_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lazy-notes-db
+          property: connectionString
+
+databases:
+  - name: lazy-notes-db
+    plan: free

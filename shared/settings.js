@@ -47,7 +47,24 @@ globalThis.LazySettings = (() => {
         <button type="button" class="set-btn set-cancel">Cancel</button>
       </div>
     </div>
-    <div class="set-backup-status"></div>`;
+    <div class="set-backup-status"></div>
+    <details class="set-sync">
+      <summary class="set-label set-sync-head">Sync to your server <span class="set-sync-dot"></span></summary>
+      <label class="set-field"><span>Server address</span>
+        <input type="url" class="set-sync-url" placeholder="https://your-server.onrender.com" spellcheck="false" /></label>
+      <label class="set-field"><span>Sync key</span>
+        <span class="set-key-row">
+          <input type="password" class="set-sync-key" placeholder="same as LAZYNOTES_KEY" spellcheck="false" autocomplete="off" />
+          <button type="button" class="set-btn set-key-show" title="Show / hide">👁</button>
+        </span></label>
+      <div class="set-backup">
+        <button type="button" class="set-btn set-key-gen" title="Make a new random key">Generate key</button>
+        <button type="button" class="set-btn set-sync-now">Sync now</button>
+      </div>
+      <div class="set-sync-hint" hidden>Put this same key on your server as <b>LAZYNOTES_KEY</b>.</div>
+      <div class="set-sync-status"></div>
+      <div class="set-sync-phone" hidden>Open on phone: <span class="set-sync-link"></span></div>
+    </details>`;
 
   function build(container) {
     const root = document.createElement("div");
@@ -184,6 +201,61 @@ globalThis.LazySettings = (() => {
       say("Replaced with the backup.");
     });
     showLast();
+
+    // ── Sync to your server (background/bg_sync.js does the work) ──
+    const syncUrl = root.querySelector(".set-sync-url");
+    const syncKey = root.querySelector(".set-sync-key");
+    const syncStatus = root.querySelector(".set-sync-status");
+    const syncDot = root.querySelector(".set-sync-dot");
+    const phone = root.querySelector(".set-sync-phone");
+    const ago = (ms) => {
+      const s = Math.round((Date.now() - ms) / 1000);
+      return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : new Date(ms).toLocaleDateString();
+    };
+    function showSync() {
+      chrome.storage.local.get(["lnSyncUrl", "lnSyncKey", "lnSyncState"], ({ lnSyncUrl = "", lnSyncKey = "", lnSyncState: st = {} }) => {
+        if (document.activeElement !== syncUrl) syncUrl.value = lnSyncUrl;
+        if (document.activeElement !== syncKey) syncKey.value = lnSyncKey;
+        const url = lnSyncUrl.trim().replace(/\/+$/, "");
+        phone.hidden = !url;
+        root.querySelector(".set-sync-link").textContent = url;
+        let text = "", tone = "";
+        if (!url || !lnSyncKey) { text = "Not set up."; tone = ""; }
+        else if (st.lastError && /key|too big/i.test(st.lastError)) { text = st.lastError; tone = "bad"; }
+        else if (st.lastError && st.pending) { text = `Waiting for the server… ${st.lastError.replace(/^.*— /, "")}`; tone = "wait"; }
+        else if (st.pending) { text = "Changes waiting to sync…"; tone = "wait"; }
+        else if (st.lastOkAt) { text = `Synced ${ago(st.lastOkAt)}`; tone = "ok"; }
+        else { text = "Not synced yet."; tone = "wait"; }
+        syncStatus.textContent = text;
+        syncStatus.dataset.tone = tone;
+        syncDot.dataset.tone = tone;
+      });
+    }
+    const saveField = (input, key, clean) => input.addEventListener("change", () =>
+      chrome.storage.local.set({ [key]: clean(input.value) }));
+    saveField(syncUrl, "lnSyncUrl", (v) => v.trim().replace(/\/+$/, ""));
+    saveField(syncKey, "lnSyncKey", (v) => v.trim());
+    root.querySelector(".set-key-show").addEventListener("click", () => {
+      syncKey.type = syncKey.type === "password" ? "text" : "password";
+    });
+    root.querySelector(".set-key-gen").addEventListener("click", () => {
+      const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      syncKey.value = [...bytes].map((b) => abc[b % abc.length]).join("");
+      syncKey.type = "text";
+      chrome.storage.local.set({ lnSyncKey: syncKey.value });
+      root.querySelector(".set-sync-hint").hidden = false;
+    });
+    root.querySelector(".set-sync-now").addEventListener("click", async () => {
+      await chrome.storage.local.set({ lnSyncUrl: syncUrl.value.trim().replace(/\/+$/, ""), lnSyncKey: syncKey.value.trim() });
+      syncStatus.textContent = "Syncing… (a sleeping server can take a minute)";
+      syncStatus.dataset.tone = "wait";
+      chrome.runtime.sendMessage({ type: "SYNC_NOW" }, () => { void chrome.runtime.lastError; showSync(); });
+    });
+    chrome.storage.onChanged.addListener((c, area) => {
+      if (area === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey)) showSync();
+    });
+    showSync();
 
     const KEYS = ["lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen"];
     chrome.storage.onChanged.addListener((changes, area) => {

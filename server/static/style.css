@@ -1,0 +1,138 @@
+/* Lazy Notes — mobile reader. Same look as the extension's Study page. */
+
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --bg: #ffffff; --canvas: #f4f4f6; --surface: #f7f7f8; --hover: #efeff2;
+  --border: #e3e3e8; --border-strong: #c9c9d1;
+  --pri: #16161a; --sec: #55555f; --dim: #8e8e99;
+  --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, 0.08); --on-accent: #fff;
+  --danger: #c0392b; --marker: rgba(253, 224, 71, 0.55);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18181b; --canvas: #0f0f11; --surface: #1f1f23; --hover: #27272c;
+    --border: #2c2c32; --border-strong: #3d3d45;
+    --pri: #ececf0; --sec: #a1a1aa; --dim: #71717a;
+    --accent: #818cf8; --accent-soft: rgba(129, 140, 248, 0.12); --on-accent: #111114;
+    --danger: #ef6461; --marker: rgba(253, 224, 71, 0.22);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--pri); font: 16px/1.55 var(--font);
+  -webkit-text-size-adjust: 100%; overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+button { font: inherit; color: inherit; }
+
+/* ── Top bar ── */
+.bar {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px;
+  padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.bar-title { flex: 1; min-width: 0; padding: 0 8px; }
+.crumb { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crumb:empty { display: none; }
+h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.icon-btn {
+  flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent;
+  font-size: 26px; line-height: 1; color: var(--sec); cursor: pointer;
+}
+.icon-btn:active { background: var(--hover); }
+.icon-btn[hidden] { display: none; }
+.menu {
+  position: absolute; right: 8px; top: calc(100% - 4px); min-width: 180px; padding: 6px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.menu[hidden] { display: none; }
+.menu button {
+  display: block; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: transparent; text-align: left;
+}
+.menu button:active { background: var(--hover); }
+#forget { color: var(--danger); }
+
+.search-wrap { padding: 12px 16px 0; }
+.search-wrap[hidden] { display: none; }
+#search {
+  width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); color: var(--pri); font: inherit;
+}
+#search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+main { padding: 12px 16px 24px; }
+.status { padding: 8px 16px 24px; font-size: 12.5px; color: var(--dim); text-align: center; }
+
+/* ── Lists (courses, topics, search hits) ── */
+.list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.row {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  color: inherit; text-decoration: none;
+}
+.row:active { background: var(--hover); }
+.row-main { flex: 1; min-width: 0; }
+.row-name { font-weight: 600; overflow-wrap: anywhere; }
+.row-meta { font-size: 13px; color: var(--sec); }
+.row-snip { font-size: 13.5px; color: var(--sec); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row-snip mark { background: var(--marker); color: inherit; }
+.chev { flex: none; color: var(--dim); font-size: 22px; }
+.section-title { margin: 18px 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.empty { padding: 28px 8px; text-align: center; color: var(--dim); }
+
+/* ── Key screen ── */
+.key-card { max-width: 420px; margin: 32px auto 0; }
+.key-card p { color: var(--sec); }
+.key-card input {
+  width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); color: var(--pri); font: inherit;
+}
+.btn {
+  width: 100%; min-height: 48px; margin-top: 10px; border: 0; border-radius: 12px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600;
+}
+.err { color: var(--danger); font-size: 14px; min-height: 20px; margin-top: 8px; }
+
+/* ── The notes (like the Study page) ── */
+.notes { --gutter: 18px; }
+.note {
+  position: relative; margin: 6px 0 0; padding: 2px 0 2px calc(var(--gutter) + var(--indent, 0px));
+  overflow-wrap: anywhere;
+}
+.note-text { white-space: pre-wrap; }
+.hl { background: linear-gradient(to top, var(--marker) 0, var(--marker) 45%, transparent 45%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.meta { font-size: 12px; color: var(--dim); margin-top: 1px; }
+.meta a { color: var(--dim); }
+.annot { font-size: 14px; color: var(--sec); margin-top: 2px; font-style: italic; }
+
+.note--header { padding-left: var(--indent, 0px); margin-top: 22px; font-size: 1.15em; font-weight: 700; }
+.note--header:first-child { margin-top: 4px; }
+.note--sub-topic { padding-left: calc(8px + var(--indent, 0px)); margin-top: 16px; font-weight: 650; }
+.note--definition .term { font-weight: 700; }
+.note--list-head { margin-top: 10px; font-weight: 650; }
+.note--list-point { margin-top: 0; padding-left: calc(var(--gutter) + 18px + var(--indent, 0px)); }
+.note--list-point::before { content: var(--bullet, "•"); position: absolute; left: calc(var(--gutter) + 4px + var(--indent, 0px)); color: var(--accent); }
+.note--formula { margin: 10px 0; text-align: center; }
+.note--formula .note-text { display: inline-block; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-family: "Cambria Math", "STIX Two Math", ui-monospace, monospace; }
+.note--formula .context { font-size: 13px; color: var(--sec); margin-top: 4px; }
+.note--summary .note-text { display: block; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: 10px; background: var(--accent-soft); }
+.note--note .note-text { display: block; padding: 8px 12px; border-left: 3px solid var(--danger); border-radius: 6px; background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.note--note .callout { color: var(--danger); font-weight: 700; }
+.note--generic.list-head-auto .note-text { font-weight: 650; }
+.note--figure img { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); background: #fff; }
+.note--figure figcaption { font-size: 14px; color: var(--sec); font-style: italic; margin-top: 4px; }
+
+/* Typed notes: your own words, no marker */
+.typed p { margin: 0; }
+.typed .th { font-weight: 700; margin: 6px 0 2px; }
+.typed .th1 { font-size: 1.15em; } .typed .th2 { font-size: 1.05em; } .typed .th3 { color: var(--sec); }
+.typed ul, .typed ol { margin: 2px 0; padding-left: 22px; }
+.typed li::marker { color: var(--accent); }
+.typed blockquote { margin: 4px 0; padding-left: 10px; border-left: 3px solid var(--border-strong); color: var(--sec); }
+.typed mark { background: var(--marker); color: inherit; border-radius: 2px; }
