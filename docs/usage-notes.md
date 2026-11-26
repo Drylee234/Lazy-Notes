@@ -115,3 +115,7 @@ seen → cause → what changed (commit) or what's still open.
 - Home layout in the panel: NOW READING card first, then SAVING TO pickers, then a bigger "+ Open a document…" link (owner's screenshot).
 - Chrome's side panel is also actively closed when a reader tab loads (`sidePanel.close`); the "Saving to…" pill shows our panel instead of Chrome's.
 - "All notes" button in every reader toolbar (opens courses.html in a new tab).
+
+## 2026-11-26 · "How to use"
+
+- Owner forgot the floating note typer shortcut (Ctrl+.). Added a shortcuts list (`shared/howto.js`, single source): `?` button in the reader panel's title bar (also the `?` key) opens it over the page; `howto.html` page; "How to use" link in the side panel footer. Keep the list updated when shortcuts change.

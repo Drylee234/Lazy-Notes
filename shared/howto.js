@@ -1,0 +1,46 @@
+// Lazy Notes — "How to use": every shortcut in one place.
+// Used by howto.html (a page), the Notes panel's ? button in the readers
+// (an overlay) and the side panel's footer link. Edit the list here only.
+(() => {
+  const mac = /Mac/.test(navigator.platform);
+  const C = mac ? "⌘" : "Ctrl";
+  const SECTIONS = [
+    { title: "Writing a note while you read (PDF · slides · Word)", rows: [
+      [`${C} + .`, "Floating note typer: jump into the Notes box (with words selected: quote them)"],
+      [`${C} + /`, "Show / hide the Notes panel"],
+      ["Double-click blank space", "Pop-up note box right there"],
+      ["Right-click › ✎ Quick note here", "Same pop-up note box"],
+      ["Hover the Notes tab", "Opens the panel; move away and it closes"],
+      ["Enter · Tab · 0–8", "In a note box: Enter saves · Tab picks the type · a number saves as that type · Esc closes"],
+    ]},
+    { title: "Highlighting & saving", rows: [
+      ["Select words", "The save pop-up appears: pick a type (number keys 1–8) or press Enter for the lit one"],
+      ["Tab (in the pop-up)", "Jump from the text box to the type chips"],
+      ["S", "Snip a figure (PDF)"],
+      ["Click text, then arrows", "PDF keyboard cursor: ←→↑↓, Home/End = line ends, Shift+arrows select, Enter saves the selection"],
+      ["Alt + Shift + H", "Highlighter on / off (anywhere)"],
+      ["Alt + Shift + C", "Create a course"],
+    ]},
+    { title: "In the reader", rows: [
+      ["← →", "Previous / next page"],
+      [`${C} + +  /  ${C} + −  /  ${C} + 0`, "Zoom in / out / reset (pinch works too)"],
+      ["F11", "Leave full screen (readers open full screen)"],
+      ["All notes (toolbar)", "Browse, search and edit everything in a new tab"],
+    ]},
+    { title: "Study tab — your notes list", rows: [
+      [`${C} + ↑  (in the note box)`, "Jump to the last note so you can edit it; Enter edits it"],
+      [`${C} + ↓  (on a note)`, "Back to the note box"],
+      ["↑ ↓ · Home · End", "Move between notes"],
+      ["Enter · Space", "Edit the note"],
+      ["Delete (twice)", "Delete the note"],
+      ["Alt + ↑ ↓", "Move the note up / down"],
+      ["Alt + ← →", "Outdent / indent (nest under the note above)"],
+      ["← →  (on a heading)", "Fold / unfold what's under it"],
+      ["Tab · Shift+Enter", "In the note box: Tab = Save as (then a number or Enter) · Shift+Enter = new line"],
+    ]},
+  ];
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  window.lnHowtoHtml = () => SECTIONS.map((s) =>
+    `<h3>${esc(s.title)}</h3><table>${s.rows.map(([k, d]) => `<tr><td><kbd>${esc(k)}</kbd></td><td>${esc(d)}</td></tr>`).join("")}</table>`
+  ).join("");
+})();

@@ -46,6 +46,7 @@
   bar.className = "ln-embed-bar";
   bar.innerHTML = `
     <span class="ln-bar-title" title="Drag to move">Lazy Notes</span>
+    <button type="button" class="ln-bar-btn ln-bar-help" title="How to use (shortcuts)" aria-label="How to use">?</button>
     <button type="button" class="ln-bar-btn ln-bar-fold" title="Fold to this bar" aria-label="Fold">−</button>
     <button type="button" class="ln-bar-btn ln-bar-mode" data-to=""></button>
     <button type="button" class="ln-bar-btn ln-bar-mode2" data-to=""></button>
@@ -241,6 +242,23 @@
       });
     }).observe(aside);
   }
+  // "?" — every shortcut, over the page (Esc or a click outside closes it).
+  function showHowto() {
+    if (document.getElementById("ln-howto")) return;
+    const w = document.createElement("div");
+    w.id = "ln-howto";
+    w.innerHTML = `<div class="ln-howto-card" role="dialog" aria-label="How to use"><button type="button" class="ln-howto-x" aria-label="Close">✕</button><h2>How to use Lazy Notes</h2>${window.lnHowtoHtml?.() || ""}<p><a href="${chrome.runtime.getURL("howto.html")}" target="_blank" rel="noopener">Open as a page</a></p></div>`;
+    const close = () => { w.remove(); removeEventListener("keydown", onKey, true); };
+    const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } };
+    addEventListener("keydown", onKey, true);
+    w.addEventListener("mousedown", (e) => { if (e.target === w) close(); });
+    w.querySelector(".ln-howto-x").addEventListener("click", close);
+    document.body.appendChild(w);
+  }
+  bar.querySelector(".ln-bar-help").addEventListener("click", showHowto);
+  addEventListener("keydown", (e) => {
+    if (e.key === "?" && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !e.target.isContentEditable && !e.ctrlKey && !e.metaKey) showHowto();
+  });
   bar.querySelector(".ln-bar-pop").addEventListener("click", popOut);
 
   // Ctrl/⌘+/ shows or hides the panel (also from inside it).

@@ -113,3 +113,15 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 #ln-embed.ln-floating.ln-fade { opacity: 0.45; transition: opacity 0.18s; }
 #ln-embed.ln-floating.ln-fade:hover, #ln-embed.ln-floating.ln-fade:focus-within,
 .ln-embed-moving #ln-embed.ln-floating.ln-fade { opacity: 1; }
+
+#ln-howto { position: fixed; inset: 0; z-index: 400; background: rgba(0, 0, 0, 0.45); display: grid; place-items: center; }
+.ln-howto-card { position: relative; width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 18px 22px 22px;
+  background: var(--bg, #fff); color: var(--pri, #111); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.4); font: 13.5px/1.5 var(--font, system-ui, sans-serif); }
+.ln-howto-card h2 { margin: 0 0 4px; font-size: 18px; }
+.ln-howto-card h3 { margin: 18px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--sec); }
+.ln-howto-card table { width: 100%; border-collapse: collapse; }
+.ln-howto-card td { padding: 5px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+.ln-howto-card td:first-child { width: 38%; }
+.ln-howto-card kbd { font: 600 12px ui-monospace, monospace; padding: 2px 6px; border: 1px solid var(--border-strong, var(--border)); border-radius: 5px; }
+.ln-howto-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; color: var(--dim); font-size: 16px; cursor: pointer; }
+#ln-embed.ln-floating .ln-bar-help { font-weight: 700; padding: 1px 8px; }
