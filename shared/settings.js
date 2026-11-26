@@ -9,12 +9,13 @@
 //   More options: lnPanelMode "tab" | "docked"; lnQuickDblClick, lnQuickSelButtons,
 //   lnQuickMenu, lnQuickFloat (ways to open the readers' pop-up note box);
 //   lnDocCaret (keyboard cursor in PDFs). false = off.
+//   lnDocSnap (a press just beside a word still starts the highlight). false = off.
 // Needs shared/settings.css.
 
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -76,6 +77,7 @@ globalThis.LazySettings = (() => {
       </div>
       <div class="set-label set-sub">Documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
+      <label class="set-check"><input type="checkbox" data-key="lnDocSnap" /> Start highlighting even if you press a little beside the words (PDFs)</label>
     </details>
     <details class="set-sync set-ai">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
