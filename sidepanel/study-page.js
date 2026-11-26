@@ -74,9 +74,9 @@ const StudyPage = (() => {
   syncTypeTab();
   // Numbers pick the type here too (same keys as the save pop-up): 1 Header,
   // 2 Sub topic, 3 Definition, 4 Formula, 5 List point, 6 Important,
-  // 7 Summary, 0 Plain, 9 My note. Enter then saves.
+  // 7 Summary, 8 List head, 0 Plain, 9 My note. Enter then saves.
   const TYPE_KEYS = { "1": "header", "2": "sub topic", "3": "definition", "4": "formula",
-                      "5": "list point", "6": "note", "7": "summary", "0": "generic", "9": "" };
+                      "5": "list point", "6": "note", "7": "summary", "8": "list head", "0": "generic", "9": "" };
   composerType.addEventListener("keydown", (e) => {
     if (e.key in TYPE_KEYS && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
@@ -174,6 +174,7 @@ const StudyPage = (() => {
       arrangeable(el, entry);
       noteList.appendChild(el);
     });
+    LnFold.apply(noteList, entries);   // ▾ / ▸ on headers, sub topics, list heads
     rovingAfterRender();
     const refocus = focusAfterDraw || hadFocus;
     if (refocus) {
@@ -362,6 +363,7 @@ const StudyPage = (() => {
   function startReorder(e, el, note) {
     if (e.button !== 0 || editing || hlEditing) return;
     e.preventDefault();
+    if (LnFold.isFolded(note.id)) LnFold.set(noteList, shown, note.id, false);   // nothing moves unseen
     const line = document.createElement("div");
     line.className = "reorder-line";
     noteList.appendChild(line);
@@ -426,7 +428,7 @@ const StudyPage = (() => {
   // Space edits, Delete asks then deletes (press again), Alt+↑/↓ moves a
   // note, Alt+→/← indents / outdents it.
   let activeNoteId = null;
-  function noteEls() { return [...noteList.querySelectorAll(":scope > .note, :scope .note[data-id]")].filter((n, i, a) => a.indexOf(n) === i); }
+  function noteEls() { return [...noteList.querySelectorAll(":scope > .note, :scope .note[data-id]")].filter((n, i, a) => a.indexOf(n) === i && !n.classList.contains("note--folded-away")); }
   function setActiveNote(el, { focus = true } = {}) {
     if (!el) return;
     noteEls().forEach((n) => { n.tabIndex = n === el ? 0 : -1; });
@@ -454,9 +456,17 @@ const StudyPage = (() => {
     const note = shown.find((n) => String(n.id) === el.dataset.id);
     const els = noteEls();
     const i = els.indexOf(el);
-    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && el.classList.contains("note--head")) {
+      // ← folds what's under a header / sub topic / list head, → shows it.
+      e.preventDefault();
+      focusAfterDraw = el.dataset.id;
+      LnFold.set(noteList, shown, el.dataset.id, e.key === "ArrowLeft");
+      el.focus();
+    } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       if (!note) return;
       e.preventDefault();
+      // Moving a folded head: unfold it first, so nothing moves unseen.
+      if (LnFold.isFolded(note.id)) LnFold.set(noteList, shown, note.id, false);
       moveTo(note, shown.indexOf(note) + (e.key === "ArrowUp" ? -1 : 1));
     } else if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
       if (!note) return;
@@ -1099,9 +1109,9 @@ const StudyPage = (() => {
   // number key, the full name on hover and in the caption. Clicking one (or
   // pressing its number) saves straight away; Enter saves the lit one.
   const CHIP_MARK = { "header": "H", "sub topic": "H2", "definition": "Def", "formula": "ƒx",
-                      "list point": "•", "note": "!", "summary": "Σ", "generic": "¶" };
+                      "list point": "•", "note": "!", "summary": "Σ", "list head": "≡", "generic": "¶" };
   const CHIP_KEY  = { "header": "1", "sub topic": "2", "definition": "3", "formula": "4",
-                      "list point": "5", "note": "6", "summary": "7", "generic": "0" };
+                      "list point": "5", "note": "6", "summary": "7", "list head": "8", "generic": "0" };
 
   // A first guess from the words alone (the page's tags aren't known here).
   function guessType(text) {

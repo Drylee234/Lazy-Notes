@@ -18,6 +18,7 @@
     "list point",
     "note",        // Important: something to remember, stands out
     "summary",
+    "list head",   // introduces the list points under it (off: lnListHeadType = false)
     "generic"      // Plain: just the words
   ];
   // Compact chips: a short mark, the full name on hover and in the caption.
@@ -29,12 +30,23 @@
     "list point": { mark: "•",   name: "List point", key: "5" },
     "note":       { mark: "!",   name: "Important",  key: "6" },
     "summary":    { mark: "Σ",   name: "Summary",    key: "7" },
+    "list head":  { mark: "≡",   name: "List head",  key: "8" },
     "generic":    { mark: "¶",   name: "Plain",      key: "0" }
   };
   let chipEls = {};
   let handoffBtnEls = [];
   let handoffOn = true;   // lnQuickSelButtons: ✎ Note / ❝ Quote in the pop-up
-  chrome.storage.local.get("lnQuickSelButtons", (r) => { handoffOn = r?.lnQuickSelButtons !== false; });
+  let listHeadOn = true;  // lnListHeadType: the List head chip (8)
+  chrome.storage.local.get(["lnQuickSelButtons", "lnListHeadType"], (r) => {
+    handoffOn = r?.lnQuickSelButtons !== false;
+    listHeadOn = r?.lnListHeadType !== false;
+    showListHeadChip();
+  });
+  // Off: hidden from the chips, the number keys and ←/→.
+  const typesOffered = () => CATEGORIES.filter((c) => c !== "list head" || listHeadOn);
+  function showListHeadChip() {
+    if (chipEls["list head"]) chipEls["list head"].style.display = listHeadOn ? "" : "none";
+  }
   let chipCaptionEl = null;
 
   // A selection that's a list: { head, items } when 2+ lines start with a
@@ -630,6 +642,7 @@
       chipEls[cat] = b;
       chipRow.appendChild(b);
     });
+    showListHeadChip();
     const caption = document.createElement("div");
     caption.className = "lazy-notes-chip-caption";
     chipCaptionEl = caption;
@@ -935,14 +948,14 @@
   function showChipCaption(cat) {
     if (!chipCaptionEl) return;
     const c = CHIP[cat] || CHIP.generic;
-    chipCaptionEl.textContent = `${c.name} · Enter saves · 1–7, 0 = type`;
+    chipCaptionEl.textContent = `${c.name} · Enter saves · ${listHeadOn ? "1–8" : "1–7"}, 0 = type`;
   }
 
   // Where the chip row goes: right after the hidden category row.
   function row4Placeholder(container, row3) { return row3.nextSibling; }
 
   function selectCategoryOption(cat) {
-    if (!CHIP[cat]) cat = cat === "list head" ? "list point" : "generic";
+    if (!CHIP[cat] || (cat === "list head" && !listHeadOn)) cat = cat === "list head" ? "list point" : "generic";
     selectedCategory = cat;
     Object.entries(chipEls).forEach(([k, b]) => {
       b.classList.toggle("on", k === cat);
@@ -1073,8 +1086,8 @@
     // box: Tab out first); ←/→ move the lit chip; Tab from the text box
     // jumps to the chips.
     const typing = active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT");
-    if (!typing && inPopup(active) && /^[0-7]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      const cat = CATEGORIES.find((c) => CHIP[c].key === event.key);
+    if (!typing && inPopup(active) && /^[0-8]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const cat = typesOffered().find((c) => CHIP[c].key === event.key);
       if (cat) {
         event.preventDefault();
         selectCategoryOption(cat);
@@ -1090,8 +1103,9 @@
     }
     if (active?.classList?.contains("lazy-notes-chip") && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
       event.preventDefault();
-      const i = CATEGORIES.indexOf(selectedCategory);
-      const next = CATEGORIES[(i + (event.key === "ArrowRight" ? 1 : -1) + CATEGORIES.length) % CATEGORIES.length];
+      const offered = typesOffered();
+      const i = offered.indexOf(selectedCategory);
+      const next = offered[(i + (event.key === "ArrowRight" ? 1 : -1) + offered.length) % offered.length];
       selectCategoryOption(next);
       chipEls[next]?.focus();
       return;
@@ -1755,6 +1769,7 @@
     }
     if (changes.lnPopupSide) popupSide = changes.lnPopupSide.newValue || "above";
     if (changes.lnQuickSelButtons) handoffOn = changes.lnQuickSelButtons.newValue !== false;
+    if (changes.lnListHeadType) { listHeadOn = changes.lnListHeadType.newValue !== false; showListHeadChip(); }
 
     // Storage is the source of truth for on/off: extension pages (the PDF
     // reader) never get the background's tab broadcasts, and this also covers

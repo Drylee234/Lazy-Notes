@@ -557,22 +557,38 @@ async function renderDisplay() {
       return;
     }
 
-    let notes = Object.entries(topic.highlights || {}).map(([id, fields]) => ({ id, ...fields }));
-
-    if (categoryFilter.value) {
-      notes = notes.filter((n) => n.category === categoryFilter.value);
-    }
-
-    notes = sortHighlights(notes, sortSel.value);
-
+    const highlights = Object.entries(topic.highlights || {}).map(([id, fields]) => ({ id, ...fields }));
     // Notes typed in the side panel: shown in time order among the
     // highlights (after them when sorted by type), edited in the panel.
-    const typed = categoryFilter.value ? [] :
-      Object.entries(topic.notes || {}).map(([id, fields]) => ({ id, kind: "typed", ...fields }));
-    if (typed.length) {
+    const typed = Object.entries(topic.notes || {}).map(([id, fields]) => ({ id, kind: "typed", ...fields }));
+
+    // What sits under what (headers, sub topics, list heads), in page order.
+    const inOrder = sortHighlights([...highlights, ...typed], "chronological");
+    const parent = noteParents(inOrder);
+    const contextIds = new Set();
+
+    let notes;
+    if (categoryFilter.value) {
+      // A filter shows the matches under the heads they belong to (quietly).
+      let match = inOrder.filter((n) => n.kind !== "typed" && n.category === categoryFilter.value);
+      if (categoryFilter.value === "list head") {
+        // List heads come with their points (a Plain line over points counts as one).
+        const heads = new Set();
+        parent.forEach((p, id) => { const n = inOrder.find((x) => String(x.id) === id); if (n?.category === "list point" && p) heads.add(p); });
+        match = inOrder.filter((n) => n.kind !== "typed" && (n.category === "list head" || heads.has(String(n.id)) ||
+          (n.category === "list point" && heads.has(parent.get(String(n.id))))));
+      }
+      const keep = new Set(match.map((n) => String(n.id)));
+      match.forEach((n) => {
+        for (let a = parent.get(String(n.id)); a; a = parent.get(a)) if (!keep.has(a)) { keep.add(a); contextIds.add(a); }
+      });
+      notes = sortSel.value === "category" ? sortHighlights(match, "category")
+        : inOrder.filter((n) => keep.has(String(n.id)));
+      if (sortSel.value !== "category" && sortSel.value !== "chronological") notes = sortHighlights(notes, sortSel.value);
+    } else {
       notes = sortSel.value === "category"
-        ? [...notes, ...sortHighlights(typed, "chronological")]
-        : sortHighlights([...notes, ...typed], sortSel.value);
+        ? [...sortHighlights(highlights, "category"), ...sortHighlights(typed, "chronological")]
+        : sortHighlights([...highlights, ...typed], sortSel.value);
     }
 
     if (notes.length === 0) {
@@ -612,6 +628,7 @@ async function renderDisplay() {
       }
 
       const el = renderNote(note);
+      if (contextIds.has(String(note.id))) el.classList.add("note--context");
       const edit = () => { if (editingNoteId === null) expandToEdit(el, note); };
       el.addEventListener("click", edit);
       el.addEventListener("keydown", (e) => {
@@ -619,6 +636,9 @@ async function renderDisplay() {
       });
       listEl.appendChild(el);
     });
+
+    // Fold / unfold under heads (page order only; not while filtering).
+    if (!categoryFilter.value && sortSel.value === "chronological") LnFold.apply(listEl, notes);
 
     if (focusId) {
       const target = listEl.querySelector(`[data-id="${CSS.escape(focusId)}"]`);

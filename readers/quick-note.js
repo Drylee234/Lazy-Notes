@@ -30,12 +30,13 @@
     { cat: "list point", mark: "•",   name: "List point", key: "5" },
     { cat: "note",       mark: "!",   name: "Important",  key: "6" },
     { cat: "summary",    mark: "Σ",   name: "Summary",    key: "7" },
+    { cat: "list head",  mark: "≡",   name: "List head",  key: "8" },
     { cat: "generic",    mark: "¶",   name: "Plain",      key: "0" }
   ];
   const UNDO_MS = 6000;
 
   // Settings (all on unless switched off).
-  const SETTING_KEYS = ["lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode"];
+  const SETTING_KEYS = ["lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode", "lnListHeadType"];
   const settings = {};
   const on = (k) => settings[k] !== false;
   chrome.storage.local.get(SETTING_KEYS, (r) => Object.assign(settings, r));
@@ -155,6 +156,7 @@
     input.value = quote ? "" : String(text || "").trim();
     input.placeholder = quote ? "Your note about it (optional)…" : "Type a note…";
     chips["my note"].hidden = !!quote;           // a quote is a highlight
+    chips["list head"].hidden = !on("lnListHeadType");
     pick(quote ? (category && chips[category] && category !== "my note" ? category : "generic") : "my note");
 
     const noTopic = !activeCourse || !activeTopic;

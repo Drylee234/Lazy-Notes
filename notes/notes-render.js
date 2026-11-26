@@ -18,9 +18,9 @@ const CATEGORY_LABELS = {
 };
 
 // The types offered when saving or changing one, in pick order (number keys
-// 1-7, Plain = 0). "list head" is no longer offered (a line right above list
-// points gets its look automatically) but old ones still show.
-const PICK_TYPES = ["header", "sub topic", "definition", "formula", "list point", "note", "summary", "generic"];
+// 1-8, Plain = 0). A Plain line right above list points also acts as their
+// list head.
+const PICK_TYPES = ["header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "generic"];
 
 // A short readable name for where a note came from.
 function sourceLabel(note) {
@@ -254,3 +254,92 @@ function renderTypedNote(note) {
 
   return el;
 }
+
+// ---------------------------------------------------------------------------
+// What belongs under what (in page order), and folding
+// ---------------------------------------------------------------------------
+// A Header holds everything down to the next Header; a Sub topic down to the
+// next Sub topic or Header; a List head (or a Plain line right above list
+// points, which shows as one) holds the list points straight after it.
+// notes: [{ id, category, kind }] in the order they're shown. Typed notes
+// (kind "typed") sit under the header/sub topic they follow.
+// Returns Map(id → parent id or null).
+function noteParents(notes) {
+  const parent = new Map();
+  let header = null, sub = null, head = null;
+  notes.forEach((n, i) => {
+    const id = String(n.id);
+    const c = n.kind === "typed" ? "typed" : n.category;
+    if (c === "header") { parent.set(id, null); header = id; sub = null; head = null; }
+    else if (c === "sub topic") { parent.set(id, header); sub = id; head = null; }
+    else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed")) {
+      parent.set(id, sub || header); head = id;
+    } else if (c === "list point") parent.set(id, head || sub || header);
+    else { parent.set(id, sub || header); head = null; }
+  });
+  return parent;
+}
+
+// The heads among them, with how many notes each holds (all levels).
+function noteChildren(parent) {
+  const kids = new Map();
+  parent.forEach((p, id) => {
+    for (let a = p; a; a = parent.get(a)) kids.set(a, (kids.get(a) || 0) + 1);
+    void id;
+  });
+  return kids;
+}
+
+// Folding: heads get a ▾ / ▸ button; a folded head hides what's under it.
+// Folded heads are remembered in this browser (localStorage "ln-folded").
+const LnFold = (() => {
+  const KEY = "ln-folded";
+  let folded;
+  try { folded = new Set(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch (_) { folded = new Set(); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...folded].slice(-3000))); } catch (_) {} };
+
+  // container: the element holding the .note[data-id] elements, in order.
+  function apply(container, notes) {
+    const parent = noteParents(notes);
+    const kids = noteChildren(parent);
+    const els = new Map([...container.querySelectorAll(".note[data-id]")].map((el) => [el.dataset.id, el]));
+    const hiddenBy = (id) => { for (let a = parent.get(id); a; a = parent.get(a)) if (folded.has(a)) return a; return null; };
+    els.forEach((el, id) => {
+      el.querySelectorAll(".fold-btn, .fold-count").forEach((x) => x.remove());
+      el.classList.toggle("note--folded-away", !!hiddenBy(id));
+      const n = kids.get(id) || 0;
+      el.classList.toggle("note--head", n > 0);
+      el.classList.toggle("note--folded", n > 0 && folded.has(id));
+      if (!n) return;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "fold-btn";
+      b.tabIndex = -1;
+      b.textContent = folded.has(id) ? "▸" : "▾";
+      b.title = folded.has(id) ? `Show the ${n} note${n === 1 ? "" : "s"} under it (→)` : "Fold what's under it (←)";
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-expanded", String(!folded.has(id)));
+      b.addEventListener("mousedown", (e) => e.stopPropagation());
+      b.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); set(container, notes, id, !folded.has(id)); });
+      // Right after the heading's words (the left margin has the drag
+      // handle and indent buttons).
+      const at = el.querySelector(".note-text") || el;
+      at.appendChild(b);
+      if (folded.has(id)) {
+        const c = document.createElement("span");
+        c.className = "fold-count";
+        c.textContent = `${n} more`;
+        c.addEventListener("click", (e) => { e.stopPropagation(); set(container, notes, id, false); });
+        at.appendChild(c);
+      }
+    });
+  }
+  function set(container, notes, id, fold) {
+    id = String(id);
+    if (fold) folded.add(id); else folded.delete(id);
+    save();
+    apply(container, notes);
+  }
+  const isFolded = (id) => folded.has(String(id));
+  return { apply, set, isFolded };
+})();
