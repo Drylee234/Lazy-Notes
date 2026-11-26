@@ -70,6 +70,28 @@ const TASKS = {
       `Write ${extra || 5} short test-yourself questions from these notes, one per line, numbered. Each must be answerable from the notes. No answers.\n\n---\n${text}`
   },
 
+  // Ask your own question about a part of the document. `extra` is the
+  // question. The words are the only source it is allowed to use.
+  ask: {
+    maxTokens: 1200,
+    prompt: (text, extra) =>
+      `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${extra || "What does this mean?"}\n\n--- passage ---\n${text}`
+  },
+
+  // The document itself, not the notes taken from it: the notes are an
+  // abridged version, so summarising them would summarise a summary.
+  summariseDoc: {
+    maxTokens: 2000,
+    prompt: (text, extra) =>
+      `Summarise this part of a lecture document for a student${extra ? ` (${extra})` : ""}. Give the main points as single lines, no numbering, no heading, at most 10 lines. Use only what is here.\n\n---\n${text}`
+  },
+
+  quizDoc: {
+    maxTokens: 2000,
+    prompt: (text, extra) =>
+      `Write ${extra || 5} test-yourself questions a lecturer might ask from this document, one per line, numbered. Each must be answerable from the document. No answers.\n\n---\n${text}`
+  },
+
   // Which of our note types does this highlight look like?
   suggestType: {
     maxTokens: 20,
@@ -189,7 +211,10 @@ export async function handleAiRun(message) {
 
   const text = String(message.text || "").trim();
   if (!text) return { ok: false, reason: "Nothing was sent to work on." };
-  if (text.length > 60000) return { ok: false, reason: "That's too much text at once. Pick fewer notes." };
+  const LIMIT = /Doc$/.test(message.task) ? 240000 : 60000;   // ~40k words for a document
+  if (text.length > LIMIT) return { ok: false, reason: /Doc$/.test(message.task)
+    ? "That document is too long to send in one go. Use This page, or pick a section."
+    : "That's too much text at once. Pick fewer notes." };
 
   const cfg = await config();
   if (!cfg.on) return { ok: false, reason: "The AI is switched off. Turn it on in Settings › AI." };
