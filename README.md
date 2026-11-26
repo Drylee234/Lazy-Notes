@@ -8,7 +8,7 @@ to convert raw highlights into notes
 | *(top level)* | `manifest.json` and the extension's pages: `sidepanel.html`, `pdfreader.html`, `pptxreader.html`, `courses.html`, `topics.html`, `display.html`. They stay here so links saved in notes keep working. |
 | `background/` | The service worker (`background.js`) and its parts (`bg_*.js`): storage, highlights, courses, menus, messages, PDF/.pptx opening. |
 | `content/` | Scripts that run on web pages: the highlighter and save pop-up (`content.js`), the "Highlight this PDF" prompt (`pdf-prompt.js`). |
-| `readers/` | The PDF reader, the slides reader (`pptx-parse.js` reads the file) and recent-documents tracking (`docs-recent.js`). |
+| `readers/` | The PDF, slides and Word readers, recent-documents tracking (`docs-recent.js`), the Notes panel inside them (`embedded-panel.*`: edge tab, docked, pop-out window), the pop-up note box (`quick-note.*`), zoom for slides/Word (`pinch-zoom.js`) and the open document's words for spell check (`doc-words.js`). |
 | `sidepanel/` | The side panel: Home and Study tabs, dropdowns, the formatted note box (`rich-box.js`). |
 | `notes/` | All notes pages, note rendering, the highlight editor and export. |
 | `shared/` | Used everywhere: colours and Light/Dark (`theme.*`), helpers (`utils.js`), spell check (`spell.js`). |
