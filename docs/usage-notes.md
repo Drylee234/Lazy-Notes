@@ -39,6 +39,15 @@ seen → cause → what changed (commit) or what's still open.
 | "the indenting isnt working both tab and sift tab change type" | Extension: Shift+Tab only indented inside a bullet; on an ordinary line the browser moved focus instead and it looked like the type changed | Shift+Tab indents any line and never reaches the type picker |
 | Model box still shown while meaning to use the server | Person: Service was still Groq (the model shown was Groq's default) | Nothing to change — the box does hide on "My Lazy Notes server" |
 
+**Asked for, last word of the session (2026-11-26, before logging off)**
+- **Ask for a Groq API key, not a generic one.** The wording everywhere that
+  asks for a key should name Groq: it is the default service and the one that
+  stays free (~30 requests a minute, ~1,000 a day). Gemini, Claude, OpenRouter
+  and the server route all stay — they are still offered, and more will be
+  added — but Groq is what a new user should be pointed at by name. Places to
+  change: Settings › AI (the key field's placeholder and the line under it),
+  README's AI section, and `server/README.md` where it describes `AI_KEY`.
+
 **Still open (asked for, not built yet)**
 - Ask about the open PDF straight from the AI tab, with a choice of asking about the document vs the selection.
 - A quick way back to edit the last note you typed (check the existing Tab path first; else Ctrl+↑).
