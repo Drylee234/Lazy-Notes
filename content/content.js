@@ -66,6 +66,7 @@
   chrome.storage.local.get("lnPopupSide", (r) => { if (r?.lnPopupSide) popupSide = r.lnPopupSide; });
   const inPopup = (el) => !!el && ((popupContainer && popupContainer.contains(el)) || (sideBox && sideBox.contains(el)));
   let popupAnchor       = null;   // the selection's box in page coordinates
+  let popupMouse        = null;   // where the mouse let go (page coordinates)
 
   function fitTextEdit() {
     if (!textEditEl) return;
@@ -992,6 +993,21 @@
     const fitsRight = (el) => vx + vw - a.right - GAP - el.offsetWidth >= 8;
 
     const mode = popupSide;
+    // Split: the two boxes either side of where the mouse let go, so
+    // neither needs a long trip. Without room on both sides: one above the
+    // mouse, one below.
+    if (mode === "split" && popupMouse) {
+      const m = popupMouse, sw = sideBox.offsetWidth, cw = popupContainer.offsetWidth;
+      const top = (el) => m.y - Math.min(40, el.offsetHeight / 2);
+      if (m.x - vx - 16 - sw >= 8 && vx + vw - m.x - 16 - cw >= 8) {
+        place(sideBox, m.x - 16 - sw, top(sideBox));
+        place(popupContainer, m.x + 16, top(popupContainer));
+      } else {
+        place(sideBox, m.x - sw / 2, m.y - sideBox.offsetHeight - 16);
+        place(popupContainer, m.x - cw / 2, m.y + 16);
+      }
+      return;
+    }
     if (mode === "split") {
       if (fitsLeft(sideBox) && fitsRight(popupContainer)) {
         place(sideBox, a.left - sideBox.offsetWidth - GAP, a.top - 8);
@@ -1048,6 +1064,7 @@
     currentSelectedText     = "";
     currentRange            = null;
     popupAnchor             = null;
+    popupMouse              = null;
   }
 
   function isEventInsidePopup(event) {
@@ -1082,6 +1099,7 @@
     if (rect.width === 0 && rect.height === 0) return;
 
     const paragraphElement = findContextElement(selection.anchorNode);
+    popupMouse = { x: event.clientX + window.scrollX, y: event.clientY + window.scrollY };
     showPopup(rect, text, paragraphElement);
     pauseHoverOpen(event);   // the popup may have appeared under the mouse
   }

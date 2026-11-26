@@ -489,6 +489,27 @@ async function renderDisplay() {
       if (note.kind === "typed") {
         const el = renderTypedNote(note);
         el.title = "Typed in the side panel — edit it there";
+        // × then "Delete?" (4s to confirm), like the Study tab.
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "typed-del";
+        del.textContent = "×";
+        del.title = "Delete this note";
+        let armed = null;
+        del.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!armed) {
+            del.textContent = "Delete?";
+            del.classList.add("armed");
+            armed = setTimeout(() => { armed = null; del.textContent = "×"; del.classList.remove("armed"); }, 4000);
+            return;
+          }
+          clearTimeout(armed);
+          del.disabled = true;
+          const ok = await sendDelete({ type: "DELETE_TYPED_NOTE", id: note.id, courseName, topicName });
+          if (!ok) { del.disabled = false; armed = null; del.textContent = "×"; del.classList.remove("armed"); }
+        });
+        el.appendChild(del);
         listEl.appendChild(el);
         return;
       }
