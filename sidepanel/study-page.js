@@ -602,6 +602,7 @@ const StudyPage = (() => {
   const pendingMoves = new WeakMap();   // textarea -> [{ id, courseName, topicName, quote }]
   const movingIds    = new Set();       // highlights waiting to move (drawn faded)
   let pendingChoice  = null;            // { input, at, highlight }
+  let lastChoice     = "quote";
 
   function askQuoteOrMove(input, at, highlight, point) {
     pendingChoice = { input, at, highlight };
@@ -614,7 +615,8 @@ const StudyPage = (() => {
     else composer.before(choice);
     choice.hidden = false;
     floatAt(choice, point);
-    $("drop-choice-quote").focus();
+    // Your last answer is ready: Enter repeats it; Q / M pick directly.
+    $(lastChoice === "move" ? "drop-choice-move" : "drop-choice-quote").focus();
   }
 
   function closeChoice() {
@@ -625,6 +627,7 @@ const StudyPage = (() => {
   }
 
   function resolveChoice(action) {
+    if (action === "quote" || action === "move") lastChoice = action;
     const c = pendingChoice;
     closeChoice();
     if (!c) return;
@@ -648,6 +651,11 @@ const StudyPage = (() => {
   $("drop-choice-move").addEventListener("click", () => resolveChoice("move"));
   $("drop-choice-cancel").addEventListener("click", () => resolveChoice("cancel"));
   choice.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "q" || e.key.toLowerCase() === "m") {
+      e.preventDefault();
+      resolveChoice(e.key.toLowerCase() === "q" ? "quote" : "move");
+      return;
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       resolveChoice("cancel");
@@ -791,18 +799,43 @@ const StudyPage = (() => {
     closeChoice();
 
     const key = JSON.stringify([target.courseName, target.topicName]);
-    draft = { text, source, where: { ...target }, key, type: lastTypeByTopic.get(key) || TYPES[0] };
+    draft = { text, source, where: { ...target }, key, type: guessType(text) || (lastTypeByTopic.get(key) === "list point" ? "list point" : "generic") };
 
     cardTopic.textContent = target.topicName;
     cardText.textContent = text;
     const from = source && (source.sourceTitle || hostOf(source.sourceUrl));
     cardSource.textContent = from ? `From ${from}` : "Saved without a link to where it came from";
     cardAnnotation.value = "";
+    cardAnnotation.hidden = true;
+    $("drop-card-ann-toggle").hidden = false;
     drawTypeChips();
 
     card.hidden = false;
     floatAt(card, point);
     cardTypes.querySelector('[aria-checked="true"]')?.focus();
+  }
+
+  // Compact chips, same as the save pop-up on pages: a short mark, its
+  // number key, the full name on hover and in the caption. Clicking one (or
+  // pressing its number) saves straight away; Enter saves the lit one.
+  const CHIP_MARK = { "header": "H", "sub topic": "H2", "definition": "Def", "formula": "ƒx",
+                      "list point": "•", "note": "!", "summary": "Σ", "generic": "¶" };
+  const CHIP_KEY  = { "header": "1", "sub topic": "2", "definition": "3", "formula": "4",
+                      "list point": "5", "note": "6", "summary": "7", "generic": "0" };
+
+  // A first guess from the words alone (the page's tags aren't known here).
+  function guessType(text) {
+    const t = String(text || "").trim();
+    const words = t.split(/\s+/).length;
+    if (/^(note|nb|important|remember|exam|warning|tip)\b[:\s-]/i.test(t)) return "note";
+    if (/[=≈≠≤≥∑∫√±×÷∝∂]/.test(t) && words <= 25) return "formula";
+    if (/^(in summary|to summari[sz]e|in conclusion|overall|in short)\b/i.test(t)) return "summary";
+    if (/^[^.:;]{1,50}?\s*(:|\s[-–—]\s)\s*\S/.test(t) && words >= 3) return "definition";
+    if (/^[A-Za-z][\w\s'()-]{0,40}\s(is|are|refers to|means|is defined as)\s(a|an|the)?\s?\S/i.test(t) && words <= 40) return "definition";
+    if (/^\s*([-•*▪◦]|\d+[.)])\s/.test(t)) return "list point";
+    if (words <= 6 && !/[.!?,;]$/.test(t) && /^[A-Z0-9]/.test(t)) return "header";
+    if (words > 60) return "summary";
+    return null;
   }
 
   function drawTypeChips() {
@@ -813,16 +846,31 @@ const StudyPage = (() => {
       chip.className = "type-chip";
       chip.setAttribute("role", "radio");
       chip.setAttribute("aria-checked", String(type === draft.type));
+      chip.setAttribute("aria-label", CATEGORY_LABELS[type] || type);
+      chip.title = `${CATEGORY_LABELS[type] || type} (${CHIP_KEY[type]})`;
       chip.tabIndex = type === draft.type ? 0 : -1;
       chip.dataset.type = type;
-      chip.textContent = CATEGORY_LABELS[type] || type;
-      chip.addEventListener("click", () => pickType(type));
+      const mark = document.createElement("span");
+      mark.textContent = CHIP_MARK[type] || type;
+      const key = document.createElement("span");
+      key.className = "type-chip-key";
+      key.textContent = CHIP_KEY[type] || "";
+      chip.append(mark, key);
+      chip.addEventListener("click", () => { pickType(type); saveCard(); });
+      chip.addEventListener("mouseenter", () => showCaption(type));
+      chip.addEventListener("mouseleave", () => draft && showCaption(draft.type));
       cardTypes.appendChild(chip);
     });
+    showCaption(draft.type);
+  }
+
+  function showCaption(type) {
+    $("drop-card-caption").textContent = `${CATEGORY_LABELS[type] || type} · Enter saves · 1–7, 0 = type`;
   }
 
   function pickType(type, { focus = false } = {}) {
     draft.type = type;
+    showCaption(type);
     cardTypes.querySelectorAll(".type-chip").forEach((chip) => {
       const on = chip.dataset.type === type;
       chip.setAttribute("aria-checked", String(on));
@@ -861,6 +909,11 @@ const StudyPage = (() => {
   }
 
   $("drop-card-save").addEventListener("click", saveCard);
+  $("drop-card-ann-toggle").addEventListener("click", () => {
+    $("drop-card-ann-toggle").hidden = true;
+    cardAnnotation.hidden = false;
+    cardAnnotation.focus();
+  });
   $("drop-card-cancel").addEventListener("click", closeCard);
 
   card.addEventListener("keydown", (e) => {
@@ -873,6 +926,16 @@ const StudyPage = (() => {
       e.preventDefault();
       saveCard();
       return;
+    }
+    // A number picks that type and saves (not while typing an annotation).
+    if (/^[0-7]$/.test(e.key) && e.target !== cardAnnotation && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const type = Object.keys(CHIP_KEY).find((t) => CHIP_KEY[t] === e.key);
+      if (type && TYPES.includes(type)) {
+        e.preventDefault();
+        pickType(type);
+        saveCard();
+        return;
+      }
     }
     // Arrow keys move between the type chips, like radio buttons.
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];

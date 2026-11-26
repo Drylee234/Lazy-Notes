@@ -129,7 +129,9 @@
     <div id="drop-card-text" class="dock-card-text"></div>
     <div id="drop-card-source" class="dock-card-source"></div>
     <div id="drop-card-types" class="type-chips" role="radiogroup" aria-label="Type"></div>
-    <input id="drop-card-annotation" type="text" placeholder="Add your own note to it (optional)" aria-label="Your note about it (optional)" />
+    <div id="drop-card-caption" class="chip-caption"></div>
+    <button id="drop-card-ann-toggle" class="ann-toggle" type="button">Annotation ›</button>
+    <input id="drop-card-annotation" type="text" placeholder="Add your own note to it (optional)" aria-label="Your note about it (optional)" hidden />
     <div class="dock-card-actions">
       <button id="drop-card-cancel" class="ln-btn-cancel" type="button">Cancel</button>
       <button id="drop-card-save" class="ln-btn-submit" type="button">Save</button>
@@ -139,8 +141,8 @@
   <div id="drop-choice" class="dock-choice" role="group" aria-labelledby="drop-choice-text" hidden>
     <span id="drop-choice-text"></span>
     <div class="dock-choice-actions">
-      <button id="drop-choice-quote" type="button" title="Copy its words into your note; the highlight stays">Quote it</button>
-      <button id="drop-choice-move" type="button" title="Put it in your note; the highlight is removed when you save">Move it</button>
+      <button id="drop-choice-quote" type="button" title="Copy its words into your note; the highlight stays (Q)">Quote it <kbd>Q</kbd></button>
+      <button id="drop-choice-move" type="button" title="Put it in your note; the highlight is removed when you save (M)">Move it <kbd>M</kbd></button>
       <button id="drop-choice-cancel" type="button">Cancel</button>
     </div>
   </div>
