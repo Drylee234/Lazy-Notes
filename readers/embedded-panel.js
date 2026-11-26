@@ -2,8 +2,12 @@
 // The same sidepanel.html, in an iframe (?embedded=1), so the keyboard stays
 // in one page: no clicking between the document and Chrome's own side panel.
 //
-// Two ways to show it (Settings › More options › Notes panel, lnPanelMode):
-//   "tab"    (default) — hidden behind a slim "Notes" tab on the right edge;
+// Three ways to show it (Settings › More options › Notes panel, lnPanelMode):
+//   "float"  (default) — a box over the page you drag by its title bar,
+//            resize from its corner, fold to just the title bar (− / +);
+//            it remembers where it was. Ctrl+. jumps into its note box, so
+//            what you type is right where you're reading.
+//   "tab"    — hidden behind a slim "Notes" tab on the right edge;
 //            clicking the tab (or Ctrl+/) slides it out over the page, and
 //            clicking back in the document slides it away. The page keeps
 //            its full width. Ctrl+. opens the pop-up note box (quick-note.js).
@@ -24,7 +28,8 @@
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {} };
 
-  let mode = "tab";            // lnPanelMode
+  let mode = "float";          // lnPanelMode: "float" | "tab" | "docked"
+  const modeOf = (v) => (v === "docked" || v === "tab" ? v : "float");
   let slidOut = false;         // tab mode: panel showing over the page
   let floatBtnOn = true;       // lnQuickFloat
   let chromePanelOpen = false;
@@ -40,8 +45,11 @@
   const bar = document.createElement("div");
   bar.className = "ln-embed-bar";
   bar.innerHTML = `
-    <button type="button" class="ln-bar-btn ln-bar-mode"></button>
-    <button type="button" class="ln-bar-btn ln-bar-pop" title="Pop out into its own window">⧉ Pop out</button>
+    <span class="ln-bar-title" title="Drag to move">Lazy Notes</span>
+    <button type="button" class="ln-bar-btn ln-bar-fold" title="Fold to this bar" aria-label="Fold">−</button>
+    <button type="button" class="ln-bar-btn ln-bar-mode" data-to=""></button>
+    <button type="button" class="ln-bar-btn ln-bar-mode2" data-to=""></button>
+    <button type="button" class="ln-bar-btn ln-bar-pop" title="Pop out into its own window">⧉</button>
     <button type="button" class="ln-bar-btn ln-bar-close" title="Hide (Ctrl+/)" aria-label="Hide">✕</button>`;
   const frame = document.createElement("iframe");
   frame.src = chrome.runtime.getURL("sidepanel.html?embedded=1");
@@ -70,7 +78,17 @@
 
   // ── Show / hide ──
   function shown() {
+    if (mode === "float") return state.floatOpen !== false;
     return mode === "tab" ? slidOut : state.open && (!chromePanelOpen || forced);
+  }
+  // Floating box: where it is, how big, folded or not (kept in state).
+  function placeFloat() {
+    const W = innerWidth, H = innerHeight;
+    const w = Math.min(Math.max(state.fw || 340, MIN_W), W - 16);
+    const h = Math.min(Math.max(state.fh || Math.round(H * 0.62), 160), H - 16);
+    const x = Math.min(Math.max(state.fx ?? W - w - 24, 8), W - 80);
+    const y = Math.min(Math.max(state.fy ?? 64, 8), H - 40);
+    Object.assign(aside.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: state.folded ? "" : `${h}px` });
   }
   function apply({ refit = true } = {}) {
     const on = shown();
@@ -82,23 +100,39 @@
     const wasDocked = document.body.classList.contains("ln-embed-open");
     document.body.classList.toggle("ln-embed-open", mode === "docked" && on);
     document.body.classList.toggle("ln-embed-float", mode === "tab");
+    document.body.classList.toggle("ln-embed-floating", mode === "float");
+    aside.classList.toggle("ln-floating", mode === "float");
+    aside.classList.toggle("ln-folded", mode === "float" && !!state.folded);
+    if (mode === "float") placeFloat();
+    else Object.assign(aside.style, { left: "", top: "", width: "", height: "" });
+    const fold = bar.querySelector(".ln-bar-fold");
+    fold.hidden = mode !== "float";
+    fold.textContent = state.folded ? "+" : "−";
+    fold.title = state.folded ? "Open it again" : "Fold to this bar";
     aside.hidden = !on;
-    edge.hidden = mode !== "tab" || on;
+    edge.hidden = mode === "docked" || on;
     penBtn.hidden = !floatBtnOn;
     btn.setAttribute("aria-pressed", String(on));
     btn.classList.toggle("on", on);
     btn.title = (mode === "docked" && chromePanelOpen && !forced
       ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
-      : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (mode === "docked" ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
-    const modeBtn = bar.querySelector(".ln-bar-mode");
-    modeBtn.textContent = mode === "tab" ? "📌 Dock" : "⇥ Edge tab";
-    modeBtn.title = mode === "tab" ? "Keep it beside the document" : "Hide it behind a tab on the edge";
+      : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (mode !== "tab" ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
+    // The two other ways to show it.
+    const LABEL = { float: ["🗗 Float", "A box you can drag anywhere"], tab: ["⇥ Edge tab", "Hide it behind a tab on the edge"],
+                    docked: ["📌 Dock", "Keep it beside the document"] };
+    const others = ["float", "tab", "docked"].filter((m) => m !== mode);
+    [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2")].forEach((b, i) => {
+      b.dataset.to = others[i];
+      b.textContent = LABEL[others[i]][0];
+      b.title = LABEL[others[i]][1];
+    });
     // The PDF reader refits on resize; the others reflow by themselves.
     if (refit && wasDocked !== document.body.classList.contains("ln-embed-open")) window.dispatchEvent(new Event("resize"));
   }
 
   function togglePanel() {
-    if (mode === "tab") slidOut = !slidOut;
+    if (mode === "float") state.floatOpen = !shown();
+    else if (mode === "tab") slidOut = !slidOut;
     else if (chromePanelOpen && !forced) { forced = true; state.open = true; }
     else { state.open = !shown(); if (!state.open) forced = false; }
     save();
@@ -109,12 +143,51 @@
   tabBtn.addEventListener("click", togglePanel);
   penBtn.addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   bar.querySelector(".ln-bar-close").addEventListener("click", () => { if (shown()) togglePanel(); });
-  bar.querySelector(".ln-bar-mode").addEventListener("click", () => {
-    const next = mode === "tab" ? "docked" : "tab";
+  bar.querySelectorAll(".ln-bar-mode, .ln-bar-mode2").forEach((b) => b.addEventListener("click", () => {
     state.open = true;
-    slidOut = false;
-    chrome.storage.local.set({ lnPanelMode: next });   // the listener below applies it
+    state.floatOpen = true;
+    slidOut = b.dataset.to === "tab";
+    save();
+    chrome.storage.local.set({ lnPanelMode: b.dataset.to });   // the listener below applies it
+  }));
+  bar.querySelector(".ln-bar-fold").addEventListener("click", () => { state.folded = !state.folded; save(); apply({ refit: false }); });
+
+  // Floating: drag by the title bar (not its buttons); kept on screen.
+  bar.addEventListener("pointerdown", (e) => {
+    if (mode !== "float" || e.button !== 0 || e.target.closest("button")) return;
+    e.preventDefault();
+    bar.setPointerCapture(e.pointerId);
+    const r = aside.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    document.body.classList.add("ln-embed-resizing", "ln-embed-moving");
+    const move = (ev) => {
+      state.fx = Math.min(Math.max(ev.clientX - dx, 8 - r.width + 80), innerWidth - 80);
+      state.fy = Math.min(Math.max(ev.clientY - dy, 0), innerHeight - 32);
+      aside.style.left = `${state.fx}px`;
+      aside.style.top = `${state.fy}px`;
+    };
+    const up = () => {
+      bar.removeEventListener("pointermove", move);
+      bar.removeEventListener("pointerup", up);
+      document.body.classList.remove("ln-embed-resizing", "ln-embed-moving");
+      save();
+    };
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", up);
   });
+  bar.addEventListener("dblclick", (e) => { if (mode === "float" && !e.target.closest("button")) bar.querySelector(".ln-bar-fold").click(); });
+  // Resized from its corner (CSS resize): remember the size.
+  if (window.ResizeObserver) {
+    let rt = 0;
+    new ResizeObserver(() => {
+      if (mode !== "float" || state.folded || aside.hidden) return;
+      cancelAnimationFrame(rt);
+      rt = requestAnimationFrame(() => {
+        const r = aside.getBoundingClientRect();
+        if (r.width && r.height) { state.fw = Math.round(r.width); state.fh = Math.round(r.height); save(); }
+      });
+    }).observe(aside);
+  }
   bar.querySelector(".ln-bar-pop").addEventListener("click", popOut);
 
   // Ctrl/⌘+/ shows or hides the panel (also from inside it).
@@ -194,7 +267,8 @@
 
   // ── Keyboard across the boundary (docked mode: Ctrl+.) ──
   function focusPanel() {
-    if (!shown()) { state.open = true; if (chromePanelOpen) forced = true; save(); apply(); }
+    if (mode === "float") { state.floatOpen = true; state.folded = false; save(); apply({ refit: false }); }
+    else if (!shown()) { state.open = true; if (chromePanelOpen) forced = true; save(); apply(); }
     frame.focus();
     frame.contentWindow?.postMessage({ type: "ln-focus-composer" }, location.origin);
   }
@@ -207,7 +281,7 @@
     if (!sel || !sel.rangeCount) document.querySelector("#viewer")?.focus?.();
   }
   addEventListener("keydown", (e) => {
-    if (mode !== "docked") return;   // tab mode: quick-note.js opens the pop-up note box
+    if (mode === "tab") return;   // tab mode: quick-note.js opens the pop-up note box
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {
       e.preventDefault();
       focusPanel();
@@ -241,7 +315,7 @@
     resizeT = setTimeout(() => {
       const maxW = Math.floor(window.innerWidth / 2);
       if (state.width > maxW && maxW >= MIN_W) state.width = maxW;
-      apply({ refit: false });
+      apply({ refit: false });   // (also keeps the floating box on screen)
     }, 200);
   });
 
@@ -268,13 +342,13 @@
 
   // ── Settings ──
   chrome.storage.local.get(["lnPanelMode", "lnQuickFloat"], (r) => {
-    mode = r.lnPanelMode === "docked" ? "docked" : "tab";
+    mode = modeOf(r.lnPanelMode);
     floatBtnOn = r.lnQuickFloat !== false;
     apply();
   });
   chrome.storage.onChanged.addListener((c, area) => {
     if (area !== "local") return;
-    if ("lnPanelMode" in c) { mode = c.lnPanelMode.newValue === "docked" ? "docked" : "tab"; slidOut = false; apply(); }
+    if ("lnPanelMode" in c) { const next = modeOf(c.lnPanelMode.newValue); if (next !== "tab") slidOut = false; mode = next; apply(); }
     if ("lnQuickFloat" in c) { floatBtnOn = c.lnQuickFloat.newValue !== false; apply({ refit: false }); }
   });
 

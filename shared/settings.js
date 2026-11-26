@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnGroupIndent", "lnSendReports"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnListHeadType", "lnGroupIndent", "lnSendReports", "lnBoldItalic"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -41,7 +41,8 @@ globalThis.LazySettings = (() => {
     <details class="set-sync set-more">
       <summary class="set-label set-sync-head">More options</summary>
       <div class="set-label set-sub">Notes panel in the readers</div>
-      <div class="seg" data-key="lnPanelMode" data-default="tab" role="radiogroup" aria-label="Notes panel in the readers">
+      <div class="seg" data-key="lnPanelMode" data-default="float" role="radiogroup" aria-label="Notes panel in the readers">
+        <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>
         <button type="button" data-value="tab" role="radio" title="Hidden behind a tab on the right edge; slides out over the page">Edge tab</button>
         <button type="button" data-value="docked" role="radio" title="Always beside the document">Docked</button>
       </div>
@@ -52,6 +53,7 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab</label>
       <div class="set-label set-sub">Notes</div>
       <label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label>
+      <label class="set-check"><input type="checkbox" data-key="lnBoldItalic" data-off /> B / I buttons in the note box (Ctrl+B / Ctrl+I always work)</label>
       <div class="set-label set-sub">Saving</div>
       <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>
       <div class="set-label set-sub">Typing</div>
@@ -127,7 +129,8 @@ globalThis.LazySettings = (() => {
         ["lnTheme", "lnPopupSide", "lnAutocorrect", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS],
         (r) => {
           segs.forEach((seg) => markSeg(seg, r[seg.dataset.key]));
-          checks.forEach((c) => { c.checked = r[c.dataset.key] !== false; });
+          // data-off: off unless switched on; the rest are on unless switched off.
+          checks.forEach((c) => { c.checked = "off" in c.dataset ? r[c.dataset.key] === true : r[c.dataset.key] !== false; });
           level.value = String(typeof r.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r.lnAutocorrect === false ? 0 : 1);
           showLevel();
         });

@@ -77,3 +77,23 @@ body.ln-embed-open #toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
 body.ln-tb-narrow #toolbar { height: auto; grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
 body.ln-tb-narrow #toolbar .tb-center { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
 body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets the Undo toast sit left of the panel */
+
+/* Floating box (lnPanelMode "float"): drag the title bar, resize from the
+   corner, − folds it to the bar. */
+#ln-embed.ln-floating {
+  right: auto; bottom: auto; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  resize: both; min-width: 280px; min-height: 36px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22); z-index: 125;
+}
+#ln-embed.ln-floating .ln-embed-divider { display: none; }
+#ln-embed.ln-floating .ln-embed-bar { cursor: grab; background: var(--accent); border-bottom: 0; padding: 5px 6px 5px 12px; }
+.ln-embed-moving #ln-embed.ln-floating .ln-embed-bar { cursor: grabbing; }
+#ln-embed.ln-floating .ln-bar-title { flex: 1; color: var(--on-accent); font: 600 13px var(--font); user-select: none; }
+#ln-embed.ln-floating .ln-bar-btn { color: var(--on-accent); opacity: 0.85; }
+#ln-embed.ln-floating .ln-bar-btn:hover { background: rgba(255, 255, 255, 0.18); color: var(--on-accent); opacity: 1; }
+#ln-embed.ln-floating .ln-bar-fold { font-size: 17px; line-height: 1; padding: 1px 8px; font-weight: 600; }
+#ln-embed.ln-floating .ln-bar-close { margin-left: 0; }
+#ln-embed.ln-folded { resize: none; height: auto !important; min-height: 0; }
+#ln-embed.ln-folded iframe { display: none; }
+#ln-embed:not(.ln-floating) .ln-bar-title { display: none; }
+.ln-bar-fold[hidden] { display: none; }

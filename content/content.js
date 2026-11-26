@@ -19,6 +19,7 @@
     "note",        // Important: something to remember, stands out
     "summary",
     "list head",   // introduces the list points under it (off: lnListHeadType = false)
+    "table",       // rows and cells (key T)
     "generic"      // Plain: just the words
   ];
   // Compact chips: a short mark, the full name on hover and in the caption.
@@ -31,6 +32,7 @@
     "note":       { mark: "!",   name: "Important",  key: "6" },
     "summary":    { mark: "Σ",   name: "Summary",    key: "7" },
     "list head":  { mark: "≡",   name: "List head",  key: "8" },
+    "table":      { mark: "▦",   name: "Table",      key: "t" },
     "generic":    { mark: "¶",   name: "Plain",      key: "0" }
   };
   let chipEls = {};
@@ -144,6 +146,9 @@
     const t = String(text || "").trim();
     const words = t.split(/\s+/).length;
     const tag = el?.closest?.("h1, h2, h3, h4, h5, h6, li, .s-title")?.tagName?.toLowerCase() || "";
+    // A table: picked inside a <table>, or 2+ lines with tabs between cells.
+    if (el?.closest?.("table") && /\t|\n/.test(t)) return "table";
+    if (t.split("\n").filter((l) => l.includes("\t")).length >= 2) return "table";
     if (/^(note|nb|important|remember|exam|warning|tip)\b[:\s-]/i.test(t)) return "note";
     if (/[=≈≠≤≥∑∫√±×÷∝∂]/.test(t) && words <= 25) return "formula";
     if (/^(in summary|to summari[sz]e|in conclusion|overall|in short)\b/i.test(t)) return "summary";
@@ -948,7 +953,7 @@
   function showChipCaption(cat) {
     if (!chipCaptionEl) return;
     const c = CHIP[cat] || CHIP.generic;
-    chipCaptionEl.textContent = `${c.name} · Enter saves · ${listHeadOn ? "1–8" : "1–7"}, 0 = type`;
+    chipCaptionEl.textContent = `${c.name} · Enter saves · ${listHeadOn ? "1–8" : "1–7"}, T, 0 = type`;
   }
 
   // Where the chip row goes: right after the hidden category row.
@@ -1086,8 +1091,8 @@
     // box: Tab out first); ←/→ move the lit chip; Tab from the text box
     // jumps to the chips.
     const typing = active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT");
-    if (!typing && inPopup(active) && /^[0-8]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      const cat = typesOffered().find((c) => CHIP[c].key === event.key);
+    if (!typing && inPopup(active) && /^[0-8t]$/i.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const cat = typesOffered().find((c) => CHIP[c].key === event.key.toLowerCase());
       if (cat) {
         event.preventDefault();
         selectCategoryOption(cat);
@@ -1380,7 +1385,7 @@
   function showPopup(rect, selectedText, paragraphElement) {
     if (!popupContainer) buildPopup();
     resetPopupState();
-    if (!parseList(selectedText, currentRange)) selectedText = joinBrokenLines(selectedText);
+    if (!parseList(selectedText, currentRange) && !/\t/.test(selectedText)) selectedText = joinBrokenLines(selectedText);
 
     currentSelectedText     = selectedText;
     currentParagraphElement = paragraphElement;

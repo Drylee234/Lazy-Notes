@@ -457,9 +457,15 @@
       b.setAttribute("aria-label", title);
       b.addEventListener("mousedown", (e) => e.preventDefault());   // keep the caret
       b.addEventListener("click", () => { if (!box.disabled) { format(box, cmd); refresh(); } });
+      if (cmd === "bold" || cmd === "italic") b.classList.add("fb-bi");
       buttons[cmd] = b;
       bar.appendChild(b);
     });
+    // B / I buttons: hidden unless Settings › More options turns them on
+    // (lnBoldItalic); Ctrl/⌘+B and +I still work either way.
+    const showBI = (on) => bar.classList.toggle("fb-no-bi", on !== true);
+    globalThis.chrome?.storage?.local.get("lnBoldItalic", (r) => showBI(r?.lnBoldItalic));
+    globalThis.chrome?.storage?.onChanged.addListener((c, area) => { if (area === "local" && c.lnBoldItalic) showBI(c.lnBoldItalic.newValue); });
 
     function refresh() {
       const sel = getSelection();

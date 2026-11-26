@@ -76,13 +76,13 @@ const StudyPage = (() => {
   // 2 Sub topic, 3 Definition, 4 Formula, 5 List point, 6 Important,
   // 7 Summary, 8 List head, 0 Plain, 9 My note. Enter then saves.
   const TYPE_KEYS = { "1": "header", "2": "sub topic", "3": "definition", "4": "formula",
-                      "5": "list point", "6": "note", "7": "summary", "8": "list head", "0": "generic", "9": "" };
+                      "5": "list point", "6": "note", "7": "summary", "8": "list head", "t": "table", "T": "table", "0": "generic", "9": "" };
   // Like the save pop-up: Tab here shows the types as numbered chips; a
   // number saves as that type at once, ←/→ move, Enter saves, Shift+Tab or
   // Esc goes back to writing. Clicking a chip saves too.
-  const CHIP_ORDER = ["", "header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "generic"];
+  const CHIP_ORDER = ["", "header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "table", "generic"];
   const CHIP_LOOK = { "": ["✎", "9", "My note"], "header": ["H", "1"], "sub topic": ["H2", "2"], "definition": ["Def", "3"],
-    "formula": ["ƒx", "4"], "list point": ["•", "5"], "note": ["!", "6"], "summary": ["Σ", "7"], "list head": ["≡", "8"], "generic": ["¶", "0"] };
+    "formula": ["ƒx", "4"], "list point": ["•", "5"], "note": ["!", "6"], "summary": ["Σ", "7"], "list head": ["≡", "8"], "table": ["▦", "T"], "generic": ["¶", "0"] };
   const chipRow = document.createElement("div");
   chipRow.id = "composer-chips";
   chipRow.setAttribute("role", "radiogroup");
@@ -1175,9 +1175,9 @@ const StudyPage = (() => {
   // number key, the full name on hover and in the caption. Clicking one (or
   // pressing its number) saves straight away; Enter saves the lit one.
   const CHIP_MARK = { "header": "H", "sub topic": "H2", "definition": "Def", "formula": "ƒx",
-                      "list point": "•", "note": "!", "summary": "Σ", "list head": "≡", "generic": "¶" };
+                      "list point": "•", "note": "!", "summary": "Σ", "list head": "≡", "table": "▦", "generic": "¶" };
   const CHIP_KEY  = { "header": "1", "sub topic": "2", "definition": "3", "formula": "4",
-                      "list point": "5", "note": "6", "summary": "7", "list head": "8", "generic": "0" };
+                      "list point": "5", "note": "6", "summary": "7", "list head": "8", "table": "T", "generic": "0" };
 
   // A first guess from the words alone (the page's tags aren't known here).
   function guessType(text) {

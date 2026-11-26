@@ -63,11 +63,16 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | 17 | Tidy joined lines in notes typed in the Study box but saved as Plain; highlight text showed without line breaks; Shift+Enter gave blank lines | Typed-as-type notes never tidied (and restored); .note-text keeps line breaks; one Shift+Enter = one line |
 | 18 | Study note box's Save-as was a plain dropdown (number only selected) | Tab shows numbered chips like the save pop-up; a number saves at once; ←/→ move; Enter saves; Shift+Tab/Esc back |
 | 19 | Hover tools (⋮⋮ ⇤ ⇥) covered the words; notes too far apart; suggestion strip too small | Tools only when the mouse is in a note's left margin (or keyboard focus); 2px between notes; strip 13.5px with accent border |
+| 20 | Study opened a course's first topic when none was picked | Study shows only the picked topic (Home or its picker); else "Pick a topic" |
+| 21 | Pop-out was a separate OS window | Default is a floating in-page box: drag by title bar, resize corner, − / + fold, remembers place; Ctrl+. into its note box |
 | 16 | Fold button in the left margin, under the Study tab's drag handle / indent buttons | Fold button right after the heading's words |
 
 ## 6. Decisions
 | Decision | Why |
 |---|---|
+| Table type (key T, ▦): rows = lines, cells = tabs / | / 2+ spaces; guessed for selections inside <table> or tab-separated lines; markdown + HTML export | user asked |
+| Courses list their documents (Home "Documents in this course", course page cards) from notes' sourceUrl + lnDocs (shared/utils.js courseDocuments) | user asked |
+| Autocorrect: extra letters cost 0.55 (doubled 0.4), held letters (3+) collapsed, learned fixes, missing spaces split when both halves common (rank ≤ 25000) and clearly best | user asked |
 | Types: Header(1) H, Sub topic(2) H2, Definition(3) Def, Formula(4) ƒx, List point(5) •, Important(6) ! [stored "note"], Summary(7) Σ, List head(8) ≡ [toggle lnListHeadType], Plain(0) ¶ [stored "generic"]; My note = 9 in note boxes | user approved trimmed types + compact chips; list head asked back |
 | A Plain line directly above list points renders bold with a colon and counts as their list head | trim types |
 | Save pop-up: compact chips, number keys save, Enter saves lit (guessed) type, Tab from text box to chips; ✎ Note / ❝ Quote buttons bottom-left | faster type selection; hand-off to note box |
@@ -113,7 +118,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 2); joins broken PDF lines in old highlights from a page/document only (never typed notes, never notes typed in a note box and saved as a type [no sourceUrl/anchor] — v2 put those back; not figures; lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
 - Reports (background/bg_diag.js + shared/diag.js on every page): lnDiag {errors: last 100 {t, where, msg, stack}, usage: {day: {action: n}} 30 days}; sent with each sync as data.lnReport (no note text, no key) unless lnSendReports = false; server GET /api/report (Bearer key) returns it; Settings › Problems › Copy problem report (message DIAG_REPORT).
 - Sync warning: side panel banner after 2 failed tries in a row (or wrong key / too big), plain-words reason + Retry / Fix (opens Settings sync) / ✕ (hidden until the error changes).
-- More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret, lnGroupIndent (notes under a sub topic one step in, --group-px 18px each), lnSendReports.
+- More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret, lnGroupIndent (notes under a sub topic one step in, --group-px 18px each), lnSendReports; lnBoldItalic (OFF unless true: B / I buttons in the note box; Ctrl+B/I always work; settings checkboxes with data-off are off by default). lnPanelMode now "float" (default) | "tab" | "docked". lnSpellLearned {typo: fix} (suggestions you picked).
 - chrome.storage.session: lnDocWords {title, words:[[form,count]…] top 8000}, lnPanelWindow (pop-out window id).
 - localStorage (per extension origin): ln-embed-<page> (panel open/width), ln-zoom-<page> (slides/Word zoom), ln-folded (folded head ids, last 3000), ln-pdf-fit.
 - IndexedDB: lazynotes-pdfs, lazynotes-slides, lazynotes-docs (store "files").
@@ -151,6 +156,7 @@ Tests: Playwright scripts lived in the session scratchpad (gone with the session
 3. Ideas not yet requested (only if asked): drag a folded group as one; fold state synced; fold in All notes when filtered.
 
 ## 12. Open questions ⚠️
+- My note vs Plain: merge? (Claude's suggestion in chat: note boxes offer one "Note"; Plain stays for highlights.)
 - Item 6 "smoother panel": what exactly feels less smooth than Web Highlights?
 - Does the PDF caret "jump" still happen in real Chrome?
 

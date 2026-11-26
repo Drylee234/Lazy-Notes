@@ -14,13 +14,46 @@ const CATEGORY_LABELS = {
   "summary":    "Summary",
   "generic":    "Plain",       // was "Generic"
   "note":       "Important",   // was "Note"
-  "figure":     "Figure"       // a snipped picture (readers' Snip / Save image)
+  "figure":     "Figure",      // a snipped picture (readers' Snip / Save image)
+  "table":      "Table"        // rows and cells (tabs, | or 2+ spaces between cells)
 };
 
 // The types offered when saving or changing one, in pick order (number keys
 // 1-8, Plain = 0). A Plain line right above list points also acts as their
 // list head.
-const PICK_TYPES = ["header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "generic"];
+const PICK_TYPES = ["header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "table", "generic"];
+
+// A table's text → rows of cells. Rows are lines; cells are split by tabs
+// (a table copied from a web page), else by "|", else by 2+ spaces.
+function parseTable(text) {
+  const lines = String(text ?? "").split(/\n/).map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
+  const by = lines.some((l) => l.includes("\t")) ? /\t/
+    : lines.filter((l) => l.includes("|")).length >= Math.ceil(lines.length / 2) ? /\|/ : /\s{2,}/;
+  let rows = lines.map((l) => {
+    let cells = l.split(by).map((c) => c.trim());
+    if (by.source === "\\|") { if (cells[0] === "") cells.shift(); if (cells[cells.length - 1] === "") cells.pop(); }
+    return cells;
+  }).filter((r) => !(r.length && r.every((c) => /^:?-{2,}:?$/.test(c))));   // markdown |---| line
+  const width = Math.max(1, ...rows.map((r) => r.length));
+  return rows.map((r) => [...r, ...Array(width - r.length).fill("")]);
+}
+
+function renderTable(text) {
+  const table = document.createElement("table");
+  table.className = "note-table";
+  parseTable(text).forEach((cells, i) => {
+    const tr = table.insertRow();
+    cells.forEach((c) => {
+      const cell = document.createElement(i === 0 ? "th" : "td");
+      cell.textContent = c;
+      tr.appendChild(cell);
+    });
+  });
+  const wrap = document.createElement("div");
+  wrap.className = "note-table-wrap";
+  wrap.appendChild(table);
+  return wrap;
+}
 
 // A short readable name for where a note came from.
 function sourceLabel(note) {
@@ -74,6 +107,7 @@ function renderNote(note, { compact = false, page = false } = {}) {
   const text = document.createElement("div");
   text.className = "note-text";
   if (note.category === "figure") text.textContent = note.text || "";
+  else if (note.category === "table") text.appendChild(renderTable(note.text));
   else if (page) fillPageText(text, note);
   else if (note.category === "definition" && splitTerm(note.text)) fillTermDefinition(text, splitTerm(note.text), false);
   else text.textContent = note.text;

@@ -439,3 +439,7 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 #composer-chips .type-chip { position: relative; min-width: 28px; height: 26px; padding: 0 6px; font-weight: 600; }
 #composer-chips[hidden] { display: none; }
 .composer-chip-caption { flex-basis: 100%; margin-top: 2px; }
+
+/* B / I buttons hidden unless switched on (rich-box.js, lnBoldItalic) */
+.fb-no-bi .fb-bi { display: none; }
+.fb-no-bi .fb-bi + .fb-sep, .fb-no-bi > .fb-sep:first-child { display: none; }

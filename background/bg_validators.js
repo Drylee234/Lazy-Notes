@@ -14,7 +14,8 @@ export const CATEGORIES = [
   "summary",
   "generic",
   "note",
-  "figure"   // a picture snipped from a PDF/slide/document; text = its caption
+  "figure",  // a picture snipped from a PDF/slide/document; text = its caption
+  "table"    // rows (lines) and cells (tabs, | or 2+ spaces)
 ];
 
 export async function validateHighlight(payload) {

@@ -31,6 +31,7 @@
     { cat: "note",       mark: "!",   name: "Important",  key: "6" },
     { cat: "summary",    mark: "Σ",   name: "Summary",    key: "7" },
     { cat: "list head",  mark: "≡",   name: "List head",  key: "8" },
+    { cat: "table",      mark: "▦",   name: "Table",      key: "t" },
     { cat: "generic",    mark: "¶",   name: "Plain",      key: "0" }
   ];
   const UNDO_MS = 6000;
@@ -253,7 +254,7 @@
   chipsEl.addEventListener("keydown", (e) => {
     e.stopPropagation();
     const shown = TYPES.filter((t) => !chips[t.cat].hidden);
-    const byKey = shown.find((t) => t.key === e.key);
+    const byKey = shown.find((t) => t.key === e.key.toLowerCase());
     if (byKey) { e.preventDefault(); pick(byKey.cat); save(); return; }
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       e.preventDefault();
@@ -286,7 +287,7 @@
   // see embedded-panel.js). With text selected, it opens as a quote.
   addEventListener("keydown", (e) => {
     if (!((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".")) return;
-    if ((settings.lnPanelMode || "tab") !== "tab") return;
+    if (settings.lnPanelMode !== "tab") return;   // float / docked: Ctrl+. goes into the panel
     e.preventDefault();
     e.stopImmediatePropagation();
     if (!box.hidden) { close(); return; }

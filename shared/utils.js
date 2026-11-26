@@ -130,3 +130,44 @@ function typedNoteHtml(text) {
   flushAll();
   return out.join("");
 }
+
+// The documents (PDF, slides, Word) a course's notes came from, newest
+// first: [{ key, name, kind, open, notes, lastAt, topics: Set }].
+// From each note's link (reader pages and .pdf/.pptx/.docx links), plus
+// recently opened documents that were set to this course (lnDocs).
+function courseDocuments(courseName, course, lnDocs = {}) {
+  const docs = new Map();
+  const readerUrl = (p, q) => (globalThis.chrome?.runtime?.getURL ? chrome.runtime.getURL(`${p}?${q}`) : `${p}?${q}`);
+  const kindOf = (u) => /pptxreader|\.pptx(\?|#|$)/i.test(u) ? "pptx" : /docxreader|\.docx(\?|#|$)/i.test(u) ? "docx"
+    : /pdfreader|\.pdf(\?|#|$)/i.test(u) ? "pdf" : null;
+  const add = (url, title, when, topic, notes = 1) => {
+    if (!url) return;
+    const kind = kindOf(url);
+    if (!kind) return;                      // a web page, not a document
+    const key = url.split("#")[0];
+    let open = key;
+    if (!/^chrome-extension:/.test(key) && !/reader\.html/.test(key)) {
+      open = readerUrl(`${kind}reader.html`, `url=${encodeURIComponent(key)}`);
+    }
+    const d = docs.get(key) || { key, kind, open, name: "", notes: 0, lastAt: 0, topics: new Set() };
+    const name = String(title || "").replace(/,\s*(page|slide|p\.)\s*\d+\s*$/i, "").trim();
+    if (name && (!d.name || name.length < d.name.length)) d.name = name;
+    d.notes += notes;
+    d.lastAt = Math.max(d.lastAt, when || 0);
+    if (topic) d.topics.add(topic);
+    docs.set(key, d);
+  };
+  Object.entries(course?.topics || {}).forEach(([topicName, t]) =>
+    Object.values(t.highlights || {}).forEach((h) => add(h.sourceUrl, h.sourceTitle, Date.parse(h.timestamp) || 0, topicName)));
+  // Opened in a reader and set to this course, maybe no notes yet. A web
+  // PDF's reader link (?url=…) counts as the same document as its notes.
+  Object.values(lnDocs).forEach((d) => {
+    if (d.course !== courseName || !d.key) return;
+    const q = new URLSearchParams(d.key.split("?")[1] || "");
+    const url = q.get("url") || (globalThis.chrome?.runtime?.getURL ? chrome.runtime.getURL(d.key.replace(/^\//, "")) : d.key);
+    add(url, d.name, d.openedAt, d.topic, 0);
+  });
+  return [...docs.values()]
+    .map((d) => ({ ...d, name: d.name || decodeURIComponent(d.key.split(/[/?=]/).pop() || "Document") }))
+    .sort((a, b) => b.lastAt - a.lastAt);
+}

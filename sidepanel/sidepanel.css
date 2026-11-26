@@ -448,3 +448,15 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 #sync-warn button { border: 1px solid var(--border); background: var(--bg); color: var(--pri); border-radius: 5px; padding: 3px 9px; font: inherit; cursor: pointer; }
 #sync-warn button:hover { background: var(--hover); }
 #sync-warn .sync-warn-x { margin-left: auto; border: 0; background: none; color: var(--dim); }
+
+/* Documents in this course (Home) */
+#course-docs { margin-top: 14px; }
+#course-docs[hidden] { display: none; }
+.course-doc { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--pri); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
+.course-doc:hover, .course-doc:focus-visible { background: var(--hover); }
+.course-doc-kind { flex: none; width: 30px; padding: 2px 0; border-radius: 4px; font-size: 9.5px; font-weight: 700; text-align: center; color: #fff; background: #dc2626; }
+.course-doc-kind[data-kind="pptx"] { background: #ea580c; }
+.course-doc-kind[data-kind="docx"] { background: #2563eb; }
+.course-doc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.course-doc-meta { flex: none; font-size: 11px; color: var(--dim); }
