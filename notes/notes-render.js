@@ -56,7 +56,15 @@ function renderNote(note, { compact = false, page = false } = {}) {
   const text = document.createElement("div");
   text.className = "note-text";
   if (page) fillPageText(text, note);
+  else if (note.category === "definition" && splitTerm(note.text)) fillTermDefinition(text, splitTerm(note.text), false);
   else text.textContent = note.text;
+  // A list head introduces its points: show it with a colon (display only).
+  if (note.category === "list head" && !/[:：]\s*$/.test(note.text || "")) {
+    const colon = document.createElement("span");
+    colon.className = "note-colon";
+    colon.textContent = ":";
+    text.appendChild(colon);
+  }
   el.appendChild(text);
 
   const caption = page && note.category === "formula" ? squashSpaces(note.context) : "";
@@ -121,8 +129,25 @@ function markedText(text) {
 }
 
 function fillPageText(el, note) {
-  if (note.category === "definition") fillDefinition(el, note);
+  const parts = note.category === "definition" ? splitTerm(note.text) : null;
+  if (parts) fillTermDefinition(el, parts, true);
+  else if (note.category === "definition") fillDefinition(el, note);
   else el.appendChild(markedText(note.text));
+}
+
+// "Viscosity: resistance to flow" / "Viscosity - resistance to flow" ->
+// { term, rest }, or null when the text isn't written as term + meaning.
+function splitTerm(text) {
+  const m = squashSpaces(text).match(/^([^:\-–—]{1,60}?)\s*(?::|\s[-–—]\s)\s*(.+)$/);
+  return m && m[2].length > 1 ? { term: m[1], rest: m[2] } : null;
+}
+
+// The term in bold, then its meaning: "**Viscosity**: resistance to flow".
+function fillTermDefinition(el, { term, rest }, marked) {
+  const b = document.createElement("strong");
+  b.className = "note-term";
+  b.appendChild(marked ? markedText(term) : document.createTextNode(term));
+  el.append(b, ": ", marked ? markedText(rest) : rest);
 }
 
 // "Mitochondria" + context "… Mitochondria are the organelles that make

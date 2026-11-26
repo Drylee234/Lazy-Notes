@@ -65,6 +65,16 @@ const StudyPage = (() => {
     return box;
   })();
   const composerType = $("composer-type");
+  composerType.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      await submitComposer();
+      composerInput.focus();
+    } else if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      composerInput.focus();
+    }
+  });
   const composerSave   = $("composer-save");
   const composerError  = $("composer-error");
 
@@ -344,7 +354,16 @@ const StudyPage = (() => {
     scrollToId = id;
   }
 
+  // Tab after typing goes to "Save as" (arrow keys or a letter pick the
+  // type), Enter there saves; Shift+Tab goes back. In a list, Tab indents.
   composerInput.addEventListener("keydown", (e) => {
+    const at = getSelection().anchorNode;
+    const atEl = at?.nodeType === Node.ELEMENT_NODE ? at : at?.parentElement;
+    if (e.key === "Tab" && !e.shiftKey && !atEl?.closest?.("li")) {
+      e.preventDefault();
+      composerType.focus();
+      return;
+    }
     if (isSaveKey(e)) {
       e.preventDefault();
       submitComposer();
@@ -371,6 +390,13 @@ const StudyPage = (() => {
     input.value = note.text;
     input.setAttribute("aria-label", "Edit note");
     const bar = createFormatBar(input);
+    // "Save as": keep it your note, or turn it into a highlight type.
+    const asType = composerType.cloneNode(true);
+    asType.removeAttribute("id");
+    asType.className = "edit-as-type";
+    asType.value = "";
+    asType.addEventListener("mousedown", (e) => e.stopPropagation());
+    bar.appendChild(asType);
 
     const hint = document.createElement("div");
     hint.className = "typed-editor-hint";
@@ -412,6 +438,17 @@ const StudyPage = (() => {
     });
 
     async function commit() {
+      if (asType.value) {
+        const words = input.innerText.replace(/\n{3,}/g, "\n\n").trim();
+        if (!words) return;
+        chrome.runtime.sendMessage({
+          type: "NEW_HIGHLIGHT", id: crypto.randomUUID(), text: words, context: null, category: asType.value,
+          course: where.courseName, topic: where.topicName, annotation: "", sourceUrl: null, sourceTitle: null, anchor: null
+        });
+        await send({ type: "DELETE_TYPED_NOTE", id: note.id, ...where });
+        closeEditor();
+        return;
+      }
       const text = input.value.trim();
       // Emptying a note doesn't delete it (that's the × button): keep it.
       if (!text || text === note.text) {
@@ -440,6 +477,15 @@ const StudyPage = (() => {
         closeHighlightEditor();
       },
       onCancel: () => closeHighlightEditor(),
+      // Type "My note": becomes one of your typed notes (annotation kept
+      // as a line under it), the highlight goes.
+      onConvert: async (fields) => {
+        const text = fields.annotation ? `${fields.text}\n${fields.annotation}` : fields.text;
+        if (await saveTypedNote({ id: crypto.randomUUID(), ...where, text })) {
+          await send({ type: "DELETE_HIGHLIGHT", id: note.id, ...where });
+        }
+        closeHighlightEditor();
+      },
       onDelete: async () => {
         const reply = await send({ type: "DELETE_HIGHLIGHT", id: note.id, ...where });
         if (!reply?.ok && await highlightExists(where, note.id)) {
@@ -512,7 +558,7 @@ const StudyPage = (() => {
   // line of its own, so it never splits what you typed), when the browser
   // can tell; else after the line with the caret; else at the end.
   function dropOffset(input, e) {
-    if (input.isRich) return input.blockAt(e.clientX, e.clientY);   // a block element
+    if (input.isRich) return input.pointAt(e.clientX, e.clientY);   // { block, range }
     const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
     const at = pos && pos.offsetNode === input ? pos.offset
       : document.activeElement === input ? input.selectionStart

@@ -994,9 +994,25 @@ updatePdfBanner();
     pptx.checked = pptxAutoOpen !== false;
     docAuto.checked = lnDocAutoSelect !== false;
   });
-  const spellAuto = document.getElementById("spell-auto");
-  chrome.storage.local.get("lnAutocorrect", ({ lnAutocorrect }) => { spellAuto.checked = lnAutocorrect !== false; });
-  spellAuto.addEventListener("change", () => chrome.storage.local.set({ lnAutocorrect: spellAuto.checked }));
+  const popupSeg = document.getElementById("popup-seg");
+  const markSide = (v) => popupSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.side === (v || "above"))));
+  chrome.storage.local.get("lnPopupSide", ({ lnPopupSide }) => markSide(lnPopupSide));
+  popupSeg.addEventListener("click", (e) => {
+    const v = e.target.closest("button")?.dataset.side;
+    if (!v) return;
+    markSide(v);
+    chrome.storage.local.set({ lnPopupSide: v });
+  });
+  // Autocorrect strength: 0 Off · 1 Mild · 2 Strong · 3 Toxic (Backspace undoes a fix at any level).
+  const spellLevel = document.getElementById("spell-level");
+  const spellName  = document.getElementById("spell-level-name");
+  const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
+  const showLevel = () => { spellName.textContent = LEVELS[spellLevel.value]; };
+  chrome.storage.local.get(["lnAutocorrect", "lnAutocorrectLevel"], ({ lnAutocorrect, lnAutocorrectLevel }) => {
+    spellLevel.value = String(typeof lnAutocorrectLevel === "number" ? lnAutocorrectLevel : lnAutocorrect === false ? 0 : 1);
+    showLevel();
+  });
+  spellLevel.addEventListener("input", () => { showLevel(); chrome.storage.local.set({ lnAutocorrectLevel: Number(spellLevel.value) }); });
   docAuto.addEventListener("change", () => chrome.storage.local.set({ lnDocAutoSelect: docAuto.checked }));
   seg.addEventListener("click", (e) => {
     const t = e.target.closest("button")?.dataset.themeChoice;

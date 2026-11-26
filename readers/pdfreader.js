@@ -52,7 +52,10 @@ const hlStatus     = $("hl-status");
 let pdfDoc     = null;
 let pages      = [];        // [{ num, el, baseViewport, rendered, renderTask }]
 let scale      = 1;
-let fitWidth   = true;      // follow the window width until the user zooms
+// "width" / "page": follow the window (and the outline panel) when it
+// resizes; null after a manual zoom. Remembered between documents.
+let fitMode    = "width";
+try { const m = localStorage.getItem("ln-pdf-fit"); if (m === "width" || m === "page") fitMode = m; } catch (_) {}
 let observer   = null;
 let currentPage = 1;
 
@@ -236,6 +239,128 @@ async function loadDocument(data, name) {
   await buildPages();
   goToPage(initialPageFromHash(), false);
   LazyDocs.opened({ kind: "pdf", name: title, pages: pdfDoc.numPages, page: currentPage });
+  buildOutline();
+}
+
+// ---------------------------------------------------------------------------
+// Outline — the PDF's bookmarks in a left panel (a page list if it has none).
+// Open/closed is remembered. The section you're in is marked as you scroll.
+// ---------------------------------------------------------------------------
+
+const outlineEl   = $("outline");
+const outlineList = $("outline-list");
+const outlineBtn  = $("outline-btn");
+let outlineItems  = [];   // [{ page, el }] in document order
+
+async function destPage(dest) {
+  try {
+    const d = typeof dest === "string" ? await pdfDoc.getDestination(dest) : dest;
+    if (!Array.isArray(d) || !d[0]) return null;
+    const ref = d[0];
+    return (typeof ref === "number" ? ref : await pdfDoc.getPageIndex(ref)) + 1;
+  } catch (_) { return null; }
+}
+
+async function buildOutline() {
+  outlineItems = [];
+  outlineList.replaceChildren();
+  let outline = null;
+  try { outline = await pdfDoc.getOutline(); } catch (_) {}
+
+  const makeItem = (title, page, depth, kids) => {
+    const row = document.createElement("div");
+    row.className = "ol-item";
+    row.style.setProperty("--depth", String(depth));
+    const line = document.createElement("div");
+    line.className = "ol-line";
+    const twisty = document.createElement("button");
+    twisty.type = "button";
+    twisty.className = "ol-twisty";
+    twisty.tabIndex = -1;
+    if (kids) {
+      twisty.textContent = "▸";
+      twisty.setAttribute("aria-label", "Show sub-sections");
+      twisty.addEventListener("click", (e) => {
+        e.stopPropagation();
+        row.classList.toggle("open");
+      });
+    } else twisty.classList.add("none");
+    const link = document.createElement("button");
+    link.type = "button";
+    link.className = "ol-link";
+    const name = document.createElement("span");
+    name.className = "ol-title";
+    name.textContent = title || "(untitled)";
+    link.appendChild(name);
+    link.title = title || "";
+    const num = document.createElement("span");
+    num.className = "ol-page";
+    num.textContent = page ? String(page) : "";
+    link.appendChild(num);
+    link.addEventListener("click", () => { if (page) goToPage(page); });
+    line.append(twisty, link);
+    row.appendChild(line);
+    if (page) outlineItems.push({ page, el: row });
+    return row;
+  };
+
+  async function addLevel(items, parent, depth) {
+    for (const it of items) {
+      const page = await destPage(it.dest);
+      const row = makeItem(it.title, page, depth, it.items?.length);
+      parent.appendChild(row);
+      if (it.items?.length) {
+        const kids = document.createElement("div");
+        kids.className = "ol-kids";
+        row.appendChild(kids);
+        await addLevel(it.items, kids, depth + 1);
+      }
+    }
+  }
+
+  if (outline?.length) {
+    outlineEl.querySelector(".outline-head").textContent = "Outline";
+    await addLevel(outline, outlineList, 0);
+    // Top level opens by default, like Chrome's viewer.
+    outlineList.querySelectorAll(":scope > .ol-item").forEach((r) => r.classList.add("open"));
+  } else {
+    outlineEl.querySelector(".outline-head").textContent = "Pages";
+    for (let n = 1; n <= pdfDoc.numPages; n++) outlineList.appendChild(makeItem(`Page ${n}`, n, 0, 0));
+  }
+  outlineItems.sort((a, b) => a.page - b.page);
+  outlineBtn.hidden = false;
+  let open = false;
+  try { open = localStorage.getItem("ln-pdf-outline") === "1"; } catch (_) {}
+  setOutlineOpen(open, { refit: open });
+  markOutline(currentPage);
+}
+
+function setOutlineOpen(open, { refit: doRefit = true } = {}) {
+  document.documentElement.style.setProperty("--toolbar-h", `${toolbarHeight()}px`);
+  outlineEl.hidden = !open;
+  document.body.classList.toggle("outline-open", open);
+  outlineBtn.setAttribute("aria-pressed", String(open));
+  outlineBtn.classList.toggle("on", open);
+  try { localStorage.setItem("ln-pdf-outline", open ? "1" : "0"); } catch (_) {}
+  if (doRefit) refit();
+}
+
+outlineBtn.addEventListener("click", () => setOutlineOpen(outlineEl.hidden));
+
+// The last entry starting at or before this page; its parents open so it shows.
+function markOutline(num) {
+  if (!outlineItems.length) return;
+  let hit = null;
+  for (const it of outlineItems) { if (it.page <= num) hit = it; else break; }
+  outlineList.querySelectorAll(".ol-item.current").forEach((el) => el.classList.remove("current"));
+  if (!hit) return;
+  hit.el.classList.add("current");
+  for (let p = hit.el.parentElement?.closest(".ol-item"); p; p = p.parentElement?.closest(".ol-item")) p.classList.add("open");
+  if (!outlineEl.hidden) {
+    const line = hit.el.querySelector(".ol-line");
+    const r = line.getBoundingClientRect(), box = outlineEl.getBoundingClientRect();
+    if (r.top < box.top + 30 || r.bottom > box.bottom - 10) line.scrollIntoView({ block: "nearest" });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -260,7 +385,7 @@ async function buildPages() {
   }
 
   pageCountEl.textContent = `of ${pdfDoc.numPages}`;
-  if (fitWidth) scale = fitScale();
+  if (fitMode) scale = fitScale(fitMode);
   layoutPages();
 
   observer = new IntersectionObserver(onIntersect, {
@@ -270,11 +395,18 @@ async function buildPages() {
   pages.forEach((p) => observer.observe(p.el));
 }
 
-function fitScale() {
+// Fit to width: the widest page fills the reading area (beside the outline
+// when it's open). Fit to page: a whole page shows at once.
+function fitScale(mode = "width") {
+  const availW = viewerEl.clientWidth - 32;
+  if (mode === "page") {
+    const tallest = Math.max(...pages.map((p) => p.baseViewport.height));
+    const widest  = Math.max(...pages.map((p) => p.baseViewport.width));
+    const availH  = window.innerHeight - toolbarHeight() - 2 * PAGE_GAP;
+    return clampScale(Math.min(availH / tallest, availW / widest));
+  }
   const widest = Math.max(...pages.map((p) => p.baseViewport.width));
-  // Comfortable reading width: fill narrow windows, cap wide ones.
-  const avail  = Math.min(window.innerWidth - 32, 920);
-  return clampScale(avail / widest);
+  return clampScale(availW / widest);
 }
 
 function clampScale(s) {
@@ -289,7 +421,14 @@ function layoutPages() {
     p.el.style.height = `${Math.floor(vp.height * scale)}px`;
     p.el.style.marginBottom = `${PAGE_GAP}px`;
   });
+  updateZoomUi();
+}
+
+function updateZoomUi() {
   zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+  const sel = $("zoom-mode");
+  sel.value = fitMode || "custom";
+  sel.querySelector('[value="custom"]').textContent = `${Math.round(scale * 100)}%`;
 }
 
 function onIntersect(entries) {
@@ -343,11 +482,12 @@ async function renderPage(p) {
 }
 
 // Re-render everything at a new scale, keeping the same spot on screen.
-function setScale(newScale, { fit = false } = {}) {
+function setScale(newScale, { fit = null } = {}) {
   newScale = clampScale(newScale);
-  fitWidth = fit;
+  fitMode = fit;
+  if (fit) { try { localStorage.setItem("ln-pdf-fit", fit); } catch (_) {} }
   if (!pdfDoc || Math.abs(newScale - scale) < 0.001) {
-    zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+    updateZoomUi();
     return;
   }
 
@@ -644,6 +784,7 @@ function goToPage(num, smooth = true) {
 function setCurrentPage(num) {
   currentPage = num;
   LazyDocs.page(num);
+  markOutline(num);
   if (document.activeElement !== pageInput) pageInput.value = String(num);
 }
 
@@ -668,7 +809,7 @@ window.addEventListener("scroll", () => {
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (fitWidth && pdfDoc) setScale(fitScale(), { fit: true }); }, 150);
+  resizeTimer = setTimeout(refit, 150);
 });
 
 pageInput.addEventListener("change", () => {
@@ -682,7 +823,14 @@ $("prev-page").addEventListener("click", () => goToPage(currentPage - 1));
 $("next-page").addEventListener("click", () => goToPage(currentPage + 1));
 $("zoom-in").addEventListener("click",  () => setScale(scale * 1.2));
 $("zoom-out").addEventListener("click", () => setScale(scale / 1.2));
-$("zoom-fit").addEventListener("click", () => setScale(fitScale(), { fit: true }));
+function refit() {
+  if (fitMode && pdfDoc) setScale(fitScale(fitMode), { fit: fitMode });
+}
+$("zoom-mode").addEventListener("change", (e) => {
+  const m = e.target.value;
+  if (m === "width" || m === "page") setScale(fitScale(m), { fit: m });
+  e.target.blur();
+});
 
 // Keyboard: ←/→ pages, Ctrl/Cmd +/−/0 zoom. Leave keys alone while typing or
 // while the save popup is open.
@@ -695,7 +843,7 @@ document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey) {
     if (e.key === "=" || e.key === "+") { e.preventDefault(); setScale(scale * 1.2); }
     if (e.key === "-")                  { e.preventDefault(); setScale(scale / 1.2); }
-    if (e.key === "0")                  { e.preventDefault(); setScale(fitScale(), { fit: true }); }
+    if (e.key === "0")                  { e.preventDefault(); setScale(fitScale("width"), { fit: "width" }); }
     return;
   }
   if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(currentPage + 1); }

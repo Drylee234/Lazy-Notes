@@ -201,21 +201,59 @@
       return null;
     };
 
-    // "> text" as its own quote block after `block` (or at the end); caret
-    // goes on a fresh line under it. Returns the quote's text line.
-    box.insertQuoteAt = (block, rawText) => {
+    // Where a drop at (x, y) lands: { block, range } (the exact spot).
+    box.pointAt = (x, y) => {
+      const r = document.caretRangeFromPoint?.(x, y);
+      if (r && box.contains(r.startContainer)) return { block: blockOf(r.startContainer, box), range: r };
+      return { block: box.blockAt(x, y), range: null };
+    };
+
+    // "> text" as a quote block exactly where it was dropped: a paragraph
+    // dropped into the middle of is split around it (in a list, it goes
+    // after the list). Caret goes on a fresh line under it. Returns the
+    // quote's text line.
+    box.insertQuoteAt = (at, rawText) => {
       const text = String(rawText ?? "").replace(/\s+/g, " ").trim();
       if (!text) return null;
+      const block = at?.block ?? at ?? null;
+      const range = at?.range ?? null;
       const q = document.createElement("blockquote");
       q.textContent = text;
       const after = document.createElement("p");
       after.appendChild(document.createElement("br"));
-      if (block && block.parentNode === box) block.after(q);
-      else box.appendChild(q);
+      let placed = false;
+      if (block && block.parentNode === box && range && !/^(UL|OL)$/.test(block.tagName) && block.contains(range.startContainer)) {
+        const head = document.createRange();
+        head.setStart(block, 0);
+        head.setEnd(range.startContainer, range.startOffset);
+        if (!head.toString().trim()) {
+          block.before(q);                      // dropped at the start: above it
+        } else {
+          const tail = document.createRange();
+          tail.setStart(range.startContainer, range.startOffset);
+          tail.setEnd(block, block.childNodes.length);
+          const rest = tail.extractContents();
+          block.after(q);
+          if (rest.textContent.trim()) {        // dropped mid-line: split it
+            const second = document.createElement(block.tagName);
+            second.appendChild(rest);
+            const first = document.createTreeWalker(second, NodeFilter.SHOW_TEXT).nextNode();
+            if (first) first.nodeValue = first.nodeValue.replace(/^\s+/, "");
+            q.after(second);
+          }
+        }
+        placed = true;
+      }
+      if (!placed) {
+        if (block && block.parentNode === box) block.after(q);
+        else box.appendChild(q);
+      }
+      // Caret on the line under the quote (a fresh one if there isn't one).
       q.after(after);
+      const next = after;
       box.focus();
       const r = document.createRange();
-      r.setStart(after, 0);
+      r.setStart(next, 0);
       r.collapse(true);
       getSelection().removeAllRanges();
       getSelection().addRange(r);

@@ -48,8 +48,12 @@
 }
 
 /* List points hang under their list head. */
-#note-list .note--page.note--list-head + .note--list-point,
-#note-list .note--page.note--list-point + .note--list-point { margin-top: -2px; }
+#note-list .note--page.note--list-point + .note--list-point { margin-top: 0; }
+
+/* The page's margin (see notes.css): the side panel's notes start 8px in. */
+#note-list .note,
+#note-list .note--list-point { padding-left: calc(8px + var(--indent, 18px)); }
+#note-list .note--list-point::before { left: calc(8px + 22px); }
 
 #note-list .note--page[draggable="true"] { cursor: grab; }
 #note-list .note.dragging { opacity: 0.5; }
@@ -353,7 +357,7 @@ body:has(#study-view.visible) #study-dock { display: block; }
 #rn-picker .hs-list { min-width: 200px; }
 
 /* "Save as" in the formatting bar: My note, or a highlight type */
-#composer-type, .note--typed.editing select {
+#composer-type, .edit-as-type {
   margin-left: auto; height: 24px; max-width: 120px; padding: 0 20px 0 8px;
   border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--sec);
   font: inherit; font-size: 12px; cursor: pointer; appearance: none;

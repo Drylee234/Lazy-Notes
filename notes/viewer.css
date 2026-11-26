@@ -233,3 +233,59 @@ mark {
   .note-sheet { padding: 16px 18px; }
   .btn-group { margin-left: 0; }
 }
+
+/* ── Continue reading (courses.html), like the side panel's Home ── */
+.section-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+#recent-docs { margin-bottom: 28px; }
+.rd-empty { margin: -2px 0 10px; font-size: 13px; color: var(--dim); }
+.rd-empty[hidden] { display: none; }
+#recent-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+.rd-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--pri);
+  text-decoration: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.rd-card:hover { border-color: var(--border-strong); background: var(--hover); }
+.rd-icon {
+  flex: none;
+  width: 36px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #c0392b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.rd-icon.pptx { color: #d4570f; }
+.rd-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.rd-name, .rd-meta, .rd-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-name { font-weight: 600; font-size: 13.5px; }
+.rd-meta { font-size: 12px; color: var(--sec); }
+.rd-where { font-size: 12px; color: var(--accent); }
+.rd-bar { display: block; height: 3px; margin-top: 6px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.rd-bar i { display: block; height: 100%; background: var(--accent); }
+.rd-open { justify-content: center; border-style: dashed; color: var(--accent); font-weight: 600; min-height: 72px; }
+.rd-open:hover { background: var(--accent-soft); border-style: solid; }
+.rd-plus { font-size: 18px; line-height: 1; }

@@ -17,18 +17,20 @@
 (() => {
   let speller = null;
   let loading = null;
-  let autocorrect = true;
+  // Autocorrect strength (side panel ⚙ slider, "lnAutocorrectLevel"):
+  // 0 off · 1 mild (one clear one-slip fix) · 2 strong · 3 toxic.
+  let level = 1;
   let ignore = new Set();
 
   if (globalThis.chrome?.storage?.local) {
-    chrome.storage.local.get(["lnAutocorrect", "lnSpellIgnore"], (r) => {
-      autocorrect = r.lnAutocorrect !== false;
+    chrome.storage.local.get(["lnAutocorrect", "lnAutocorrectLevel", "lnSpellIgnore"], (r) => {
+      level = typeof r.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r.lnAutocorrect === false ? 0 : 1;
       ignore = new Set(r.lnSpellIgnore || []);
       ignore.forEach((w) => speller?.add(w));
     });
     chrome.storage.onChanged.addListener((c, area) => {
       if (area !== "local") return;
-      if (c.lnAutocorrect) autocorrect = c.lnAutocorrect.newValue !== false;
+      if (c.lnAutocorrectLevel) level = Number(c.lnAutocorrectLevel.newValue ?? 1);
     });
   }
 
@@ -55,15 +57,17 @@
   // ── Which words are checked ──
   const WORD = /[A-Za-z][A-Za-z']*$/;
 
-  function checkable(word, atSentenceStart) {
-    if (word.length < 3 || /[^A-Za-z']/.test(word)) return false;
+  function checkable(word, atSentenceStart, lvl = 1) {
+    if (word.length < (lvl >= 3 ? 2 : 3) || /[^A-Za-z']/.test(word)) return false;
     if (word === word.toUpperCase()) return false;                 // GET, BME
     if (/[A-Z]/.test(word.slice(1))) return false;                 // iPhone, McDonald
-    if (/^[A-Z]/.test(word) && !atSentenceStart) return false;     // names
+    if (/^[A-Z]/.test(word) && !atSentenceStart && lvl < 2) return false;     // names (mild only)
     return true;
   }
 
-  const isWord = (w) => speller.correct(w) || speller.correct(w.toLowerCase()) || ignore.has(w.toLowerCase());
+  // Short words people type that the dictionary may not know.
+  const COMMON = new Set(["ok", "okay", "eg", "ie", "vs", "etc", "hi", "lol", "pls", "tbh", "idk", "ur", "u", "na", "sha", "yh", "ya"]);
+  const isWord = (w) => COMMON.has(w.toLowerCase()) || speller.correct(w) || speller.correct(w.toLowerCase()) || ignore.has(w.toLowerCase());
   const misspelled = (w) => !!speller && !isWord(w);
 
   // ── The one clear fix, or null ──
@@ -89,6 +93,33 @@
     if (f.swap.size === 1) fix = [...f.swap][0];
     else if (f.double.size === 1 && f.swap.size === 0) fix = [...f.double][0];
     else if (f.swap.size + f.double.size + f.other.size === 1) fix = [...f.swap, ...f.double, ...f.other][0];
+    if (!fix) return null;
+    return /^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix;
+  }
+
+  // Damerau-Levenshtein distance (small words only, so plain DP is fine).
+  function slips(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+    return d[a.length][b.length];
+  }
+
+  // Strong / toxic: the best guess even when it isn't the only one.
+  function bestFix(word, lvl) {
+    const clear = clearFix(word);
+    if (clear) return clear;
+    const f = oneSlipFixes(word);
+    const top = speller.suggest(word)[0];
+    let fix = f.swap.size ? [...f.swap][0]
+      : f.double.size ? [...f.double][0]
+      : top && slips(top, word) <= 1 ? top
+      : lvl >= 3 && top && slips(top, word) <= 2 ? top
+      : null;
     if (!fix) return null;
     return /^[A-Z]/.test(word) ? fix[0].toUpperCase() + fix.slice(1) : fix;
   }
@@ -170,7 +201,7 @@
   function onInput(e) {
     const field = e.target;
     lastFix = null;
-    if (!autocorrect || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
+    if (!level || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
     const v = view(field);
     if (!v || v.empty) return;
     const caret = v.caret;
@@ -185,9 +216,14 @@
     if (ignore.has(word.toLowerCase()) && word !== "i") return;
     let fixed = capsFix(word, atStart);
     if (!fixed) {
-      if (!checkable(word, atStart) || !misspelled(word)) return;
-      fixed = clearFix(word);
+      if (checkable(word, atStart, level) && misspelled(word)) {
+        fixed = level >= 2 ? bestFix(word, level) : clearFix(word);
+      } else if (level >= 2 && atStart && /^[a-z]/.test(word) && word.length > 1 && speller.correct(word)) {
+        fixed = word[0].toUpperCase() + word.slice(1);   // capitalise a sentence's first word
+      }
     }
+    // Strong+: a misspelled word at a sentence start also gets its capital.
+    if (fixed && level >= 2 && atStart && /^[a-z]/.test(fixed)) fixed = fixed[0].toUpperCase() + fixed.slice(1);
     if (!fixed || fixed === word) return;
     replace(field, v, start, start + word.length, fixed, 1);
     lastFix = { field, original: word, fixed, sep: e.data };

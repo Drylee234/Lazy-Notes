@@ -11,7 +11,7 @@
 //   onSave({ text, category, annotation, context })   may return a promise
 //   onDelete() → promise of true once deleted
 // form.focusText() puts the cursor at the end of the text.
-function noteEditor(note, { onSave, onCancel, onDelete }) {
+function noteEditor(note, { onSave, onCancel, onDelete, onConvert }) {
   const form = document.createElement("div");
   form.className = "edit-form";
   form.addEventListener("click", (e) => e.stopPropagation());
@@ -31,23 +31,37 @@ function noteEditor(note, { onSave, onCancel, onDelete }) {
     type.appendChild(opt);
   });
 
-  // "More": shut until asked for; its line says what's inside.
-  const more    = document.createElement("details");
-  const summary = document.createElement("summary");
-  more.className = "edit-more";
-  const describe = () => {
-    const parts = [CATEGORY_LABELS[type.value] || type.value];
-    if (annotation.value.trim()) parts.push("annotation");
-    if (context.value.trim())    parts.push("context");
-    summary.textContent = ["More", ...parts].join(" · ");
-  };
-  type.addEventListener("change", describe);
-  [annotation, context].forEach((area) => area.addEventListener("input", describe));
-  describe();
+  // "My note": turn the highlight into one of your own typed notes (Study
+  // tab only, where onConvert is given).
+  if (onConvert) type.add(new Option("My note (typed)", "__typed__"));
 
-  more.append(summary, editorField("Type", type), editorField("Annotation", annotation), editorField("Context", context));
-  // Hidden areas can't be measured, so size them once they show.
-  more.addEventListener("toggle", () => { if (more.open) [annotation, context].forEach(fitEditorArea); });
+  // Type › Annotation › Context: each folded on its own line, which says
+  // what's in it; click a line to open just that one.
+  const more = document.createElement("div");
+  more.className = "edit-folds";
+  const fold = (field, describe) => {
+    const d = document.createElement("details");
+    d.className = "edit-fold";
+    const sum = document.createElement("summary");
+    const redraw = () => { sum.textContent = describe(); };
+    redraw();
+    d.append(sum, field);
+    d.addEventListener("toggle", () => {
+      if (!d.open) return;
+      const area = field.querySelector("textarea, select");
+      if (area?.tagName === "TEXTAREA") fitEditorArea(area);
+      area?.focus();
+    });
+    return { d, redraw };
+  };
+  const short = (v) => (v.length > 28 ? v.slice(0, 27) + "…" : v);
+  const fType = fold(editorField("Type", type), () => `${type.value === "__typed__" ? "My note" : (CATEGORY_LABELS[type.value] || type.value)} ›`);
+  const fAnn  = fold(editorField("Annotation", annotation), () => `Annotation ${annotation.value.trim() ? "· " + short(annotation.value.trim()) : "›"}`);
+  const fCtx  = fold(editorField("Context", context), () => `Context ${context.value.trim() ? "· " + short(context.value.trim()) : "›"}`);
+  type.addEventListener("change", fType.redraw);
+  annotation.addEventListener("input", fAnn.redraw);
+  context.addEventListener("input", fCtx.redraw);
+  more.append(fType.d, fAnn.d, fCtx.d);
 
   // ── Footer: Delete (two clicks) · Cancel · Save ──
   const footer = document.createElement("div");
@@ -90,7 +104,10 @@ function noteEditor(note, { onSave, onCancel, onDelete }) {
       return;
     }
     save.disabled = true;
-    try { await onSave(fields); } finally { save.disabled = false; }
+    try {
+      if (fields.category === "__typed__" && onConvert) await onConvert(fields);
+      else await onSave(fields);
+    } finally { save.disabled = false; }
   }
 
   footer.append(del, cancel, save);
@@ -102,7 +119,7 @@ function noteEditor(note, { onSave, onCancel, onDelete }) {
   const initial = snapshot();
   const outside = (e) => {
     if (!form.isConnected) { document.removeEventListener("pointerdown", outside, true); return; }
-    if (form.contains(e.target) || e.target.closest?.(".hs-list, #study-dock, .ln-spell-bar")) return;
+    if (form.contains(e.target) || e.target.closest?.(".hs-list, #drop-card, #drop-choice, .ln-spell-bar")) return;
     document.removeEventListener("pointerdown", outside, true);
     if (snapshot() !== initial && text.value.trim()) submit(); else onCancel();
   };

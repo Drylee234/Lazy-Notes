@@ -59,6 +59,12 @@
   let categoryBtnEl     = null;
   let whereEl           = null;
   let textEditEl        = null;
+  let sideBox           = null;   // split layout: the text + annotation box
+  let editGroup         = null;   // text box + annotation, moved between boxes
+  let whereElHome       = null;
+  let popupSide         = "above";   // above | below | left | right | split
+  chrome.storage.local.get("lnPopupSide", (r) => { if (r?.lnPopupSide) popupSide = r.lnPopupSide; });
+  const inPopup = (el) => !!el && ((popupContainer && popupContainer.contains(el)) || (sideBox && sideBox.contains(el)));
   let popupAnchor       = null;   // the selection's box in page coordinates
 
   function fitTextEdit() {
@@ -112,6 +118,12 @@
         transition: width 0.15s ease;
       }
 
+      .lazy-notes-popup-side { width: 260px; min-width: 0; }
+      .lazy-notes-popup-side .lazy-notes-text-edit { margin-bottom: 8px; }
+      .lazy-notes-fold { cursor: pointer; color: #a1a1aa; user-select: none; margin-bottom: 0 !important; }
+      .lazy-notes-fold:hover, .lazy-notes-fold:focus-visible { color: #f0f0f0; outline: none; }
+      .lazy-notes-annotation-row:not(.open) .lazy-notes-textarea { display: none; }
+      .lazy-notes-annotation-row.open .lazy-notes-fold { margin-bottom: 6px !important; }
       .lazy-notes-text-edit {
         margin: 0 0 10px; resize: none; line-height: 1.4; font-size: 12.5px;
         border-left: 3px solid #fde047 !important; color: #f0f0f0;
@@ -422,9 +434,22 @@
     row4.className = "lazy-notes-popup-row";
 
     const annotationLabel = document.createElement("span");
-    annotationLabel.className = "lazy-notes-popup-label-block";
-    annotationLabel.textContent = "Annotation:";
+    // Minimized until wanted: "Annotation ›" opens the box.
+    annotationLabel.className = "lazy-notes-popup-label-block lazy-notes-fold";
+    annotationLabel.textContent = "Annotation ›";
+    annotationLabel.tabIndex = 0;
+    annotationLabel.setAttribute("role", "button");
+    const openAnnotation = (e) => {
+      e?.preventDefault();
+      row4.classList.add("open");
+      annotationLabel.textContent = "Annotation";
+      annotationInputEl?.focus();
+      if (popupAnchor) positionPopup();
+    };
+    annotationLabel.addEventListener("click", openAnnotation);
+    annotationLabel.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); openAnnotation(e); } });
     row4.appendChild(annotationLabel);
+    row4.classList.add("lazy-notes-annotation-row");
 
     const annotationInput = document.createElement("textarea");
     annotationInput.className = "lazy-notes-textarea";
@@ -476,7 +501,21 @@
     row5.appendChild(saveBtn);
     container.appendChild(row5);
 
+    // The editable text with its annotation under it, as one group that the
+    // split layout moves into a box of its own.
+    const group = document.createElement("div");
+    group.className = "lazy-notes-edit-group";
+    textEdit.replaceWith(group);
+    group.append(textEdit, row4);
+    editGroup = group;
+
+    const side = document.createElement("div");
+    side.className = "lazy-notes-popup lazy-notes-popup-side";
+    side.style.display = "none";
+    sideBox = side;
+
     (document.body || document.documentElement).appendChild(container);
+    (document.body || document.documentElement).appendChild(side);
 
     popupContainer    = container;
     courseBtnEl       = courseBtn;
@@ -729,6 +768,8 @@
       delete m.dataset.shutUntilLeave;
     });
 
+    const annRow = popupContainer?.ownerDocument.querySelector(".lazy-notes-annotation-row");
+    if (annRow) { annRow.classList.remove("open"); annRow.querySelector(".lazy-notes-fold").textContent = "Annotation ›"; }
     if (annotationInputEl) {
       annotationInputEl.value = "";
       annotationInputEl.style.height = "32px";
@@ -890,7 +931,7 @@
       active !== annotationInputEl &&
       !(active === textEditEl && event.shiftKey) &&
       !active?.classList?.contains("lazy-notes-btn") &&
-      popupContainer.contains(active)
+      inPopup(active)
     ) {
       event.preventDefault();
       sendHighlight();
@@ -920,21 +961,64 @@
   // Popup show / hide
   // ---------------------------------------------------------------------------
 
-  // Above the selection, so it doesn't cover what comes next; below only
-  // when there's no room above. Re-run when the pop-up grows.
+  // Where the pop-up sits around the selection, from the side panel's ⚙
+  // ("lnPopupSide"): above (default), below, left, right, or split (the
+  // text box on the left, type + Save on the right). A side without room
+  // falls back to above/below. Re-run when the pop-up grows.
   function positionPopup(rect) {
     if (!popupContainer) return;
     if (rect) {
-      popupAnchor = { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY, left: rect.left + window.scrollX };
+      popupAnchor = { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY,
+                      left: rect.left + window.scrollX, right: rect.right + window.scrollX };
     }
     const a = popupAnchor;
     if (!a) return;
-    const h = popupContainer.offsetHeight;
-    const roomAbove = a.top - window.scrollY - 8 >= h;
-    const top = roomAbove ? a.top - h - 8 : a.bottom + 8;
-    const maxLeft = window.scrollX + document.documentElement.clientWidth - popupContainer.offsetWidth - 10;
-    popupContainer.style.top  = `${top}px`;
-    popupContainer.style.left = `${Math.max(10, Math.min(a.left, maxLeft))}px`;
+    const vx = window.scrollX, vy = window.scrollY;
+    const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    const GAP = 10;
+    const place = (el, left, top) => {
+      const w = el.offsetWidth, h = el.offsetHeight;
+      el.style.left = `${Math.max(vx + 8, Math.min(left, vx + vw - w - 8))}px`;
+      el.style.top  = `${Math.max(vy + 8, Math.min(top, vy + vh - h - 8))}px`;
+    };
+    const vertical = (el, prefer) => {
+      const h = el.offsetHeight;
+      const roomAbove = a.top - vy - GAP >= h;
+      const roomBelow = vy + vh - a.bottom - GAP >= h;
+      const above = prefer === "above" ? (roomAbove || !roomBelow) : (!roomBelow && roomAbove);
+      place(el, a.left, above ? a.top - h - GAP : a.bottom + GAP);
+    };
+    const fitsLeft  = (el) => a.left - vx - GAP - el.offsetWidth >= 8;
+    const fitsRight = (el) => vx + vw - a.right - GAP - el.offsetWidth >= 8;
+
+    const mode = popupSide;
+    if (mode === "split") {
+      if (fitsLeft(sideBox) && fitsRight(popupContainer)) {
+        place(sideBox, a.left - sideBox.offsetWidth - GAP, a.top - 8);
+        place(popupContainer, a.right + GAP, a.top - 8);
+      } else {
+        vertical(sideBox, "above");
+        vertical(popupContainer, "below");
+      }
+      return;
+    }
+    if (mode === "left" && fitsLeft(popupContainer)) return place(popupContainer, a.left - popupContainer.offsetWidth - GAP, a.top - 8);
+    if (mode === "right" && fitsRight(popupContainer)) return place(popupContainer, a.right + GAP, a.top - 8);
+    vertical(popupContainer, mode === "below" ? "below" : "above");
+  }
+
+  // Split layout: the text box group lives in its own box; otherwise it sits
+  // in the main pop-up under "Saving to".
+  function arrangePopup() {
+    if (!editGroup || !sideBox) return;
+    const where = popupContainer.querySelector(".lazy-notes-where");
+    if (popupSide === "split") {
+      if (editGroup.parentNode !== sideBox) sideBox.appendChild(editGroup);
+      sideBox.style.display = "block";
+    } else {
+      if (editGroup.parentNode !== popupContainer) where.after(editGroup);
+      sideBox.style.display = "none";
+    }
   }
 
   function showPopup(rect, selectedText, paragraphElement) {
@@ -945,6 +1029,7 @@
     currentParagraphElement = paragraphElement;
 
     popupContainer.style.display = "block";
+    arrangePopup();
     if (textEditEl) { textEditEl.value = selectedText; fitTextEdit(); }
     positionPopup(rect);
 
@@ -953,6 +1038,7 @@
 
   function hidePopup() {
     if (popupContainer) popupContainer.style.display = "none";
+    if (sideBox) sideBox.style.display = "none";
     if (courseMenuEl)   courseMenuEl.classList.remove("open");
     if (topicMenuEl)    topicMenuEl.classList.remove("open");
     if (categoryMenuEl) categoryMenuEl.classList.remove("open");
@@ -965,7 +1051,7 @@
   }
 
   function isEventInsidePopup(event) {
-    return popupContainer && popupContainer.contains(event.target);
+    return inPopup(event.target);
   }
 
   // ---------------------------------------------------------------------------
@@ -1182,6 +1268,7 @@
     // keep the selection, since that's what is being dragged.
     if (popupContainer && popupContainer.style.display !== "none") {
       popupContainer.style.display = "none";
+      if (sideBox) sideBox.style.display = "none";
       allMenus().forEach((m) => m.classList.remove("open"));
     }
   }
@@ -1236,6 +1323,7 @@
     if (changes.lazynotes) {
       courseTree = changes.lazynotes.newValue?.courses || {};
     }
+    if (changes.lnPopupSide) popupSide = changes.lnPopupSide.newValue || "above";
 
     // Storage is the source of truth for on/off: extension pages (the PDF
     // reader) never get the background's tab broadcasts, and this also covers
@@ -1268,6 +1356,8 @@
     deactivateHighlighter();
     popupContainer?.remove();
     popupContainer = null;
+    sideBox?.remove();
+    sideBox = null;
     document.removeEventListener(REINIT_EVENT, onReinit);
   }
 

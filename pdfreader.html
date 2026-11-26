@@ -12,6 +12,7 @@
 
 <header id="toolbar">
   <div class="tb-left">
+    <button id="outline-btn" class="tb-btn icon" type="button" title="Outline" aria-label="Show outline" aria-pressed="false" hidden>☰</button>
     <a class="tb-logo" href="courses.html" title="All notes"><img src="icons/logo.svg" alt="Lazy Notes" width="22" height="22" /></a>
     <button id="open-btn" class="tb-btn" title="Open a PDF or slides (.pptx)">Open</button>
     <span id="doc-title" class="doc-title">PDF Reader</span>
@@ -26,7 +27,11 @@
     <span class="tb-sep"></span>
 
     <button id="zoom-out" class="tb-btn icon" title="Zoom out" aria-label="Zoom out">−</button>
-    <button id="zoom-fit" class="tb-btn" title="Fit to width">Fit</button>
+    <select id="zoom-mode" class="tb-btn zoom-mode" title="Fit" aria-label="Fit">
+      <option value="width">Fit to width</option>
+      <option value="page">Fit to page</option>
+      <option value="custom" hidden>Custom</option>
+    </select>
     <button id="zoom-in" class="tb-btn icon" title="Zoom in" aria-label="Zoom in">+</button>
     <span id="zoom-label" class="tb-dim"></span>
   </div>
@@ -36,6 +41,12 @@
     <button id="hl-status" class="hl-status" title="Open the Lazy Notes side panel"></button>
   </div>
 </header>
+
+<!-- Outline (the PDF's bookmarks), or a page list when it has none -->
+<aside id="outline" hidden>
+  <div class="outline-head">Outline</div>
+  <nav id="outline-list"></nav>
+</aside>
 
 <main id="viewer"></main>
 
