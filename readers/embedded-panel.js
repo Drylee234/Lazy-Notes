@@ -57,16 +57,25 @@
     btn.classList.toggle("on", on);
     btn.title = (chromePanelOpen && !forced
       ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
-      : on ? "Hide notes" : "Show notes") + ` (${key}: jump to the note box and back)`;
+      : on ? "Hide notes" : "Show notes") + ` (${key}: jump to the note box and back · Ctrl+/ show/hide)`;
     // The PDF reader refits on resize; the others reflow by themselves.
     if (refit) window.dispatchEvent(new Event("resize"));
   }
 
-  btn.addEventListener("click", () => {
+  function togglePanel() {
     if (chromePanelOpen && !forced) { forced = true; state.open = true; }
     else { state.open = !shown(); if (!state.open) forced = false; }
     save();
     apply();
+    if (!shown()) { frame.blur(); window.focus(); }
+  }
+  btn.addEventListener("click", togglePanel);
+  // Ctrl/⌘+/ shows or hides the panel (also from inside it).
+  addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === "/") { e.preventDefault(); togglePanel(); }
+  }, true);
+  addEventListener("message", (e) => {
+    if (e.origin === location.origin && e.source === frame.contentWindow && e.data?.type === "ln-toggle-panel") togglePanel();
   });
 
   // ── Resize ──

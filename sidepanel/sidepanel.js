@@ -1016,6 +1016,11 @@ updatePdfBanner();
     }, 30);
   });
   addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === "/") {
+      e.preventDefault();
+      parent.postMessage({ type: "ln-toggle-panel" }, location.origin);
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {
       e.preventDefault();
       done();
