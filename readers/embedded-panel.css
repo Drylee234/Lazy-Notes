@@ -21,3 +21,23 @@ body.ln-embed-open #toolbar { margin-right: 0; }
 .ln-embed-btn { display: inline-flex; align-items: center; gap: 5px; }
 .ln-embed-btn.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 @media (max-width: 760px) { .ln-embed-btn span { display: none; } }
+
+/* Narrow toolbars (the panel takes room): the left group shrinks first,
+   then buttons drop to icons, so the middle controls (page, zoom input)
+   never get overlapped. */
+#toolbar { container-type: inline-size; }
+body.ln-embed-open #toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
+#toolbar .tb-left { overflow: hidden; }
+#toolbar .doc-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+@container (max-width: 980px) {
+  .ln-embed-btn span, .snip-btn span { display: none; }
+  .hl-status { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@container (max-width: 760px) {
+  .doc-title { display: none; }
+  .hl-status { max-width: 90px; }
+}
+/* Too narrow for one row (embedded-panel.js sets .ln-tb-narrow): page +
+   zoom controls move to a second row instead of being overlapped. */
+body.ln-tb-narrow #toolbar { height: auto; grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
+body.ln-tb-narrow #toolbar .tb-center { grid-column: 1 / -1; grid-row: 2; justify-content: center; }

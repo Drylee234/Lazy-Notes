@@ -140,5 +140,21 @@
     }, 200);
   });
 
+  // A toolbar too narrow for one row puts its middle controls on a second
+  // row (see embedded-panel.css), so nothing overlaps.
+  const toolbar = document.getElementById("toolbar");
+  if (toolbar && window.ResizeObserver) {
+    const center = toolbar.querySelector(".tb-center");
+    const need = () => [...toolbar.children].reduce((w, c) => w + c.scrollWidth, 0) + 48;
+    new ResizeObserver(() => {
+      const narrow = toolbar.clientWidth < need();
+      if (narrow !== document.body.classList.contains("ln-tb-narrow")) {
+        document.body.classList.toggle("ln-tb-narrow", narrow);
+        document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`);
+      }
+    }).observe(toolbar);
+    void center;
+  }
+
   apply({ refit: false });
 })();

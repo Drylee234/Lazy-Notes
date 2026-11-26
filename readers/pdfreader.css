@@ -365,3 +365,8 @@ body.snipping .textLayer { pointer-events: none; user-select: none; }
 }
 .zoom-input:hover { border-color: var(--border); }
 .zoom-input:focus { outline: none; border-color: var(--accent); color: var(--pri); background: var(--bg); }
+
+/* Rotated pages: turn the selectable text layer with the picture (as PDF.js's viewer does) */
+.textLayer[data-main-rotation="90"]  { transform: rotate(90deg) translateY(-100%); transform-origin: 0 0; inset: auto; top: 0; left: 0; }
+.textLayer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); transform-origin: 0 0; inset: auto; top: 0; left: 0; }
+.textLayer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); transform-origin: 0 0; inset: auto; top: 0; left: 0; }

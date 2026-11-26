@@ -52,6 +52,7 @@ const hlStatus     = $("hl-status");
 let pdfDoc     = null;
 let pages      = [];        // [{ num, el, baseViewport, rendered, renderTask }]
 let scale      = 1;
+let rotation   = 0;   // 0 / 90 / 180 / 270, turned with ↻ or R
 // "width" / "page": follow the window (and the outline panel) when it
 // resizes; null after a manual zoom. Remembered between documents.
 let fitMode    = "width";
@@ -396,7 +397,7 @@ async function buildPages() {
 
   for (let num = 1; num <= pdfDoc.numPages; num++) {
     const page = await pdfDoc.getPage(num);
-    const baseViewport = page.getViewport({ scale: 1 });
+    const baseViewport = page.getViewport({ scale: 1, rotation });
 
     const el = document.createElement("div");
     el.className = "page";
@@ -464,7 +465,7 @@ async function renderPage(p) {
   if (p.rendered) return;
   p.rendered = true;
 
-  const viewport = p.page.getViewport({ scale });
+  const viewport = p.page.getViewport({ scale, rotation });
   const dpr = window.devicePixelRatio || 1;
 
   const canvas = document.createElement("canvas");
@@ -493,6 +494,8 @@ async function renderPage(p) {
       viewport
     });
     await textLayer.render();
+    // PDF.js lays rotated text out unrotated; CSS turns the layer to match.
+    textLayerEl.dataset.mainRotation = String(rotation);
     registerTextLayer(textLayerEl);
     p.textReady = true;
     drawHighlights(p);
@@ -504,6 +507,18 @@ async function renderPage(p) {
 }
 
 // Re-render everything at a new scale, keeping the same spot on screen.
+// Turn every page a quarter turn (Shift: the other way), keeping the fit
+// mode or zoom, and the current page in view.
+function rotatePages(step = 90) {
+  if (!pdfDoc) return;
+  rotation = (rotation + step + 360) % 360;
+  pages.forEach((p) => { p.baseViewport = p.page.getViewport({ scale: 1, rotation }); });
+  const keep = fitMode ? null : scale;
+  const old = scale;
+  scale = 0;   // force a full re-render even if the zoom stays the same
+  setScale(fitMode ? fitScale(fitMode) : keep ?? old, { fit: fitMode });
+}
+
 function setScale(newScale, { fit = null } = {}) {
   newScale = clampScale(newScale);
   fitMode = fit;
@@ -857,6 +872,7 @@ zoomLabel.addEventListener("keydown", (e) => {
 });
 zoomLabel.addEventListener("blur", () => { zoomLabel.value = `${Math.round(scale * 100)}%`; });
 $("zoom-in").addEventListener("click",  () => setScale(scale * 1.2));
+$("rotate-btn")?.addEventListener("click", (e) => rotatePages(e.shiftKey ? -90 : 90));
 $("zoom-out").addEventListener("click", () => setScale(scale / 1.2));
 function refit() {
   if (fitMode && pdfDoc) setScale(fitScale(fitMode), { fit: fitMode });
@@ -994,6 +1010,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if ((e.key === "s" || e.key === "S") && !e.altKey) { e.preventDefault(); setSnipping(!snipping); return; }
+  if ((e.key === "r" || e.key === "R") && !e.altKey) { e.preventDefault(); rotatePages(e.shiftKey ? -90 : 90); return; }
   if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(currentPage + 1); }
   if (e.key === "ArrowLeft"  || e.key === "PageUp")   { e.preventDefault(); goToPage(currentPage - 1); }
 });
