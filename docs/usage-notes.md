@@ -108,3 +108,10 @@ seen → cause → what changed (commit) or what's still open.
 
 - Readers (PDF/slides/Word) open full screen once per tab via `chrome.windows.update` (no click needed; F11 leaves) — `lnReaderFullscreen`.
 - Chrome's side panel is switched off on reader tabs; the toolbar button toggles the built-in Notes panel there (`LN_TOGGLE_PANEL`). Web pages still use Chrome's panel (an in-page panel there would mean injecting an iframe into every site) — `lnReaderNativePanel` brings Chrome's panel back in readers.
+
+## 2026-11-26 · Readers: hover-open, layout, All notes
+
+- Fade stays; hovering the Notes edge tab (or a folded floating bar) now opens the panel after ~0.3s and moving away closes it (not if you clicked into it) — `lnPanelHover`.
+- Home layout in the panel: NOW READING card first, then SAVING TO pickers, then a bigger "+ Open a document…" link (owner's screenshot).
+- Chrome's side panel is also actively closed when a reader tab loads (`sidePanel.close`); the "Saving to…" pill shows our panel instead of Chrome's.
+- "All notes" button in every reader toolbar (opens courses.html in a new tab).

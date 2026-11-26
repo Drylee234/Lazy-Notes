@@ -38,7 +38,9 @@ chrome.action.onClicked.addListener((tab) => {
 function syncReaderPanel(tabId, url) {
   if (!isReader(url)) { chrome.sidePanel.setOptions({ tabId, enabled: true }).catch(() => {}); return; }
   chrome.storage.local.get("lnReaderNativePanel", (r) => {
-    chrome.sidePanel.setOptions({ tabId, enabled: r?.lnReaderNativePanel === true }).catch(() => {});
+    const keep = r?.lnReaderNativePanel === true;
+    chrome.sidePanel.setOptions({ tabId, enabled: keep }).catch(() => {});
+    if (!keep) chrome.sidePanel.close?.({ tabId })?.catch?.(() => {});   // already open from the page before: shut it
   });
 }
 chrome.tabs.onUpdated.addListener((tabId, _info, tab) => syncReaderPanel(tabId, tab.url || tab.pendingUrl));

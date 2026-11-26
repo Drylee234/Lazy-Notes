@@ -72,6 +72,22 @@
   btn.className = "tb-btn ln-embed-btn";
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2" width="13" height="12" rx="2"/><path d="M10 2v12"/></svg><span>Notes</span>`;
   document.querySelector("#toolbar .tb-right")?.prepend(btn);
+  // All notes, one click from the reader (no panel needed).
+  const allBtn = document.createElement("a");
+  allBtn.className = "tb-btn ln-allnotes-btn";
+  allBtn.href = chrome.runtime.getURL("courses.html");
+  allBtn.target = "_blank";
+  allBtn.rel = "noopener";
+  allBtn.title = "Browse, search and edit all your notes (opens in a new tab)";
+  allBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 3.5h10M3 8h10M3 12.5h6"/></svg><span>All notes</span>`;
+  allBtn.style.cssText = "text-decoration:none;display:inline-flex;align-items:center;gap:6px;";
+  btn.before(allBtn);
+  // The status pill ("Saving to …") used to open Chrome's side panel; it now
+  // shows ours (unless Chrome's panel is kept in readers on purpose).
+  chrome.storage.local.get("lnReaderNativePanel", (r) => {
+    if (r?.lnReaderNativePanel === true) return;
+    document.getElementById("hl-status")?.addEventListener("click", (e) => { e.stopImmediatePropagation(); if (!shown()) togglePanel(); }, true);
+  });
 
   const isMac = /Mac/.test(navigator.platform);
   const key = isMac ? "⌘." : "Ctrl+.";
@@ -376,6 +392,32 @@
       });
     }).observe(toolbar);
   }
+
+  // Hover to open (lnPanelHover): resting on the edge tab shows the panel,
+  // resting on a folded floating bar unfolds it; moving away puts it back
+  // (unless you've clicked into it to type).
+  let hoverOn = true, hoverAuto = null, hoverT = 0;
+  const rest = (fn, ms) => { clearTimeout(hoverT); hoverT = setTimeout(fn, ms); };
+  tabBtn.addEventListener("pointerenter", () => {
+    if (!hoverOn || shown()) return;
+    rest(() => { if (shown()) return; hoverAuto = "show"; togglePanel(); }, 300);
+  });
+  const awayCheck = () => rest(() => {
+    if (!hoverAuto || aside.matches(":hover") || tabBtn.matches(":hover") || document.activeElement === frame || document.body.classList.contains("ln-embed-moving")) return;
+    if (hoverAuto === "fold") { state.folded = true; apply({ refit: false }); }
+    else if (shown()) togglePanel();
+    hoverAuto = null;
+  }, 700);
+  tabBtn.addEventListener("pointerleave", () => { if (hoverAuto) awayCheck(); else clearTimeout(hoverT); });
+  aside.addEventListener("pointerenter", () => {
+    clearTimeout(hoverT);
+    if (hoverOn && mode === "float" && state.folded) rest(() => { hoverAuto = "fold"; state.folded = false; apply({ refit: false }); }, 350);
+  });
+  aside.addEventListener("pointerleave", () => { if (hoverAuto) awayCheck(); else clearTimeout(hoverT); });
+  // Any deliberate use (a click into it, the buttons) keeps it open.
+  aside.addEventListener("pointerdown", () => { hoverAuto = null; }, true);
+  chrome.storage.local.get("lnPanelHover", (r) => { hoverOn = r?.lnPanelHover !== false; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnPanelHover" in c) hoverOn = c.lnPanelHover.newValue !== false; });
 
   // The toolbar button (background) toggles this panel in readers.
   chrome.runtime.onMessage.addListener((m) => { if (m?.type === "LN_TOGGLE_PANEL") togglePanel(); });

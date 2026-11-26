@@ -15,7 +15,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnReaderFullscreen", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnPanelHover", "lnReaderFullscreen", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -60,6 +60,7 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note; Plain stays for page words)</label>
       <label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote, no question)</label>
       <label class="set-check"><input type="checkbox" data-key="lnPanelFade" /> Floating Notes box fades while the mouse is away from it</label>
+      <label class="set-check"><input type="checkbox" data-key="lnPanelHover" /> Hovering the Notes tab (or the folded bar) opens the panel; moving away closes it</label>
       <label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label>
       <label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Also use Chrome's side panel inside readers (off = only the built-in Notes panel; the toolbar button toggles it)</label>
       <div class="set-label set-sub">Saving</div>

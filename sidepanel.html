@@ -62,9 +62,22 @@
   <!-- HOME VIEW -->
   <section id="home-view" class="visible">
 
+    <!-- On a Lazy Notes PDF/slides tab: what's open. -->
+    <div id="reading-now" hidden>
+      <div class="rn-label">Now reading</div>
+      <div class="rn-doc">
+        <span class="doc-icon" id="rn-icon">PDF</span>
+        <div class="rn-text">
+          <div class="rn-name" id="rn-name"></div>
+          <div class="rn-meta" id="rn-meta"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- The slim top edge: where notes go (any course / topic, or create
          one) and a way to open a file. Always there, on every tab. -->
     <div id="saving-bar">
+      <div class="rn-label">Saving to</div>
       <div id="rn-picker">
         <select id="rn-course" aria-label="Course these notes go to"></select>
         <select id="rn-topic" aria-label="Topic these notes go to"></select>
@@ -73,17 +86,6 @@
       <button id="open-doc-btn" class="open-doc-link" type="button">+ Open a document…</button>
       <input id="open-doc-file" type="file" accept=".pdf,.pptx,.docx,application/pdf" hidden />
       <div id="open-doc-msg" hidden></div>
-    </div>
-
-    <!-- On a Lazy Notes PDF/slides tab: what's open. -->
-    <div id="reading-now" hidden>
-      <div class="rn-doc">
-        <span class="doc-icon" id="rn-icon">PDF</span>
-        <div class="rn-text">
-          <div class="rn-name" id="rn-name"></div>
-          <div class="rn-meta" id="rn-meta"></div>
-        </div>
-      </div>
     </div>
 
     <!-- Anywhere else: documents to go back to. -->
