@@ -11,7 +11,7 @@
 }
 .note:hover, .note:focus-visible { background: var(--hover); }
 
-.note-text { color: var(--pri); overflow-wrap: anywhere; }
+.note-text { color: var(--pri); overflow-wrap: anywhere; white-space: pre-line; }   /* keep the lines you typed */
 
 /* Categories — laid out like lecture notes: headers sit on the left edge,
    everything else is written inside a margin; sub topics sit half-way.

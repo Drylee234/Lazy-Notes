@@ -60,6 +60,8 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | 13 | Panel options described in words only | Wanted images to pick from |
 | 14 | PDF keyboard caret drawn while dragging a selection ("the cursor moves instead of a highlight") | Caret hidden while the mouse is down; shows only after a plain click or Shift+arrows; switch lnDocCaret |
 | 15 | Typing-hint bar floated over the pop-up box's type chips | Hint shown in the box's own footer line (no overlap) |
+| 17 | Tidy joined lines in notes typed in the Study box but saved as Plain; highlight text showed without line breaks; Shift+Enter gave blank lines | Typed-as-type notes never tidied (and restored); .note-text keeps line breaks; one Shift+Enter = one line |
+| 18 | Study note box's Save-as was a plain dropdown (number only selected) | Tab shows numbered chips like the save pop-up; a number saves at once; ←/→ move; Enter saves; Shift+Tab/Esc back |
 | 16 | Fold button in the left margin, under the Study tab's drag handle / indent buttons | Fold button right after the heading's words |
 
 ## 6. Decisions
@@ -107,7 +109,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Panel sizes: docked/slide-out width default 360px, min 280px, max half the window; pop-up note box 330px wide; pop-out window = panel width, beside the current Chrome window.
 - Zoom: slides/Word 50%–300%, snaps to 100% within 3%; Ctrl+= ×1.15; pinch factor exp(−deltaY·0.01). PDF Ctrl+= ×1.2.
 - Storage keys (chrome.storage.local): lazynotes (courses → topics → {highlights{id}, notes{id}}; fields incl. order, indent, image), activeCourse, activeTopic, highlighterActive, lastDrag, lnDocs, lnTheme, lnPopupSide, lnAutocorrectLevel (0 Off/1 Mild/2 Strong/3 Toxic), lnSpellIgnore, lnDocAutoSelect, pptxAutoOpen, lnLastBackup, lnSyncUrl, lnSyncKey, lnSyncState, panelRequest (types SHOW_CREATE_COURSE, SHOW_CREATE_TOPIC, FILL_COMPOSER).
-- Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 1); joins broken PDF lines in old highlights (not typed notes, not figures, lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
+- Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 2); joins broken PDF lines in old highlights from a page/document only (never typed notes, never notes typed in a note box and saved as a type [no sourceUrl/anchor] — v2 put those back; not figures; lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
 - More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret.
 - chrome.storage.session: lnDocWords {title, words:[[form,count]…] top 8000}, lnPanelWindow (pop-out window id).
 - localStorage (per extension origin): ln-embed-<page> (panel open/width), ln-zoom-<page> (slides/Word zoom), ln-folded (folded head ids, last 3000), ln-pdf-fit.

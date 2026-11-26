@@ -430,3 +430,10 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 #arrange-toast[hidden] { display: none; }
 #arrange-toast button { border: 0; border-radius: 999px; padding: 3px 9px; background: transparent; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
 #arrange-toast button:hover { background: rgba(127,127,127,.2); }
+
+/* Save-as chips over the note box, shown while the type picker has focus
+   (Tab from the note box). Numbers save at once, like the save pop-up. */
+#composer-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 0 6px; }
+#composer-chips .type-chip { position: relative; min-width: 28px; height: 26px; padding: 0 6px; font-weight: 600; }
+#composer-chips[hidden] { display: none; }
+.composer-chip-caption { flex-basis: 100%; margin-top: 2px; }

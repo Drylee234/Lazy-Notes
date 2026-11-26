@@ -4,7 +4,8 @@
 // sentences ("…the concentration\ngradients that…"). New saves join them
 // (content.js joinBrokenLines). This runs once (lnTidyDone = 1) and does the
 // same to every old highlight:
-//   • only highlights (typed notes keep the lines you typed), not figures;
+//   • only highlights from a page or document (typed notes, and notes typed
+//     in a note box but saved as a type, keep the lines you typed), not figures;
 //   • lists stay lists: lines that start with a bullet or number are kept;
 //   • the words as they were are kept on the note (textBefore), so
 //     "Undo tidy" in Settings › More options puts every one of them back.
@@ -12,7 +13,7 @@
 
 import { storageGet, storageSet } from './bg_storage.js';
 
-const TIDY_VERSION = 1;
+const TIDY_VERSION = 2;   // 2: notes typed in the note box are never tidied (and v1's are put back)
 
 // Same rules as content.js joinBrokenLines / rich-box.js cleanPdfText.
 const BULLET_RE = /^\s*[•●○◦▪■□►▸▹➢➤✓✔·]\s*/;
@@ -44,7 +45,18 @@ export async function tidyOldNotes({ force = false } = {}) {
   const { lnTidyDone, lazynotes } = await storageGet(["lnTidyDone", "lazynotes"]);
   if (!lazynotes || (!force && lnTidyDone >= TIDY_VERSION)) return 0;
   let count = 0;
+  // Typed in a note box and saved as a type (no page it came from): the
+  // lines are yours. Put back any that version 1 joined.
+  const typedHere = (h) => !h.sourceUrl && !h.anchor;
   eachHighlight(lazynotes, (h) => {
+    if (typedHere(h) && h.textBefore !== undefined) {
+      if (joinBrokenLines(h.textBefore) === h.text) h.text = h.textBefore;
+      delete h.textBefore;
+      count++;
+    }
+  });
+  eachHighlight(lazynotes, (h) => {
+    if (typedHere(h)) return;
     if (h.category === "figure" || typeof h.text !== "string" || !h.text.includes("\n")) return;
     const joined = joinBrokenLines(h.text);
     if (joined === h.text) return;

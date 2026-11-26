@@ -77,18 +77,68 @@ const StudyPage = (() => {
   // 7 Summary, 8 List head, 0 Plain, 9 My note. Enter then saves.
   const TYPE_KEYS = { "1": "header", "2": "sub topic", "3": "definition", "4": "formula",
                       "5": "list point", "6": "note", "7": "summary", "8": "list head", "0": "generic", "9": "" };
-  composerType.addEventListener("keydown", (e) => {
-    if (e.key in TYPE_KEYS && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      composerType.value = TYPE_KEYS[e.key];
-    }
+  // Like the save pop-up: Tab here shows the types as numbered chips; a
+  // number saves as that type at once, ←/→ move, Enter saves, Shift+Tab or
+  // Esc goes back to writing. Clicking a chip saves too.
+  const CHIP_ORDER = ["", "header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "generic"];
+  const CHIP_LOOK = { "": ["✎", "9", "My note"], "header": ["H", "1"], "sub topic": ["H2", "2"], "definition": ["Def", "3"],
+    "formula": ["ƒx", "4"], "list point": ["•", "5"], "note": ["!", "6"], "summary": ["Σ", "7"], "list head": ["≡", "8"], "generic": ["¶", "0"] };
+  const chipRow = document.createElement("div");
+  chipRow.id = "composer-chips";
+  chipRow.setAttribute("role", "radiogroup");
+  chipRow.setAttribute("aria-label", "Save as");
+  chipRow.hidden = true;
+  const chipFor = {};
+  CHIP_ORDER.forEach((t) => {
+    const [mark, key, name] = CHIP_LOOK[t];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "type-chip";
+    b.tabIndex = -1;
+    b.setAttribute("role", "radio");
+    b.title = `${name || CATEGORY_LABELS[t] || t} (${key})`;
+    b.innerHTML = `<span></span><span class="type-chip-key"></span>`;
+    b.firstChild.textContent = mark;
+    b.lastChild.textContent = key;
+    b.addEventListener("mousedown", (e) => e.preventDefault());   // keep focus on the picker
+    b.addEventListener("click", () => saveAsType(t));
+    chipFor[t] = b;
+    chipRow.appendChild(b);
   });
+  const chipCaption = document.createElement("div");
+  chipCaption.className = "chip-caption composer-chip-caption";
+  chipRow.appendChild(chipCaption);
+  composer.prepend(chipRow);
+  const markChip = () => {
+    const v = composerType.value;
+    Object.entries(chipFor).forEach(([t, b]) => b.setAttribute("aria-checked", String(t === v)));
+    chipCaption.textContent = `${CHIP_LOOK[v]?.[2] || CATEGORY_LABELS[v] || v} · number saves as it · Enter saves · Shift+Tab back`;
+  };
+  async function saveAsType(t) {
+    composerType.value = t;
+    markChip();
+    await submitComposer();
+    composerInput.focus();
+  }
+  composerType.addEventListener("focus", () => { markChip(); chipRow.hidden = false; });
+  composerType.addEventListener("blur", () => { chipRow.hidden = true; });
+  composerType.addEventListener("change", markChip);
   composerType.addEventListener("keydown", async (e) => {
-    if (e.key === "Enter") {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key in TYPE_KEYS) {
+      e.preventDefault();
+      await saveAsType(TYPE_KEYS[e.key]);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const i = CHIP_ORDER.indexOf(composerType.value);
+      const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+      composerType.value = CHIP_ORDER[(i + step + CHIP_ORDER.length) % CHIP_ORDER.length];
+      markChip();
+    } else if (e.key === "Enter") {
       e.preventDefault();
       await submitComposer();
       composerInput.focus();
-    } else if (e.key === "Tab" && e.shiftKey) {
+    } else if ((e.key === "Tab" && e.shiftKey) || e.key === "Escape") {
       e.preventDefault();
       composerInput.focus();
     }
@@ -623,7 +673,9 @@ const StudyPage = (() => {
     // Saved as a highlight type: plain words, like a highlight without a link.
     if (composerType.value) {
       const id = crypto.randomUUID();
-      const words = composerInput.innerText.replace(/\n{3,}/g, "\n\n").trim();
+      // Each paragraph of the box is one line (Shift+Enter); an empty
+      // paragraph between them stays as one blank line.
+      const words = composerInput.innerText.replace(/\n\n(\n*)/g, (_, more) => (more ? "\n\n" : "\n")).trim();
       chrome.runtime.sendMessage({   // no reply for highlights, same as a drop
         type: "NEW_HIGHLIGHT", id, text: words, context: null, category: composerType.value,
         course: target.courseName, topic: target.topicName, annotation: "",
