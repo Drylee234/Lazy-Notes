@@ -312,15 +312,27 @@ function renderTypedNote(note) {
 function noteParents(notes) {
   const parent = new Map();
   let header = null, sub = null, head = null;
+  // Indented notes belong to the nearest note above them that is less
+  // indented ("Simple diffusion" owns what you indent under it), whatever
+  // type either is. lastAt[level] = the latest note at that indent level.
+  let lastAt = [];
   notes.forEach((n, i) => {
     const id = String(n.id);
     const c = n.kind === "typed" ? "typed" : n.category;
+    const lvl = Math.max(0, Math.min(3, n.indent || 0));
+    const isHead = c === "header" || c === "sub topic";
     if (c === "header") { parent.set(id, null); header = id; sub = null; head = null; }
     else if (c === "sub topic") { parent.set(id, header); sub = id; head = null; }
     else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed")) {
       parent.set(id, sub || header); head = id;
     } else if (c === "list point") parent.set(id, head || sub || header);
     else { parent.set(id, sub || header); head = null; }
+    if (isHead) { lastAt = []; return; }
+    if (lvl > 0) {
+      for (let k = lvl - 1; k >= 0; k--) if (lastAt[k] != null) { parent.set(id, lastAt[k]); break; }
+    }
+    lastAt[lvl] = id;
+    lastAt.length = lvl + 1;
   });
   return parent;
 }
@@ -377,7 +389,9 @@ const LnFold = (() => {
       b.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); set(container, notes, id, !folded.has(id)); });
       // Right after the heading's words (the left margin has the drag
       // handle and indent buttons).
-      const at = el.querySelector(".note-text") || el;
+      let at = el.querySelector(".note-text") || el;
+      // A typed note is made of blocks: end of the last line, not a new line.
+      while (at.lastElementChild && /^(P|UL|OL|LI|DIV|BLOCKQUOTE|SPAN)$/.test(at.lastElementChild.tagName) && !at.lastElementChild.matches(".fold-btn,.fold-count")) at = at.lastElementChild;
       at.appendChild(b);
       if (folded.has(id)) {
         const c = document.createElement("span");

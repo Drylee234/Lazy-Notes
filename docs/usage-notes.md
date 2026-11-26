@@ -90,3 +90,7 @@ seen → cause → what changed (commit) or what's still open.
 
 - Pressing the mouse just beside text didn't start a highlight until the pointer reached a word → presses within 28px of a word now snap to it (`lnDocSnap`, Settings › More options).
 - Home/End in the PDF keyboard cursor went to the start of one text piece, not the line → now go to the visual line start/end (Shift extends). Cursor can already be switched off (`lnDocCaret`).
+
+## 2026-11-26 · Bug report: notes nested under a typed list item
+
+- A highlight indented under a typed note's list item ("Simple Diffusion:") left a big gap and wasn't "owned" by it → the fold ▾ button now sits at the end of the last line (it was on its own line in typed notes), and indented notes belong to the nearest less-indented note above (fold hides them; any types).
