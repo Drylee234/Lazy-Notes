@@ -447,7 +447,7 @@ function layoutPages() {
 }
 
 function updateZoomUi() {
-  zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+  if (document.activeElement !== zoomLabel) zoomLabel.value = `${Math.round(scale * 100)}%`;
   const sel = $("zoom-mode");
   sel.value = fitMode || "custom";
   sel.querySelector('[value="custom"]').textContent = `${Math.round(scale * 100)}%`;
@@ -843,6 +843,19 @@ pageInput.addEventListener("focus", () => pageInput.select());
 
 $("prev-page").addEventListener("click", () => goToPage(currentPage - 1));
 $("next-page").addEventListener("click", () => goToPage(currentPage + 1));
+// Type a zoom: "125", "125%" or "1.25"; Enter applies, Esc puts it back.
+zoomLabel.addEventListener("focus", () => zoomLabel.select());
+zoomLabel.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { zoomLabel.value = `${Math.round(scale * 100)}%`; zoomLabel.blur(); return; }
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const n = parseFloat(zoomLabel.value.replace(",", "."));
+  // Whole numbers are percent (125 → 125%); a small decimal is a factor (1.5 → 150%).
+  if (n > 0) setScale(/[.,]/.test(zoomLabel.value) && !/%/.test(zoomLabel.value) && n < 10 ? n : n / 100);
+  zoomLabel.blur();
+  updateZoomUi();
+});
+zoomLabel.addEventListener("blur", () => { zoomLabel.value = `${Math.round(scale * 100)}%`; });
 $("zoom-in").addEventListener("click",  () => setScale(scale * 1.2));
 $("zoom-out").addEventListener("click", () => setScale(scale / 1.2));
 function refit() {

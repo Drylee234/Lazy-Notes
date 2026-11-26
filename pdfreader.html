@@ -6,6 +6,7 @@
 <title>Lazy Notes — PDF Reader</title>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
 <link rel="stylesheet" href="readers/pdfreader.css" />
+<link rel="stylesheet" href="readers/embedded-panel.css" />
 <script src="shared/theme.js"></script>
 </head>
 <body>
@@ -33,7 +34,8 @@
       <option value="custom" hidden>Custom</option>
     </select>
     <button id="zoom-in" class="tb-btn icon" title="Zoom in" aria-label="Zoom in">+</button>
-    <span id="zoom-label" class="tb-dim"></span>
+    <input id="zoom-label" class="zoom-input" type="text" inputmode="numeric" title="Type a zoom (e.g. 125) and press Enter" aria-label="Zoom percent" />
+
   </div>
 
   <div class="tb-right">
@@ -84,6 +86,7 @@
 <script src="readers/docs-recent.js"></script>
 <script src="readers/figure-save.js"></script>
 <script src="content/content.js"></script>
+<script src="readers/embedded-panel.js"></script>
 <script type="module" src="readers/pdfreader.js"></script>
 </body>
 </html>

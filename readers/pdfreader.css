@@ -356,3 +356,12 @@ body.snipping .textLayer { pointer-events: none; user-select: none; }
 #pdf-caret[hidden] { display: none; }
 #pdf-caret.blink { animation: pdf-caret-blink 1.05s steps(1) infinite; }
 @keyframes pdf-caret-blink { 50% { opacity: 0; } }
+
+/* Zoom percent: type a value, Enter applies */
+.zoom-input {
+  width: 56px; height: 28px; padding: 0 6px; text-align: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent;
+  color: var(--dim); font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums;
+}
+.zoom-input:hover { border-color: var(--border); }
+.zoom-input:focus { outline: none; border-color: var(--accent); color: var(--pri); background: var(--bg); }

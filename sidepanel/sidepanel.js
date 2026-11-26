@@ -990,4 +990,36 @@ updatePdfBanner();
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") settings.open = false; });
 })();
 
+// Built into a reader (readers/embedded-panel.js loads sidepanel.html?embedded=1
+// in an iframe): open on Study, and hand the keyboard back and forth.
+//   parent → "ln-focus-composer": go to Study and put the cursor in the note box
+//   → parent "ln-panel-done": Ctrl/⌘+. here, or Esc in an empty note box
+(function embeddedMode() {
+  if (!new URLSearchParams(location.search).has("embedded")) return;
+  document.body.classList.add("embedded");
+  const toStudy = () => document.querySelector('.view-tab[data-view="study"]')?.click();
+  setTimeout(toStudy, 0);
+  setTimeout(toStudy, 500);   // after init() has drawn the tabs
+  const done = () => parent.postMessage({ type: "ln-panel-done" }, location.origin);
+  addEventListener("message", (e) => {
+    if (e.origin !== location.origin || e.source !== parent) return;
+    if (e.data?.type !== "ln-focus-composer") return;
+    toStudy();
+    setTimeout(() => {
+      const box = document.getElementById("composer-input");
+      if (!box) return;
+      if (box.caretToEnd) box.caretToEnd(); else box.focus();
+    }, 30);
+  });
+  addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {
+      e.preventDefault();
+      done();
+    } else if (e.key === "Escape" && e.target.id === "composer-input" && !e.target.textContent.trim()) {
+      e.preventDefault();
+      done();
+    }
+  }, true);
+})();
+
 init();

@@ -1,0 +1,23 @@
+/* Lazy Notes — the side panel built into the readers (embedded-panel.js). */
+#ln-embed {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 120;
+  width: var(--ln-embed-w, 360px);
+  display: flex; background: var(--bg); border-left: 1px solid var(--border);
+}
+#ln-embed[hidden] { display: none; }
+#ln-embed iframe { flex: 1; width: 100%; height: 100%; border: 0; background: var(--bg); }
+.ln-embed-divider {
+  position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 1;
+}
+.ln-embed-divider:hover, .ln-embed-resizing .ln-embed-divider { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+/* While resizing, the iframe mustn't swallow the pointer. */
+.ln-embed-resizing #ln-embed iframe { pointer-events: none; }
+.ln-embed-resizing { cursor: col-resize; user-select: none; }
+
+/* The document makes room for it (toolbar included). */
+body.ln-embed-open { padding-right: var(--ln-embed-w, 360px); }
+body.ln-embed-open #toolbar { margin-right: 0; }
+
+.ln-embed-btn { display: inline-flex; align-items: center; gap: 5px; }
+.ln-embed-btn.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+@media (max-width: 760px) { .ln-embed-btn span { display: none; } }
