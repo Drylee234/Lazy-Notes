@@ -55,6 +55,14 @@ globalThis.LazySettings = (() => {
       <div class="set-label set-sub">Typing</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label>
       <label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label>
+      <div class="set-label set-sub">Old notes</div>
+      <div class="set-tidy">
+        <span class="set-tidy-status">Old PDF highlights get their broken lines joined, like new ones.</span>
+        <span class="set-backup">
+          <button type="button" class="set-btn set-tidy-run" title="Join broken lines in old highlights (lists stay lists)">Tidy now</button>
+          <button type="button" class="set-btn set-tidy-undo" title="Put every tidied highlight back as it was">Undo tidy</button>
+        </span>
+      </div>
       <div class="set-label set-sub">Documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
     </details>
@@ -281,6 +289,24 @@ globalThis.LazySettings = (() => {
       if (area === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey)) showSync();
     });
     showSync();
+
+    // ── Old notes: joined lines (background/bg_tidy.js) ──
+    const tidyStatus = root.querySelector(".set-tidy-status");
+    const showTidy = () => chrome.storage.local.get("lnTidyLog", ({ lnTidyLog: t }) => {
+      if (!t) return;
+      tidyStatus.textContent = t.undone != null
+        ? `Put back ${t.undone} highlight${t.undone === 1 ? "" : "s"} as they were.`
+        : `Joined broken lines in ${t.count} old highlight${t.count === 1 ? "" : "s"} (${new Date(t.at).toLocaleDateString()}).`;
+    });
+    const tidy = (undo) => chrome.runtime.sendMessage({ type: "TIDY_NOTES", undo }, (r) => {
+      void chrome.runtime.lastError;
+      if (r?.ok && !undo && !r.count) tidyStatus.textContent = "Nothing to tidy: old highlights are already joined.";
+      else showTidy();
+    });
+    root.querySelector(".set-tidy-run").addEventListener("click", () => tidy(false));
+    root.querySelector(".set-tidy-undo").addEventListener("click", () => tidy(true));
+    chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnTidyLog) showTidy(); });
+    showTidy();
 
     const KEYS = ["lnTheme", "lnPopupSide", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS];
     chrome.storage.onChanged.addListener((changes, area) => {

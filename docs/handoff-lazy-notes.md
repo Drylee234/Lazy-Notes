@@ -98,7 +98,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - ❌ Bottom-drawer panel (option 4) — not chosen.
 
 ## 8. Data & facts (exact)
-- Repo `Drylee234/Lazy-Notes`; last pushed commit on `main`: `7f299b8` ("List head type back (8), fold/unfold …"). Before it: `23cc7cf` (doc words, pinch zoom, web Note/Quote, joined lines, new topic), `1867fd4` (edge tab, pop-up note box, caret fix), `9dcf563` (handoff #2).
+- Repo `Drylee234/Lazy-Notes`; manifest version 2.0 (`0c7ffaf`; tag v2.0 push was refused by the session proxy — user to tag on GitHub); earlier `7f299b8` ("List head type back (8), fold/unfold …"). Before it: `23cc7cf` (doc words, pinch zoom, web Note/Quote, joined lines, new topic), `1867fd4` (edge tab, pop-up note box, caret fix), `9dcf563` (handoff #2).
 - Render: workspace `tea-d9tu9qm417fc73fa0br0` ("Alfred's workspace"); web service `lazy-notes` id `srv-dc3uo7e1egvs73er4o30`, URL https://lazy-notes-c07b.onrender.com, region frankfurt, free, auto-deploys from `main`, build `pip install -r server/requirements.txt`, start `cd server && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`, env PYTHON_VERSION 3.12.7, LAZYNOTES_KEY = [secret removed: re-enter it].
 - Render Postgres `lazy-notes-db` id `dpg-dc3uki6i0phs738klbog-a`, v16, free, frankfurt, expires 2026-12-26 (free DB: plan for renewal/backup before then). DATABASE_URL set by user; sync works.
 - Server API: GET /api/health (no auth) → {"ok":true,"app":"lazy-notes"}; PUT /api/snapshot (Bearer key) body {"app":"lazy-notes","version":1,"sentAt","data":{"lazynotes","lnDocs"}}; GET /api/snapshot; 30 MB max; keeps latest + 5.
@@ -107,6 +107,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Panel sizes: docked/slide-out width default 360px, min 280px, max half the window; pop-up note box 330px wide; pop-out window = panel width, beside the current Chrome window.
 - Zoom: slides/Word 50%–300%, snaps to 100% within 3%; Ctrl+= ×1.15; pinch factor exp(−deltaY·0.01). PDF Ctrl+= ×1.2.
 - Storage keys (chrome.storage.local): lazynotes (courses → topics → {highlights{id}, notes{id}}; fields incl. order, indent, image), activeCourse, activeTopic, highlighterActive, lastDrag, lnDocs, lnTheme, lnPopupSide, lnAutocorrectLevel (0 Off/1 Mild/2 Strong/3 Toxic), lnSpellIgnore, lnDocAutoSelect, pptxAutoOpen, lnLastBackup, lnSyncUrl, lnSyncKey, lnSyncState, panelRequest (types SHOW_CREATE_COURSE, SHOW_CREATE_TOPIC, FILL_COMPOSER).
+- Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 1); joins broken PDF lines in old highlights (not typed notes, not figures, lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
 - More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret.
 - chrome.storage.session: lnDocWords {title, words:[[form,count]…] top 8000}, lnPanelWindow (pop-out window id).
 - localStorage (per extension origin): ln-embed-<page> (panel open/width), ln-zoom-<page> (slides/Word zoom), ln-folded (folded head ids, last 3000), ln-pdf-fit.
@@ -133,6 +134,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | + New topic in Study topic list | final, on main | `23cc7cf` | — |
 | List head (8), folding, filters with heads | final, on main | `7f299b8` | Study + All notes topic page |
 | Smoother panel (vs Web Highlights) | waiting on user | — | redraw keeps scroll, ~0.1s for 300 notes; need what feels rough |
+| Old notes get joined PDF lines (auto once, Undo in Settings) | final, on main | after `0c7ffaf` | folding, list heads, filters, doc-words already apply to old notes |
 | Remaining "More options" toggles: pop-up course/topic pickers, "Saving to" line, Document reader footer link, formatting bar, built-in Notes panel on/off | NOT done | — | rule 2 |
 | Drag PDF text into built-in panel | untested | — | headless can't drag into iframe |
 

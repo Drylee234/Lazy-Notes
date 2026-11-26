@@ -11,6 +11,7 @@ import {
   handleDeleteHighlight
 } from './bg_courses.js';
 import { requestSidePanel } from './bg_sidepanel.js';
+import { tidyOldNotes, undoTidy } from './bg_tidy.js';
 import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
@@ -79,6 +80,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case "NEW_HIGHLIGHT":
       handleNewHighlight(message);
       return;
+    case "TIDY_NOTES":        // Settings › More options: run again / undo
+      (message.undo ? undoTidy() : tidyOldNotes({ force: true }))
+        .then((count) => sendResponse({ ok: true, count }))
+        .catch((err) => sendResponse({ ok: false, reason: String(err) }));
+      return true;
     case "SEND_TO_NOTE_BOX":   // ✎ Note / ❝ Quote in a web page's save pop-up
       requestSidePanel({ type: "FILL_COMPOSER", mode: message.mode, text: String(message.text || "") }, sender.tab);
       return;
