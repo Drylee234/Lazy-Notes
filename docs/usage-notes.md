@@ -76,3 +76,8 @@ seen → cause → what changed (commit) or what's still open.
 | Factual slip: "Luigi Giovanni" (Galvani) | Person or slide | Nothing to automate |
 | White table snips glare in dark mode | Extension look | **Open idea:** dim pictures slightly in dark mode (switchable) |
 | Table split across two snips | PDF page break | **Open idea:** "Join to last figure" stacks a snip under the previous one |
+
+## 2026-11-26 · Bug report: PDF highlight + Home key
+
+- Pressing the mouse just beside text didn't start a highlight until the pointer reached a word → presses within 28px of a word now snap to it (`lnDocSnap`, Settings › More options).
+- Home/End in the PDF keyboard cursor went to the start of one text piece, not the line → now go to the visual line start/end (Shift extends). Cursor can already be switched off (`lnDocCaret`).

@@ -991,6 +991,89 @@ document.addEventListener("selectionchange", drawCaret);
 addEventListener("resize", drawCaret);
 addEventListener("scroll", drawCaret, { passive: true });
 
+// Start (or end) of the visual line the caret is on: the leftmost (or
+// rightmost) text piece sitting on the same row of the same page.
+function visualLineEnd(sel, toStart) {
+  let n = sel.focusNode;
+  const layer = (n.nodeType === 1 ? n : n.parentElement)?.closest(".textLayer");
+  if (!layer) return null;
+  let rect = null;
+  if (n.nodeType === 3 && n.nodeValue.length) {
+    const r = document.createRange();
+    const o = sel.focusOffset;
+    try { r.setStart(n, Math.max(0, o - (o > 0 ? 1 : 0))); r.setEnd(n, Math.min(n.nodeValue.length, o > 0 ? o : 1)); } catch (_) {}
+    rect = r.getBoundingClientRect();
+  }
+  if (!rect || !rect.height) rect = (n.nodeType === 1 ? n : n.parentElement).getBoundingClientRect();
+  if (!rect.height) return null;
+  const cy = rect.top + rect.height / 2, tol = rect.height * 0.5;
+  let best = null, bestX = toStart ? Infinity : -Infinity;
+  for (const sp of layer.querySelectorAll("span:not(.markedContent)")) {
+    if (!sp.firstChild || sp.firstChild.nodeType !== 3 || !sp.textContent.trim()) continue;
+    const b = sp.getBoundingClientRect();
+    if (!b.height || Math.abs(b.top + b.height / 2 - cy) > tol) continue;
+    const x = toStart ? b.left : b.right;
+    if (toStart ? x < bestX : x > bestX) { bestX = x; best = sp; }
+  }
+  if (!best) return null;
+  const tn = best.firstChild;
+  if (toStart) {
+    const lead = tn.nodeValue.length - tn.nodeValue.trimStart().length;
+    return { node: tn, offset: lead };
+  }
+  return { node: tn, offset: tn.nodeValue.trimEnd().length };
+}
+
+// Pressing in the small gap beside/between words used to start nothing, so
+// a drag only began once the mouse reached a word. Snap such a press (and the
+// drag after it) to the nearest word within a few pixels.
+const SNAP_PX = 28;
+function nearestTextPos(x, y, layer, maxDist) {
+  let best = null, bd = maxDist;
+  for (const sp of layer.querySelectorAll("span:not(.markedContent)")) {
+    if (!sp.firstChild || sp.firstChild.nodeType !== 3) continue;
+    const b = sp.getBoundingClientRect();
+    if (!b.width || !b.height) continue;
+    const dx = x < b.left ? b.left - x : x > b.right ? x - b.right : 0;
+    const dy = y < b.top ? b.top - y : y > b.bottom ? y - b.bottom : 0;
+    const d = Math.hypot(dx, dy);
+    if (d < bd) { bd = d; best = { sp, b }; }
+  }
+  if (!best) return null;
+  const { sp, b } = best, tn = sp.firstChild;
+  if (x <= b.left) return { node: tn, offset: 0 };
+  if (x >= b.right) return { node: tn, offset: tn.nodeValue.length };
+  const r = document.caretRangeFromPoint?.(x, Math.min(Math.max(y, b.top + 1), b.bottom - 1));
+  return r && sp.contains(r.startContainer) ? { node: r.startContainer, offset: r.startOffset } : { node: tn, offset: 0 };
+}
+let snapDrag = null, snapOn = true;     // lnDocSnap = false turns it off
+chrome.storage?.local.get("lnDocSnap", (r) => { snapOn = r?.lnDocSnap !== false; });
+chrome.storage?.onChanged.addListener((c, area) => { if (area === "local" && "lnDocSnap" in c) snapOn = c.lnDocSnap.newValue !== false; });
+document.addEventListener("mousedown", (e) => {
+  if (!snapOn || e.button !== 0 || snipping || e.shiftKey || !pdfDoc) return;
+  const layer = e.target.classList?.contains("textLayer") ? e.target : null;
+  if (!layer) return;
+  const pos = nearestTextPos(e.clientX, e.clientY, layer, SNAP_PX);
+  if (!pos) return;
+  e.preventDefault();                       // we run this drag ourselves
+  getSelection().collapse(pos.node, pos.offset);
+  snapDrag = layer;
+  layer.classList.add("selecting");
+}, true);
+document.addEventListener("mousemove", (e) => {
+  if (!snapDrag) return;
+  if (!(e.buttons & 1)) { snapDrag = null; return; }
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  let pos = null;
+  if (el && el.closest?.(".textLayer") === snapDrag && el !== snapDrag && el.firstChild?.nodeType === 3) {
+    const r = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (r && el.contains(r.startContainer)) pos = { node: r.startContainer, offset: r.startOffset };
+  }
+  if (!pos) pos = nearestTextPos(e.clientX, e.clientY, snapDrag, 80);
+  if (pos) getSelection().extend(pos.node, pos.offset);
+}, true);
+document.addEventListener("mouseup", () => { snapDrag = null; }, true);
+
 const CARET_MOVES = {
   ArrowLeft:  ["backward", "character"], ArrowRight: ["forward", "character"],
   ArrowUp:    ["backward", "line"],      ArrowDown:  ["forward", "line"],
@@ -1011,6 +1094,17 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     e.stopImmediatePropagation();    // not also a page turn
     const [dir, unit] = move;
+    // Home/End: each PDF text piece is its own box, so the browser's idea of
+    // a "line" is one piece. Go to the real start/end of the visual line.
+    if (unit === "lineboundary" && !e.ctrlKey && !e.metaKey) {
+      const spot = visualLineEnd(sel, dir === "backward");
+      if (spot) {
+        keySelecting = true;
+        if (e.shiftKey) sel.extend(spot.node, spot.offset); else sel.collapse(spot.node, spot.offset);
+        drawCaret();
+        return;
+      }
+    }
     const by = (e.ctrlKey || e.metaKey) && unit === "character" ? "word" : unit;
     keySelecting = true;
     sel.modify(e.shiftKey ? "extend" : "move", dir, by);
