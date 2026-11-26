@@ -1,6 +1,23 @@
 // Lazy Notes — "Continue reading" on the All notes home (courses.html).
 // Same data as the side panel's Home: chrome.storage.local.lnDocs (kept by
 // readers/docs-recent.js) plus files the readers keep in IndexedDB.
+// Show the first 3 cards of a grid, with "See more (N)" / "Show less" under
+// it. Shared with the Recent notes section (notes/viewer.js).
+function seeMore(grid, cards, what) {
+  let btn = grid.nextElementSibling?.classList.contains("see-more") ? grid.nextElementSibling : null;
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "see-more";
+    grid.after(btn);
+  }
+  const expanded = grid.dataset.expanded === "1";
+  cards.forEach((c, i) => { c.hidden = !expanded && i >= 3; });
+  btn.hidden = cards.length <= 3;
+  btn.textContent = expanded ? "Show less" : `See more (${cards.length - 3} more ${what})`;
+  btn.onclick = () => { grid.dataset.expanded = expanded ? "" : "1"; seeMore(grid, cards, what); };
+}
+
 (() => {
   const section = document.getElementById("recent-docs");
   const grid    = document.getElementById("recent-docs-grid");
@@ -39,7 +56,7 @@
   async function draw() {
     const { lnDocs = {} } = await chrome.storage.local.get("lnDocs");
     const all = { ...Object.fromEntries((await storedFiles()).map((d) => [d.key, d])), ...lnDocs };
-    const docs = Object.values(all).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 6);
+    const docs = Object.values(all).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0)).slice(0, 30);
 
     const cards = docs.map((d) => {
       const a = el("a", "rd-card");
@@ -60,11 +77,15 @@
       return a;
     });
 
-    const open = el("a", "rd-card rd-open");
-    open.href = "pdfreader.html";
-    open.append(el("span", "rd-plus", "+"), el("span", "rd-open-label", "Open a document…"));
-
-    grid.replaceChildren(...cards, open);
+    // Three at first; "See more" shows the rest. "Open a document…" sits on
+    // the section's heading line.
+    if (!section.querySelector(".rd-open-link")) {
+      const openLink = el("a", "rd-open-link", "+ Open a document…");
+      openLink.href = "pdfreader.html";
+      section.querySelector(".section-title")?.after(openLink);
+    }
+    grid.replaceChildren(...cards);
+    seeMore(grid, cards, "documents");
     section.querySelector(".rd-empty").hidden = cards.length > 0;
   }
 

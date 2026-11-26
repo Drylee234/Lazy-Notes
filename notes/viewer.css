@@ -351,3 +351,14 @@ body[data-page="courses"] #app { max-width: 900px; }
   #recent-docs-grid, #recent-notes-grid { grid-template-columns: 1fr; }
 }
 .rd-icon.docx { color: #2b579a; }
+
+/* Three cards, then "See more" */
+.rd-card[hidden], .rnote-card[hidden] { display: none !important; }
+.see-more {
+  display: block; margin: 10px auto 0; padding: 6px 14px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--surface); color: var(--sec); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.see-more:hover { color: var(--pri); border-color: var(--border-strong); }
+.see-more[hidden] { display: none; }
+.rd-open-link { float: right; margin-top: -26px; font-size: 12.5px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.rd-open-link:hover { text-decoration: underline; }

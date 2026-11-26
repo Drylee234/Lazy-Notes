@@ -267,7 +267,8 @@ async function renderCourses() {
     tops.sort((a, b) => b.at - a.at);
     grid.replaceChildren();
     document.querySelector(".rn-empty").hidden = tops.length > 0;
-    tops.slice(0, 6).forEach((t) => {
+    const cards = [];
+    tops.slice(0, 30).forEach((t) => {
       const a = document.createElement("a");
       a.className = "rnote-card";
       a.href = `display.html?course=${encodeURIComponent(t.courseName)}&topic=${encodeURIComponent(t.topicName)}`;
@@ -293,7 +294,9 @@ async function renderCourses() {
       snip.textContent = txt.length > 110 ? txt.slice(0, 107) + "…" : txt;
       a.append(head, course, snip);
       grid.appendChild(a);
+      cards.push(a);
     });
+    if (typeof seeMore === "function") seeMore(grid, cards, "topics");
   }
 
   drawCourses();
