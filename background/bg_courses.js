@@ -10,8 +10,23 @@ import { broadcastToAllTabs } from './bg_messaging.js';
 import { setHighlighterActive } from './bg_highlights.js';
 import { requestSidePanel } from './bg_sidepanel.js';
 
+// "BME213 (Physiology)" and "bme213 (physiology) " are the same course: a
+// new course or topic whose name differs only in capitals or spaces from one
+// you already have uses that one (so notes don't split across two).
+const sameName = (a, b) => String(a || "").replace(/\s+/g, " ").trim().toLowerCase() ===
+  String(b || "").replace(/\s+/g, " ").trim().toLowerCase();
+
 export async function handleCreateCourse(message) {
-  const { name, level, semester, details } = message;
+  const { level, semester, details } = message;
+  const { lazynotes } = await storageGet("lazynotes");
+  const existing = Object.keys(lazynotes?.courses || {}).find((k) => sameName(k, message.name));
+  const name = existing ?? String(message.name || "").trim();
+  if (existing) {
+    // Already there: open it instead of starting a second, empty copy.
+    await handleCourseSelection(existing);
+    await requestSidePanel({ type: "SHOW_CREATE_TOPIC", courseName: existing }, null);
+    return;
+  }
 
   const result = validateCourse(name, level, semester);
   if (!result.valid) {
@@ -41,7 +56,11 @@ export async function handleCreateCourse(message) {
 }
 
 export async function handleCreateTopic(message) {
-  const { courseName, name } = message;
+  const { courseName } = message;
+  const { lazynotes } = await storageGet("lazynotes");
+  const existing = Object.keys(lazynotes?.courses?.[courseName]?.topics || {}).find((k) => sameName(k, message.name));
+  if (existing) { await handleTopicSelection(courseName, existing); return; }
+  const name = String(message.name || "").trim();
 
   const result = await validateTopic(courseName, name);
   if (!result.valid) {
