@@ -11,11 +11,33 @@ to convert raw highlights into notes
 | `readers/` | The PDF, slides and Word readers, recent-documents tracking (`docs-recent.js`), the Notes panel inside them (`embedded-panel.*`: edge tab, docked, pop-out window), the pop-up note box (`quick-note.*`), zoom for slides/Word (`pinch-zoom.js`) and the open document's words for spell check (`doc-words.js`). |
 | `sidepanel/` | The side panel: Home and Study tabs, dropdowns, the formatted note box (`rich-box.js`). |
 | `notes/` | All notes pages, note rendering, the highlight editor and export. |
-| `shared/` | Used everywhere: colours and Light/Dark (`theme.*`), helpers (`utils.js`), spell check (`spell.js`). |
+| `shared/` | Used everywhere: colours and Light/Dark (`theme.*`), helpers (`utils.js`), spell check (`spell.js`), the AI services table (`ai-providers.js`). |
 | `lib/` | Third-party code: PDF.js, nspell and the English dictionary. |
 | `icons/` | Extension icons and logo. |
 | `docs/` | Notes for continuing work (handoff file). |
 | `server/` | Optional sync server + read-only mobile site (see `server/README.md`). |
+
+## AI help
+
+Lazy Notes can ask an AI service to tidy a highlight, explain it, or write a
+definition. It is **off until you set it up**: Settings › AI, pick a service,
+paste a key, press Test connection.
+
+| Service | Free? |
+|---|---|
+| **Groq** (picked for you) | Free, ~30 requests a minute and ~1,000 a day. Open models. |
+| Google Gemini | Free, but now only about 20 requests a day on Flash. |
+| Claude (Anthropic) | Not free — a console key, billed per word. A Claude Pro plan does **not** include API access. |
+| OpenRouter | Free models (~50 a day); some of their owners may train on what you send. |
+| Other / my own | Anything OpenAI-shaped: Mistral, Cerebras, or Ollama on your own computer. |
+
+Your key stays in this Chrome: it is never synced to your server, never put in
+a backup file, and never in a problem report. All the talking happens in the
+service worker (`background/bg_ai.js`), so a key never touches a web page.
+
+Where the buttons are: **✨ Tidy** in the save pop-up (or Alt+T), and
+**✨ Tidy · 💡 Explain · 📖 Define** in the note editor. Nothing saves by
+itself — the AI fills a box you can edit, and a second press undoes it.
 
 ## Server
 
