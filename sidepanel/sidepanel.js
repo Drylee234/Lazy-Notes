@@ -462,7 +462,10 @@ viewTabs.forEach((tab) => {
 // ---------------------------------------------------------------------------
 
 function setToggleBtn(active) {
-  document.getElementById("toggle-label").textContent = active ? "Highlighter on" : "Highlighter off";
+  // "on" is a green dot (grey when off); the words stay for screen readers.
+  document.getElementById("toggle-label").textContent = "Highlighter";
+  toggleBtn.setAttribute("aria-label", active ? "Highlighter on" : "Highlighter off");
+  toggleBtn.title = active ? "Highlighter on: select text on a page to save it" : "Highlighter off";
   toggleBtn.setAttribute("aria-pressed", String(active));
   toggleBtn.classList.toggle("active", active);
   updateToggleBtnGuard();

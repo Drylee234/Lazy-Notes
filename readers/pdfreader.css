@@ -96,7 +96,7 @@ body {
   background: var(--dim);
 }
 .hl-status.on { color: var(--pri); border-color: var(--accent); }
-.hl-status.on::before { background: var(--accent); }
+.hl-status.on::before { background: #22c55e; }   /* on = green dot, as in the side panel */
 
 /* ── Pages ── */
 #viewer {
