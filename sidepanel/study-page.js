@@ -57,7 +57,7 @@ const StudyPage = (() => {
     type.id = "composer-type";
     type.title = "Save as";
     type.setAttribute("aria-label", "Save as");
-    type.add(new Option("My note", ""));
+    type.add(new Option("Note", ""));
     PICK_TYPES
       .forEach((t) => type.add(new Option(CATEGORY_LABELS[t] || t, t)));
     type.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -74,15 +74,21 @@ const StudyPage = (() => {
   syncTypeTab();
   // Numbers pick the type here too (same keys as the save pop-up): 1 Header,
   // 2 Sub topic, 3 Definition, 4 Formula, 5 List point, 6 Important,
-  // 7 Summary, 8 List head, 0 Plain, 9 My note. Enter then saves.
+  // 7 Summary, 8 List head, T Table, 9 or 0 Note (0 = Plain when "Plain in
+  // note boxes" is on). Enter then saves.
   const TYPE_KEYS = { "1": "header", "2": "sub topic", "3": "definition", "4": "formula",
-                      "5": "list point", "6": "note", "7": "summary", "8": "list head", "0": "generic", "9": "" };
+                      "5": "list point", "6": "note", "7": "summary", "8": "list head", "t": "table", "T": "table", "0": "generic", "9": "" };
   // Like the save pop-up: Tab here shows the types as numbered chips; a
   // number saves as that type at once, ←/→ move, Enter saves, Shift+Tab or
   // Esc goes back to writing. Clicking a chip saves too.
-  const CHIP_ORDER = ["", "header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "generic"];
-  const CHIP_LOOK = { "": ["✎", "9", "My note"], "header": ["H", "1"], "sub topic": ["H2", "2"], "definition": ["Def", "3"],
-    "formula": ["ƒx", "4"], "list point": ["•", "5"], "note": ["!", "6"], "summary": ["Σ", "7"], "list head": ["≡", "8"], "generic": ["¶", "0"] };
+  // "Note" (your own words, formatted) is the note box's plain choice;
+  // Plain (a highlight-style line) is offered here only when Settings ›
+  // More options › "Plain in note boxes" is on (lnPlainInBoxes).
+  let plainInBoxes = false;
+  const CHIP_ORDER = ["", "header", "sub topic", "definition", "formula", "list point", "note", "summary", "list head", "table", "generic"];
+  const chipOrder = () => CHIP_ORDER.filter((t) => t !== "generic" || plainInBoxes);
+  const CHIP_LOOK = { "": ["✎", "9", "Note"], "header": ["H", "1"], "sub topic": ["H2", "2"], "definition": ["Def", "3"],
+    "formula": ["ƒx", "4"], "list point": ["•", "5"], "note": ["!", "6"], "summary": ["Σ", "7"], "list head": ["≡", "8"], "table": ["▦", "T"], "generic": ["¶", "0"] };
   const chipRow = document.createElement("div");
   chipRow.id = "composer-chips";
   chipRow.setAttribute("role", "radiogroup");
@@ -109,6 +115,16 @@ const StudyPage = (() => {
   chipCaption.className = "chip-caption composer-chip-caption";
   chipRow.appendChild(chipCaption);
   composer.prepend(chipRow);
+  function showPlain(on) {
+    plainInBoxes = on === true;
+    chipFor.generic.hidden = !plainInBoxes;
+    const opt = [...composerType.options].find((o) => o.value === "generic");
+    if (opt) opt.hidden = !plainInBoxes;
+    if (!plainInBoxes && composerType.value === "generic") composerType.value = "";
+    chipFor[""].lastChild.textContent = plainInBoxes ? "9" : "9·0";
+  }
+  chrome.storage.local.get("lnPlainInBoxes", (r) => showPlain(r?.lnPlainInBoxes));
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnPlainInBoxes) showPlain(c.lnPlainInBoxes.newValue); });
   const markChip = () => {
     const v = composerType.value;
     Object.entries(chipFor).forEach(([t, b]) => b.setAttribute("aria-checked", String(t === v)));
@@ -127,12 +143,13 @@ const StudyPage = (() => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key in TYPE_KEYS) {
       e.preventDefault();
-      await saveAsType(TYPE_KEYS[e.key]);
+      await saveAsType(e.key === "0" && !plainInBoxes ? "" : TYPE_KEYS[e.key]);
     } else if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      const i = CHIP_ORDER.indexOf(composerType.value);
+      const order = chipOrder();
+      const i = order.indexOf(composerType.value);
       const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-      composerType.value = CHIP_ORDER[(i + step + CHIP_ORDER.length) % CHIP_ORDER.length];
+      composerType.value = order[(i + step + order.length) % order.length];
       markChip();
     } else if (e.key === "Enter") {
       e.preventDefault();
@@ -1175,9 +1192,9 @@ const StudyPage = (() => {
   // number key, the full name on hover and in the caption. Clicking one (or
   // pressing its number) saves straight away; Enter saves the lit one.
   const CHIP_MARK = { "header": "H", "sub topic": "H2", "definition": "Def", "formula": "ƒx",
-                      "list point": "•", "note": "!", "summary": "Σ", "list head": "≡", "generic": "¶" };
+                      "list point": "•", "note": "!", "summary": "Σ", "list head": "≡", "table": "▦", "generic": "¶" };
   const CHIP_KEY  = { "header": "1", "sub topic": "2", "definition": "3", "formula": "4",
-                      "list point": "5", "note": "6", "summary": "7", "list head": "8", "generic": "0" };
+                      "list point": "5", "note": "6", "summary": "7", "list head": "8", "table": "T", "generic": "0" };
 
   // A first guess from the words alone (the page's tags aren't known here).
   function guessType(text) {

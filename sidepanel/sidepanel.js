@@ -202,8 +202,35 @@ function updateFooterCount() {
 // Home — topic list
 // ---------------------------------------------------------------------------
 
+// The documents this course's notes came from (shared/utils.js
+// courseDocuments); a click opens one in its reader.
+const DOC_ICON = { pdf: "PDF", pptx: "PPT", docx: "DOC" };
+async function loadCourseDocs() {
+  const box = document.getElementById("course-docs");
+  const list = document.getElementById("course-docs-list");
+  if (!box) return;
+  const course = selectedCourse && courseTree[selectedCourse];
+  const { lnDocs = {} } = await chrome.storage.local.get("lnDocs");
+  const docs = course ? courseDocuments(selectedCourse, course, lnDocs) : [];
+  list.replaceChildren(...docs.slice(0, 12).map((d) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "course-doc";
+    row.title = `Open ${d.name}${d.topics.size ? ` · topics: ${[...d.topics].join(", ")}` : ""}`;
+    row.innerHTML = `<span class="course-doc-kind"></span><span class="course-doc-name"></span><span class="course-doc-meta"></span>`;
+    row.children[0].textContent = DOC_ICON[d.kind] || "DOC";
+    row.children[0].dataset.kind = d.kind;
+    row.children[1].textContent = d.name;
+    row.children[2].textContent = d.notes ? `${d.notes} note${d.notes === 1 ? "" : "s"}` : "opened";
+    row.addEventListener("click", () => chrome.tabs.create({ url: d.open }));
+    return row;
+  }));
+  box.hidden = docs.length === 0;
+}
+
 async function loadHomeTopics() {
   homeTopicList.innerHTML = "";
+  loadCourseDocs();
 
   if (!selectedCourse || !courseTree[selectedCourse]) {
     updateFooterCount();
@@ -389,11 +416,11 @@ async function loadStudyTopics() {
     return;
   }
 
-  // Default to the topic being highlighted into, if it's in this course.
+  // Study shows what's picked (on Home, or here): the topic being
+  // highlighted into, if it's in this course. Nothing picked: nothing shown
+  // (it used to open the course's first topic, which looked like a pick).
   if (!topicNames.includes(studySelectedTopic)) {
-    studySelectedTopic = selectedCourse === activeCourse && topicNames.includes(activeTopic)
-      ? activeTopic
-      : topicNames[0];
+    studySelectedTopic = selectedCourse === activeCourse && topicNames.includes(activeTopic) ? activeTopic : null;
   }
 
   topicNames.forEach((name) => {
@@ -405,6 +432,17 @@ async function loadStudyTopics() {
   });
   addNewTopicOption();
   studyTopicSelect.hidden = false;
+
+  if (!studySelectedTopic) {
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Pick a topic";
+    none.selected = true;
+    none.hidden = true;
+    studyTopicSelect.prepend(none);
+    showStudyEmpty("Pick a topic on the Home tab (or above) to see its notes.");
+    return;
+  }
 
   await loadNotes();
 }
@@ -771,6 +809,7 @@ async function showCreateTopic(courseName) {
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "local") return;
+  if (changes.lnDocs && !changes.lazynotes) loadCourseDocs();
 
   if (changes.lazynotes) {
     courseTree = changes.lazynotes.newValue?.courses ?? {};

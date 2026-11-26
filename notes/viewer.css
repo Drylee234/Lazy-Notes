@@ -362,3 +362,17 @@ body[data-page="courses"] #app { max-width: 900px; }
 .see-more[hidden] { display: none; }
 .rd-open-link { float: right; margin-top: -26px; font-size: 12.5px; font-weight: 600; color: var(--accent); text-decoration: none; }
 .rd-open-link:hover { text-decoration: underline; }
+
+/* Course page: documents its notes came from */
+#course-docs-page { margin: 28px 0 40px; }
+#course-docs-page[hidden] { display: none; }
+#course-docs-page .section-title { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 10px; }
+.course-docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.course-doc-card { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--pri); text-decoration: none; }
+.course-doc-card:hover { border-color: var(--border-strong); background: var(--hover); }
+.course-doc-card .course-doc-kind { grid-row: 1 / 3; width: 34px; padding: 6px 0; border-radius: 5px; font-size: 10px; font-weight: 700; text-align: center; color: #fff; background: #dc2626; }
+.course-doc-card .course-doc-kind[data-kind="pptx"] { background: #ea580c; }
+.course-doc-card .course-doc-kind[data-kind="docx"] { background: #2563eb; }
+.course-doc-card .course-doc-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.course-doc-card .course-doc-meta { font-size: 11.5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

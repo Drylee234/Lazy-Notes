@@ -28,6 +28,9 @@
   let level = 1;
   let ignore = new Set();
   let docOn = true, hintsOn = true;
+  // Fixes you've picked yourself (a suggestion clicked): applied again next
+  // time you make the same slip. lnSpellLearned = { typo: fix }.
+  let learned = {};
   // The open document's words: lower case → { c: count, form: as written }.
   const DOCW = new Map();
   const setDocWords = (d) => {
@@ -41,6 +44,7 @@
       ignore = new Set(r.lnSpellIgnore || []);
       ignore.forEach((w) => speller?.add(w));
     });
+    chrome.storage.local.get("lnSpellLearned", (r) => { learned = r?.lnSpellLearned || {}; });
     chrome.storage.local.get(["lnDocWordsOn", "lnTypingHints"], (r) => {
       docOn = r.lnDocWordsOn !== false;
       hintsOn = r.lnTypingHints !== false;
@@ -51,6 +55,7 @@
       if (area !== "local") return;
       if (c.lnAutocorrectLevel) level = Number(c.lnAutocorrectLevel.newValue ?? 1);
       if (c.lnDocWordsOn) docOn = c.lnDocWordsOn.newValue !== false;
+      if (c.lnSpellLearned) learned = c.lnSpellLearned.newValue || {};
       if (c.lnTypingHints) hintsOn = c.lnTypingHints.newValue !== false;
     });
   }
@@ -94,6 +99,35 @@
     });
   }
 
+  function learn(typo, fix) {
+    const t = typo.toLowerCase();
+    if (!t || t === fix.toLowerCase()) return;
+    learned[t] = fix.toLowerCase();
+    const keys = Object.keys(learned);
+    if (keys.length > 1500) keys.slice(0, keys.length - 1500).forEach((k) => delete learned[k]);
+    chrome.storage?.local.set({ lnSpellLearned: learned });
+  }
+
+  // Two words run together ("thecell" → "the cell"): only when both halves
+  // are common words (or yours / the document's) and one split is clearly best.
+  function splitFix(word) {
+    const w = word.toLowerCase();
+    if (w.length < 5) return null;
+    const common = (x) => x === "a" || x === "i" ||
+      (x.length >= 2 && ((RANK.get(x) || 1e9) <= 25000 || (VOCAB.get(x) || 0) >= 2 || docCount(x) >= 1) && speller.correct(x));
+    const options = [];
+    for (let i = 1; i < w.length; i++) {
+      const a = w.slice(0, i), b = w.slice(i);
+      if (common(a) && common(b)) options.push({ a, b, score: Math.log10(RANK.get(a) || 30000) + Math.log10(RANK.get(b) || 30000) });
+    }
+    if (!options.length) return null;
+    options.sort((x, y) => x.score - y.score);
+    if (options[1] && options[1].score - options[0].score < 0.6) return null;   // not clear which
+    const { a, b } = options[0];
+    const first = /^[A-Z]/.test(word) ? a[0].toUpperCase() + a.slice(1) : a;
+    return `${first} ${b}`;
+  }
+
   function remember(word) {
     const w = word.toLowerCase();
     ignore.add(w);
@@ -124,11 +158,12 @@
 
   function oneSlipFixes(word) {
     const w = word.toLowerCase();
-    const out = { swap: new Set(), double: new Set(), missing: new Set(), other: new Set() };
+    const out = { swap: new Set(), double: new Set(), extra: new Set(), missing: new Set(), other: new Set() };
     const test = (cand, bucket) => { if (cand !== w && speller.correct(cand)) out[bucket].add(cand); };
     for (let i = 0; i < w.length; i++) {
       const del = w.slice(0, i) + w.slice(i + 1);
-      test(del, i > 0 && w[i] === w[i - 1] ? "double" : "other");
+      // A letter too many (typing fast): a doubled one, or any extra one.
+      test(del, i > 0 && w[i] === w[i - 1] ? "double" : "extra");
       if (i < w.length - 1) test(w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2), "swap");
       for (const c of LETTERS) test(w.slice(0, i) + c + w.slice(i + 1), "other");
     }
@@ -159,7 +194,8 @@
     const cost = new Map();
     const add = (c, k) => { if (!cost.has(c) || cost.get(c) > k) cost.set(c, k); };
     f.swap.forEach((c) => add(c, 0.4));
-    f.double.forEach((c) => add(c, 0.5));
+    f.double.forEach((c) => add(c, 0.4));
+    f.extra.forEach((c) => add(c, 0.55));
     f.missing.forEach((c) => add(c, 0.6));   // a letter left out
     f.other.forEach((c) => add(c, 1));
     speller.suggest(w).forEach((c) => { const n = slips(c, w); if (n <= (far ? 2 : 1)) add(c.toLowerCase(), n === 1 ? 1 : 2); });
@@ -199,7 +235,9 @@
   const bestFix = (word, lvl) => autoFix(word, lvl);
 
   function suggestions(word) {
-    return ranked(word, { far: true }).slice(0, 4).map((c) => keepCase(word, c.word));
+    const split = splitFix(word);
+    const list = ranked(word, { far: true }).slice(0, split ? 3 : 4).map((c) => keepCase(word, c.word));
+    return split ? [split, ...list] : list;
   }
 
   // ── A capital in the middle of a sentence ("the rock Is hard"): lower it.
@@ -340,11 +378,16 @@
     // the result, so "DIDnt" ends up "didn't".
     const mixed = /[a-z]/.test(word) && /[A-Z]/.test(word.slice(1));
     const base = mixed ? (atStart ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word.toLowerCase()) : word;
-    let fixed = apostropheFix(base, atStart) || capsFix(word, atStart) || midCapFix(word, atStart, level) ||
+    // Letters held down ("helllo"): runs of 3+ count as one or two.
+    const runFix = /(.)\1\1/i.test(word)
+      ? [word.replace(/(.)\1{2,}/gi, "$1$1"), word.replace(/(.)\1{2,}/gi, "$1")].find((c) => speller.correct(c) || speller.correct(c.toLowerCase()))
+      : null;
+    const learnedFix = learned[word.toLowerCase()] ? keepCase(word, learned[word.toLowerCase()]) : null;
+    let fixed = learnedFix || runFix || apostropheFix(base, atStart) || capsFix(word, atStart) || midCapFix(word, atStart, level) ||
                 allCapsFix(word, atStart, level);
     if (!fixed) {
       if (checkable(word, atStart, level) && misspelled(word)) {
-        fixed = level >= 2 ? bestFix(word, level) : clearFix(word);
+        fixed = (level >= 2 ? bestFix(word, level) : clearFix(word)) || splitFix(word);
       } else if (level >= 2 && atStart && /^[a-z]/.test(word) && word.length > 1 && speller.correct(word)) {
         fixed = word[0].toUpperCase() + word.slice(1);   // capitalise a sentence's first word
       }
@@ -522,6 +565,7 @@
       sugg.forEach((s) => bar.append(button(s, "fix", () => {
         const v = view(field);
         if (v && v.text.slice(start, start + word.length) === word) replace(field, v, start, start + word.length, s);
+        if (!/\s/.test(s)) learn(word, s);   // next time it's fixed by itself
         hideBar();
       })));
       bar.append(button("Add to dictionary", "quiet", () => { remember(word); hideBar(); }));

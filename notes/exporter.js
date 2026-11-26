@@ -104,6 +104,12 @@ function mdNotes(notes, depth) {
       case "list point": out.push(`${pointIndent(note)}- ${text}`); break;
       case "definition": out.push(`**${text}**`); break;
       case "formula":    out.push(mdCode(note.text)); break;
+      case "table": {
+        const rows = parseTable(note.text).map((r) => `| ${r.map((c) => mdInline(c).replace(/\|/g, "\\|")).join(" | ")} |`);
+        if (rows.length) rows.splice(1, 0, `|${" --- |".repeat(parseTable(note.text)[0].length)}`);
+        out.push(rows.join("\n"));
+        break;
+      }
       // Markdown files can't hold the picture itself: say it's there.
       case "figure":     out.push(`*[Figure${note.text ? `: ${text}` : ""}${note.sourceTitle ? ` (${mdInline(note.sourceTitle)})` : ""}]*`); break;
       default:           out.push(isPlainHead(notes, i) ? `**${text.replace(/\s*[:：]$/, "")}:**` : text);
@@ -214,6 +220,7 @@ function htmlNotes(notes, depth) {
       case "list head":  out.push(`<h${Math.min(hd + 1, 6)}>${text}</h${Math.min(hd + 1, 6)}>`); break;
       case "definition": out.push(`<p class="definition"><strong>${text}</strong></p>`); break;
       case "formula":    out.push(`<pre class="formula"><code>${text}</code></pre>`); break;
+      case "table":      out.push(`<table class="note-table">${parseTable(note.text).map((r, i) => `<tr>${r.map((c) => { const t = i ? "td" : "th"; const e = document.createElement("i"); e.textContent = c; return `<${t}>${e.innerHTML}</${t}>`; }).join("")}</tr>`).join("")}</table>`); break;
       case "figure":     out.push(`<figure class="figure">${/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(note.image || "") ? `<img src="${note.image}" alt="${text}">` : ""}${note.text ? `<figcaption>${text}</figcaption>` : ""}</figure>`); break;
       default:           out.push(isPlainHead(notes, i)
         ? `<p class="list-head"><strong>${text.replace(/\s*[:：]$/, "")}:</strong></p>`
@@ -250,6 +257,9 @@ function htmlDocument(title, body) {
   h2 { margin-top: 32px; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; }
   blockquote { margin: 4px 0 12px; padding-left: 12px; border-left: 3px solid #ddd; color: #555; }
   pre.formula { background: #f5f5f5; padding: 8px 12px; border-radius: 6px; white-space: pre-wrap; }
+  table.note-table { border-collapse: collapse; margin: 8px 0 14px; }
+  table.note-table th, table.note-table td { border: 1px solid #ccc; padding: 4px 10px; text-align: left; vertical-align: top; }
+  table.note-table th { background: #f5f5f5; }
   figure.figure { margin: 12px 0; }
   figure.figure img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
   figure.figure figcaption { font-size: 0.9em; color: #666; font-style: italic; margin-top: 4px; }

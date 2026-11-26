@@ -439,6 +439,30 @@ async function renderTopics() {
 
   let course = (await getCourseTree())[courseName];
   const listEl = document.getElementById("topic-list");
+
+  // The PDFs / slides / Word files this course's notes came from.
+  async function drawDocs() {
+    const box = document.getElementById("course-docs-page");
+    const grid = document.getElementById("course-docs-page-list");
+    if (!box) return;
+    const c = (await getCourseTree())[courseName];
+    const { lnDocs = {} } = await chrome.storage.local.get("lnDocs");
+    const docs = c ? courseDocuments(courseName, c, lnDocs) : [];
+    grid.replaceChildren(...docs.map((d) => {
+      const a = document.createElement("a");
+      a.className = "course-doc-card";
+      a.href = d.open;
+      a.innerHTML = `<span class="course-doc-kind"></span><span class="course-doc-name"></span><span class="course-doc-meta"></span>`;
+      a.children[0].textContent = { pdf: "PDF", pptx: "PPT", docx: "DOC" }[d.kind] || "DOC";
+      a.children[0].dataset.kind = d.kind;
+      a.children[1].textContent = d.name;
+      a.children[2].textContent = [d.notes ? `${d.notes} note${d.notes === 1 ? "" : "s"}` : "opened", [...d.topics].join(", ")].filter(Boolean).join(" · ");
+      return a;
+    }));
+    box.hidden = !docs.length;
+  }
+  drawDocs();
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lazynotes || c.lnDocs)) drawDocs(); });
   const sortSel = document.getElementById("topic-sort");
 
   wireExportButtons(async () => {
