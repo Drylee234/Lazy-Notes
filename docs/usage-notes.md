@@ -22,7 +22,7 @@ seen → cause → what changed (commit) or what's still open.
 **Cause → change**
 - New documents inherited `activeCourse/activeTopic` (the previous document's). Now a new document starts with none and asks (box in the reader; suggests a course from the course code in the file name, else the AI if on). Skip = unfiled. Switch: `lnAskPlace`.
 - Documents list per course comes from notes' links, so a doc whose notes were saved under two courses shows in both. Each card now has ✕ "Remove from this course" (notes untouched; `lnCourseDocHide`).
-- Home hides the Course / Topics block while a document is open (`lnHomeCourseInDoc` brings it back); "Open a document…" always shown.
+- Home's Course / Topics block is gone altogether. A slim top bar replaces it: "Saving to Course › Topic" (always shown, "+ New course" / "+ New topic" at the end of its dropdowns) and "+ Open a document…", which opens the computer's file picker directly (not the reader's start page). Topics are browsed/made in the Study tab.
 - Also fixed: overlapping `lnDocs` writes in `docs-recent.js` could drop the new document's record (now queued).
 
 ---
