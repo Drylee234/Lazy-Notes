@@ -58,7 +58,7 @@ restarts it):
 
 | Variable | What to put |
 |---|---|
-| `AI_KEY` | the AI service's key (required) |
+| `AI_KEY` | the AI service's key (required) — a **Groq API key** unless you set `AI_PROVIDER` to something else |
 | `AI_PROVIDER` | `groq` (the default), `gemini`, `anthropic` or `openrouter` |
 | `AI_MODEL` | a model name; left out, the provider's usual one is used |
 | `AI_BASE` | only for something else OpenAI-shaped (Mistral, Cerebras, …) |

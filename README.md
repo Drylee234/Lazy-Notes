@@ -20,8 +20,10 @@ to convert raw highlights into notes
 ## AI help
 
 Lazy Notes can ask an AI service to tidy a highlight, explain it, or write a
-definition. It is **off until you set it up**: Settings › AI, pick a service,
-paste a key, press Test connection.
+definition. It is **off until you set it up**: Settings › AI, paste a
+**Groq API key** (free, no card — get one at
+<https://console.groq.com/keys>), press Test connection. Other services are
+in the list and more will be added, but Groq is the one to start with.
 
 | Service | Free? |
 |---|---|

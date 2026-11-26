@@ -39,7 +39,7 @@ globalThis.LazyAIProviders = (() => {
       shape: "openai",
       base: "https://api.groq.com/openai/v1",
       keyUrl: "https://console.groq.com/keys",
-      keyHint: "Free key from the Groq console — no card needed.",
+      keyHint: "A Groq API key — free from the Groq console, no card needed. This is the one to start with.",
       free: "Picked for you: the most generous free one — roughly 30 requests a minute and 1,000 a day, and very fast. Open models, so not quite Gemini or Claude quality.",
       models: [
         ["openai/gpt-oss-120b", "GPT-OSS 120B — best here"],
