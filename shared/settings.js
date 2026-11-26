@@ -14,7 +14,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn", "lnAskPlace", "lnHomeCourseInDoc"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -42,7 +42,6 @@ globalThis.LazySettings = (() => {
       <summary class="set-label set-sync-head">More options</summary>
       <div class="set-label set-sub">New documents</div>
       <label class="set-check"><input type="checkbox" data-key="lnAskPlace" /> Ask which course &amp; topic a new document's notes go to (suggests one)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnHomeCourseInDoc" data-off /> Keep the Course / Topics picker on Home while a document is open</label>
       <div class="set-label set-sub">Notes panel in the readers</div>
       <div class="seg" data-key="lnPanelMode" data-default="float" role="radiogroup" aria-label="Notes panel in the readers">
         <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>

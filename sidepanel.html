@@ -56,7 +56,20 @@
   <!-- HOME VIEW -->
   <section id="home-view" class="visible">
 
-    <!-- On a Lazy Notes PDF/slides tab: what's open and where notes go. -->
+    <!-- The slim top edge: where notes go (any course / topic, or create
+         one) and a way to open a file. Always there, on every tab. -->
+    <div id="saving-bar">
+      <div id="rn-picker">
+        <select id="rn-course" aria-label="Course these notes go to"></select>
+        <select id="rn-topic" aria-label="Topic these notes go to"></select>
+      </div>
+      <div class="rn-where none" id="rn-where" hidden>Pick a course and topic for your notes</div>
+      <button id="open-doc-btn" class="open-doc-link" type="button">+ Open a document…</button>
+      <input id="open-doc-file" type="file" accept=".pdf,.pptx,.docx,application/pdf" hidden />
+      <div id="open-doc-msg" hidden></div>
+    </div>
+
+    <!-- On a Lazy Notes PDF/slides tab: what's open. -->
     <div id="reading-now" hidden>
       <div class="rn-doc">
         <span class="doc-icon" id="rn-icon">PDF</span>
@@ -65,26 +78,17 @@
           <div class="rn-meta" id="rn-meta"></div>
         </div>
       </div>
-      <div class="rn-target">
-        <span class="rn-label">Saving to</span>
-        <div id="rn-picker">
-          <select id="rn-course" aria-label="Course these notes go to"></select>
-          <select id="rn-topic" aria-label="Topic these notes go to"></select>
-        </div>
-      </div>
-      <div class="rn-where none" id="rn-where" hidden>Pick a course and topic for this document's notes</div>
     </div>
 
     <!-- Anywhere else: documents to go back to. -->
     <div id="continue" hidden>
       <div class="list-head"><span class="field-label" id="continue-label">Continue reading</span></div>
       <div id="continue-list"></div>
-      <button id="open-doc-btn" class="open-doc-btn" type="button">Open a document…</button>
     </div>
 
-    <!-- Hidden while a document is open (its "Saving to" card above does the
-         job); Settings › More options brings it back (lnHomeCourseInDoc). -->
-    <div id="course-pick">
+    <!-- The old Course / Topics block: gone from Home (the bar above and the
+         Study tab do its job); kept hidden so the code that fills it still runs. -->
+    <div id="course-pick" hidden>
     <label class="field-label" for="home-course-select">Course</label>
     <select id="home-course-select" class="select">
       <option value="">Select a course</option>

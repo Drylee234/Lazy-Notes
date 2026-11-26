@@ -133,6 +133,7 @@ function populateCourseSelect(selectEl, selectedName) {
 function renderCourseSelects() {
   populateCourseSelect(homeCourseSelect, selectedCourse);
   populateCourseSelect(studyCourseSelect, selectedCourse);
+  try { fillSavingTo(activeCourse, activeTopic); } catch (_) { /* top bar not built yet */ }
 }
 
 // Picking a course in either tab, or outside the panel (right-click menu, a
@@ -956,9 +957,7 @@ async function updateReading() {
   readingNowEl.hidden = !key;
   continueEl.hidden = false;
   document.getElementById("continue-label").textContent = key ? "Other documents" : "Continue reading";
-  document.getElementById("open-doc-btn").hidden = false;   // also while a document is open
-  const { lnHomeCourseInDoc } = await chrome.storage.local.get("lnHomeCourseInDoc");
-  document.getElementById("course-pick").hidden = !!key && lnHomeCourseInDoc !== true;
+  fillSavingTo(c, t);   // the top bar: always, with or without a document
 
   if (key) {
     const icon = document.getElementById("rn-icon");
@@ -968,7 +967,6 @@ async function updateReading() {
     document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — Lazy Notes$/, "");
     document.getElementById("rn-meta").textContent = doc
       ? `${unitName(doc)} ${doc.page || 1}${doc.pages ? ` of ${doc.pages}` : ""}` : "";
-    fillSavingTo(c, t);
   }
 
   const all = { ...Object.fromEntries((await storedFiles()).map((d) => [d.key, d])), ...lnDocs };
@@ -1022,7 +1020,7 @@ const rnTopic  = document.getElementById("rn-topic");
 enhanceSelect(rnCourse);
 enhanceSelect(rnTopic);
 
-function fillOptions(select, names, value, placeholder) {
+function fillOptions(select, names, value, placeholder, action) {
   select.replaceChildren();
   if (!value || !names.includes(value)) {
     const o = new Option(placeholder, "");
@@ -1030,14 +1028,15 @@ function fillOptions(select, names, value, placeholder) {
     select.add(o);
   }
   names.forEach((n) => select.add(new Option(n, n)));
+  if (action) select.add(new Option(action[1], action[0]));   // "+ New …", listed last
   select.value = value && names.includes(value) ? value : "";
   select.dispatchEvent(new Event("input"));   // redraw the dropdown's button
 }
 
 function fillSavingTo(course, topic) {
   const topics = Object.keys(courseTree[course]?.topics ?? {});
-  fillOptions(rnCourse, Object.keys(courseTree), course, "Pick a course");
-  fillOptions(rnTopic, topics, topic, topics.length ? "Pick a topic" : "No topics yet");
+  fillOptions(rnCourse, Object.keys(courseTree), course, "Pick a course", ["__create_course__", "+ New course"]);
+  fillOptions(rnTopic, topics, topic, topics.length ? "Pick a topic" : "No topics yet", ["__create_topic__", "+ New topic"]);
   rnTopic.closest(".hs").hidden = !course;
   document.getElementById("rn-where").hidden = !!(course && topic);
 }
@@ -1055,18 +1054,73 @@ function setSavingTo(course, topic) {
 }
 
 rnCourse.addEventListener("change", async () => {
+  if (rnCourse.value === "__create_course__") {
+    fillSavingTo(activeCourse, activeTopic);
+    openCourseModalWithDefaults();
+    return;
+  }
   await refreshCourseTree();
   const course = rnCourse.value;
   const topics = Object.keys(courseTree[course]?.topics ?? {});
   setSavingTo(course, topics[0] ?? null);
 });
-rnTopic.addEventListener("change", () => setSavingTo(rnCourse.value, rnTopic.value));
+rnTopic.addEventListener("change", () => {
+  if (rnTopic.value === "__create_topic__") {
+    const course = rnCourse.value;
+    fillSavingTo(activeCourse, activeTopic);
+    openTopicModal(course);
+    return;
+  }
+  setSavingTo(rnCourse.value, rnTopic.value);
+});
 
-document.getElementById("open-doc-btn").addEventListener("click", () =>
-  chrome.tabs.create({ url: chrome.runtime.getURL("pdfreader.html") }));
+// "+ Open a document…": the computer's file picker right away. The file is
+// handed to its reader through that reader's IndexedDB store (same scheme as
+// readers/pdfreader.js openInSlidesReader) and opened in a new tab.
+const openDocFile = document.getElementById("open-doc-file");
+const openDocMsg  = document.getElementById("open-doc-msg");
+document.getElementById("open-doc-btn").addEventListener("click", () => { openDocMsg.hidden = true; openDocFile.click(); });
+openDocFile.addEventListener("change", async () => {
+  const file = openDocFile.files[0];
+  openDocFile.value = "";
+  if (!file) return;
+  const say = (t) => { openDocMsg.textContent = t; openDocMsg.hidden = !t; };
+  const kind = /\.pptx$/i.test(file.name) ? "pptx" : /\.docx$/i.test(file.name) ? "docx"
+    : (/\.pdf$/i.test(file.name) || file.type === "application/pdf") ? "pdf" : null;
+  if (!kind) {
+    say(/\.(doc|ppt)$/i.test(file.name)
+      ? "Old .doc / .ppt files can't be read: save it as .docx / .pptx or PDF first."
+      : "Pick a PDF, .pptx or .docx file.");
+    return;
+  }
+  try {
+    const { db: dbName, page } = { pdf: { db: "lazynotes-pdfs", page: "pdfreader.html" },
+      pptx: { db: "lazynotes-slides", page: "pptxreader.html" },
+      docx: { db: "lazynotes-docs", page: "docxreader.html" } }[kind];
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open(dbName, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("files", { keyPath: "id" });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => reject(req.error);
+    });
+    const all = await new Promise((r) => { const q = db.transaction("files").objectStore("files").getAll(); q.onsuccess = () => r(q.result || []); });
+    const id = all.find((f) => f.name === file.name && f.size === file.size)?.id ?? crypto.randomUUID();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readwrite");
+      tx.objectStore("files").put({ id, name: file.name, size: file.size, data: file, openedAt: Date.now() });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+    say("");
+    chrome.tabs.create({ url: chrome.runtime.getURL(`${page}?local=${encodeURIComponent(id)}`) });
+  } catch (err) {
+    say("Couldn't open that file: " + (err?.message || err));
+  }
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && (changes.lnDocs || changes.activeCourse || changes.activeTopic || changes.lnHomeCourseInDoc)) updateReading();
+  if (area === "local" && (changes.lnDocs || changes.activeCourse || changes.activeTopic)) updateReading();
 });
 chrome.tabs.onActivated.addListener(updateReading);
 chrome.tabs.onUpdated.addListener((_id, info, tab) => {
