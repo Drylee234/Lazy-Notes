@@ -190,7 +190,10 @@ export async function insertHighlight(id, payload, courseName, topicName) {
     sourceUrl:  payload.sourceUrl,
     sourceTitle: payload.sourceTitle ?? null,
     anchor:     payload.anchor ?? null,
-    timestamp:  new Date().toISOString(),
+    // A list saved as several points sends its own, a millisecond apart, to
+    // keep their order (accepted only if it's about now).
+    timestamp:  (payload.timestamp && Math.abs(Date.parse(payload.timestamp) - Date.now()) < 60000)
+                  ? payload.timestamp : new Date().toISOString(),
     edited:     null
   };
 

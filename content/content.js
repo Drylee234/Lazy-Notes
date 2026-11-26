@@ -34,6 +34,40 @@
   let chipEls = {};
   let chipCaptionEl = null;
 
+  // A selection that's a list: { head, items } when 2+ lines start with a
+  // bullet or number (PDF bullets are often private-use glyphs like ),
+  // or it spans 2+ <li> on a web page. Lines without a marker continue the
+  // point above (wrapped text); before the first point they're the head.
+  const MARKER = /^\s*([-–—•●○◦▪■□►▸▹➢➤✓✔*·\uF0A7\uF0B7\uF076\uF0D8\uF0FC\uF0A8\uF06C\uF06E]|\(?\d{1,2}[.)]|\(?[a-z][.)]|\(?(?:i{1,3}|iv|v|vi{0,3}|ix|x)[.)])\s+/i;
+  function parseList(text, range) {
+    const lines = String(text || "").split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+    let lis = [];
+    try {
+      const root = range?.commonAncestorContainer;
+      const el = root?.nodeType === 1 ? root : root?.parentElement;
+      lis = el ? [...el.querySelectorAll("li")].filter((li) => range.intersectsNode(li)) : [];
+    } catch (_) {}
+    if (lis.length >= 2) {
+      const items = lis.map((li) => (li.innerText || li.textContent).replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (items.length < 2) return null;
+      // Selected text above the list (its heading) comes first in the lines.
+      const firstAt = lines.findIndex((l) => l.includes(items[0].slice(0, 20)));
+      const head = firstAt > 0 ? lines.slice(0, firstAt).join(" ").replace(/[:：]\s*$/, "") : "";
+      return { head, items };
+    }
+    if (lines.filter((l) => MARKER.test(l)).length < 2) return null;
+    let head = "";
+    const items = [];
+    lines.forEach((l) => {
+      if (MARKER.test(l)) items.push(l.replace(MARKER, "").trim());
+      else if (items.length) items[items.length - 1] += " " + l;
+      else head += (head ? " " : "") + l;
+    });
+    return items.length >= 2 ? { head: head.replace(/[:：]\s*$/, ""), items } : null;
+  }
+  let listSplit = null;      // the parsed list for the open pop-up, or null
+  let splitToggleEl = null;
+
   // A first guess at the type from the words and where they were selected.
   // Only pre-picks: Enter accepts it, a number or a click overrides it.
   function guessType(text, el) {
@@ -171,6 +205,8 @@
         background: #3a3a44; color: #c4c4cc; font-size: 8.5px; line-height: 11px; text-align: center;
       }
       .lazy-notes-chip.on .lazy-notes-chip-key { background: #fff; color: #4f46e5; }
+      .lazy-notes-split { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 11.5px; color: #d4d4d8; cursor: pointer; }
+      .lazy-notes-split input { accent-color: #6366f1; margin: 0; }
       .lazy-notes-chip-caption { font-size: 10.5px; color: #8e8e99; margin-bottom: 8px; }
       .lazy-notes-popup-side { width: 260px; min-width: 0; }
       .lazy-notes-popup-side .lazy-notes-text-edit { margin-bottom: 8px; }
@@ -409,6 +445,13 @@
     textEdit.title = "You can edit this before saving";
     textEdit.addEventListener("input", () => {
       currentSelectedText = textEdit.value;
+      // Edited: split the list as it now reads (bullets/numbers per line).
+      if (splitToggleEl && splitToggleEl.style.display !== "none") {
+        listSplit = parseList(textEdit.value, null);
+        splitToggleEl.style.display = listSplit ? "" : "none";
+        if (listSplit) splitToggleEl.querySelector("span").textContent =
+          `Save as ${listSplit.items.length} list points${listSplit.head ? " + their heading" : ""}`;
+      }
       fitTextEdit();
       if (popupAnchor) positionPopup();
     });
@@ -519,6 +562,12 @@
     chipCaptionEl = caption;
     container.insertBefore(chipRow, row4Placeholder(container, row3));
     chipRow.after(caption);
+    const split = document.createElement("label");
+    split.className = "lazy-notes-split";
+    split.innerHTML = `<input type="checkbox" checked> <span></span>`;
+    split.addEventListener("mousedown", (e) => e.stopPropagation());
+    caption.after(split);
+    splitToggleEl = split;
 
     // ── ROW 4: Annotation ─────────────────────────────────────────────────────
     const row4 = document.createElement("div");
@@ -1190,7 +1239,14 @@
 
     // A clear guess wins; otherwise Plain. (The last saved type is kept
     // for list points, since those usually come in a row.)
-    const guess = guessType(selectedText, paragraphElement);
+    listSplit = parseList(selectedText, currentRange);
+    if (splitToggleEl) {
+      splitToggleEl.style.display = listSplit ? "" : "none";
+      splitToggleEl.querySelector("input").checked = true;
+      if (listSplit) splitToggleEl.querySelector("span").textContent =
+        `Save as ${listSplit.items.length} list points${listSplit.head ? " + their heading" : ""}`;
+    }
+    const guess = listSplit ? "list point" : guessType(selectedText, paragraphElement);
     const last = sessionCategoryMemory[selectedTopic];
     selectCategoryOption(guess || (last === "list point" ? last : "generic"));
     setTimeout(() => chipEls[selectedCategory]?.focus(), 50);
@@ -1301,6 +1357,25 @@
       anchor:     host?.anchorFor ? host.anchorFor(currentRange) : null
     };
 
+    // A list saved as list points: one highlight per point (plus the line
+    // above them as Plain, which shows as their heading), in order.
+    if (listSplit && selectedCategory === "list point" && splitToggleEl?.querySelector("input").checked) {
+      const parts = [
+        ...(listSplit.head ? [{ text: listSplit.head, category: "generic" }] : []),
+        ...listSplit.items.map((t) => ({ text: t, category: "list point" }))
+      ];
+      const t0 = Date.now();
+      const sent = parts.map((part, i) => ({
+        ...payload, id: crypto.randomUUID(), text: part.text, category: part.category, context: null,
+        annotation: i === parts.length - 1 ? selectedAnnotation : "",
+        timestamp: new Date(t0 + i).toISOString()
+      }));
+      try { chrome.runtime.sendMessage({ type: "NEW_HIGHLIGHTS", items: sent }); } catch (err) { console.error("LazyNotes: sendMessage failed:", err); return; }
+      showUndoToast({ ...payload, ids: sent.map((m) => m.id), count: listSplit.items.length });
+      listSplit = null;
+      return;
+    }
+
     try {
       chrome.runtime.sendMessage(payload);
     } catch (err) {
@@ -1355,7 +1430,9 @@
         <button type="button" title="Undo (Ctrl+Z)">Undo</button>
         <div class="bar"></div>
       </div>`;
-    root.querySelector(".msg").textContent = `Saved to ${saved.course} › ${saved.topic}`;
+    root.querySelector(".msg").textContent = saved.count
+      ? `Saved ${saved.count} points to ${saved.course} › ${saved.topic}`
+      : `Saved to ${saved.course} › ${saved.topic}`;
 
     // Countdown that pauses while hovered (the bar pauses with it).
     let left = UNDO_MS, startedAt = Date.now(), timer = setTimeout(close, left);
@@ -1373,7 +1450,8 @@
     function undo() {
       close();
       try {
-        chrome.runtime.sendMessage({ type: "DELETE_HIGHLIGHT", id: saved.id, courseName: saved.course, topicName: saved.topic });
+        (saved.ids || [saved.id]).forEach((id) =>
+          chrome.runtime.sendMessage({ type: "DELETE_HIGHLIGHT", id, courseName: saved.course, topicName: saved.topic }));
       } catch (_) { /* extension reloaded: nothing to reach */ }
     }
 
