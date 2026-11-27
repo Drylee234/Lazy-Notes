@@ -15,3 +15,6 @@ Full project context, style rules and history are in `docs/handoff-lazy-notes.md
 The owner starts almost every request with "perhaps". Treat it as "this is my idea, but":
 - **If a better way already exists** (an existing feature, shortcut or setting that does it), say so first, briefly, before or alongside building it.
 - **If the request would undo something they asked for earlier** (a benefit they gave themselves: a shortcut, a default, a removed annoyance), **alert them** and name what would be lost; prefer a setting/switch over silently reverting (see the "make it togglable" rule in the handoff).
+
+## Show, don't just tell (UX)
+For anything UX: when the owner's request is unclear, clarify with images (mockups/screenshots, labelled "Image 1 / Image 2"). Even when it's clear, prefer showing before/after screenshots so they can see what changed.
