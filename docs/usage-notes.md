@@ -11,6 +11,15 @@ seen → cause → what changed (commit) or what's still open.
 
 ---
 
+## 2026-11-27 (morning) · Ideas to save (owner: "not yet, just mentioning")
+
+- **Spacing, what was really meant:** notes at the *same* indent should sit closer together than the gap where the indent changes (entering / leaving a nest). The night's change made every gap 2px; next step = small gap within a level, bigger gap at an indent change. Not built.
+- **Edge tab panel feels off** → maybe a horizontal panel (slides from top/bottom) so click-and-disappear feels smoother. Not built; doesn't affect owner yet. Note: a bottom drawer was rejected earlier (handoff §7): ask before building.
+- **Login layer:** no login = no backup; logged in = sync is automatic between desktop and phone (no "Sync now"). Then **share notes from one account to another**. Not built. Server today: Render + Postgres with one shared key (handoff §8).
+- Owner may switch accounts: keep handoff + usage notes complete so a new session needs no back-and-forth.
+
+---
+
 ## 2026-11-27 (night) · Owner's list before logging off + Claude's own test run on a PDF
 
 **Asked for (owner)**

@@ -154,6 +154,9 @@ Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chro
 2. Offer hover-open for the web-page floating panel.
 3. Remaining More options toggles (section 10).
 
+## 11b. Saved ideas (2026-11-27 morning, not started)
+- Same-indent notes closer than an indent change · horizontal panel instead of edge tab · login (backup + auto sync) then sharing between accounts. Details: docs/usage-notes.md.
+
 ## 12. Open questions ⚠️
 - Is the note spacing fixed with real notes (cause inferred: blank leading/trailing lines)?
 - Should Chrome's panel also be used on other blocked pages (chrome://extensions etc.), or only on new tab pages (current)?
