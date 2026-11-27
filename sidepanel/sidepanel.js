@@ -473,6 +473,25 @@ studyTopicSelect.addEventListener("change", async () => {
 
 // The open topic as a written page: highlights and typed notes, with the
 // composer under it. Drawing it is study-page.js's job.
+let studyAnyway = false;
+// A document reader, a page your notes came from, or the highlighter on
+// (you're taking notes here): Study shows the topic. Only the panel shown on
+// web pages / Chrome's own panel asks; the readers' panel always shows it.
+async function onAStudyPage(topic) {
+  if (studyAnyway) return true;
+  const q = new URLSearchParams(location.search);
+  if (q.get("embedded") === "1" && q.get("page") !== "1") return true;   // inside a reader
+  const { lnStudyAnywhere, highlighterActive } = await chrome.storage.local.get(["lnStudyAnywhere", "highlighterActive"]);
+  if (lnStudyAnywhere === true || highlighterActive) return true;
+  let tab = null;
+  try { [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true }); } catch (_) {}
+  const url = String(tab?.url || "");
+  if (!url || /\/(pdfreader|pptxreader|docxreader)\.html/.test(url)) return true;
+  if (/^chrome(-extension)?:/.test(url)) return true;   // new tab, our own pages
+  const base = (u) => String(u || "").split("#")[0];
+  return Object.values(topic.highlights || {}).some((h) => h.sourceUrl && base(h.sourceUrl) === base(url));
+}
+
 async function loadNotes() {
   const topic = selectedCourse && studySelectedTopic
     ? courseTree[selectedCourse]?.topics?.[studySelectedTopic]
@@ -480,6 +499,23 @@ async function loadNotes() {
 
   if (!topic) {
     showStudyEmpty("No notes for this topic yet.");
+    return;
+  }
+
+  // On a page that isn't a document you're studying (a search page, a site
+  // you're just browsing), Study stays empty instead of showing whatever
+  // topic was last open. "Show it anyway" for this panel; off: lnStudyAnywhere.
+  if (!(await onAStudyPage(topic))) {
+    showStudyEmpty("");
+    const msg = document.createElement("div");
+    msg.className = "study-not-doc";
+    msg.innerHTML = `<b>You're not on a document.</b><span>Open a PDF, slides or a page you're studying, or switch the highlighter on to take notes here.</span>`;
+    const anyway = document.createElement("button");
+    anyway.type = "button";
+    anyway.textContent = `Show “${studySelectedTopic}” anyway`;
+    anyway.addEventListener("click", () => { studyAnyway = true; loadNotes(); });
+    msg.appendChild(anyway);
+    emptyStudy.replaceChildren(msg);
     return;
   }
 
@@ -1437,4 +1473,13 @@ init();
   addEventListener("offline", show);
   setInterval(show, 60000);   // "Synced 3 min ago" stays true
   show();
+})();
+
+// Study follows the page you're on (see onAStudyPage): redraw when the tab or
+// its address changes, or the highlighter is switched.
+(() => {
+  const again = () => { if (studyView.classList.contains("visible")) loadNotes(); };
+  chrome.tabs.onActivated.addListener(again);
+  chrome.tabs.onUpdated.addListener((_id, info) => { if (info.url) again(); });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && (c.highlighterActive || c.lnStudyAnywhere)) again(); });
 })();

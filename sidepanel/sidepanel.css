@@ -529,3 +529,9 @@ body.ln-win #brand .brand-name { display: none; }
 #brand { white-space: nowrap; }
 /* Narrow panel: just the dot (the words are in its tooltip). */
 @media (max-width: 400px) { #online .online-label { display: none; } #online { padding: 5px; } }
+
+/* Study on a page that isn't a document */
+.study-not-doc { display: grid; gap: 6px; justify-items: start; text-align: left; color: var(--sec); line-height: 1.5; }
+.study-not-doc b { color: var(--pri); }
+.study-not-doc button { margin-top: 4px; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--sec); font: inherit; font-size: 12px; cursor: pointer; }
+.study-not-doc button:hover { color: var(--pri); border-color: var(--border-strong); }
