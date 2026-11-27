@@ -122,6 +122,12 @@ class Store:
             blob = "BYTEA" if self.pg else "BLOB"
             c.execute(f"CREATE TABLE IF NOT EXISTS docs (sha TEXT NOT NULL, user_key TEXT NOT NULL, name TEXT, kind TEXT, "
                       f"size BIGINT, created_at TEXT NOT NULL, body {blob} NOT NULL, PRIMARY KEY (sha, user_key))")
+            # The server only passes documents on: once a phone has kept one,
+            # its copy here is deleted and a mark remembers "delivered" (so
+            # the extension doesn't send it again) or "wanted" (a phone lost
+            # it: the extension sends it again from the computer).
+            c.execute("CREATE TABLE IF NOT EXISTS doc_marks (sha TEXT NOT NULL, user_key TEXT NOT NULL, state TEXT NOT NULL, "
+                      "name TEXT, kind TEXT, at TEXT NOT NULL, PRIMARY KEY (sha, user_key))")
 
     def q(self, sql):
         return sql.replace("?", "%s") if self.pg else sql
@@ -188,7 +194,24 @@ class Store:
     def doc_list(self, user_key):
         with self._conn() as c:
             rows = c.execute(self.q("SELECT sha, name, kind, size, created_at FROM docs WHERE user_key = ? ORDER BY created_at DESC"), (user_key,)).fetchall()
-        return [{"sha": r[0], "name": r[1], "kind": r[2], "size": r[3], "createdAt": r[4]} for r in rows]
+            marks = c.execute(self.q("SELECT sha, name, kind, state, at FROM doc_marks WHERE user_key = ?"), (user_key,)).fetchall()
+        items = [{"sha": r[0], "name": r[1], "kind": r[2], "size": r[3], "createdAt": r[4], "state": "stored"} for r in rows]
+        have = {i["sha"] for i in items}
+        items += [{"sha": m[0], "name": m[1], "kind": m[2], "state": m[3], "createdAt": m[4]} for m in marks if m[0] not in have]
+        return items
+
+    def doc_mark(self, user_key, sha, state, name=None, kind=None):
+        with self._conn() as c:
+            c.execute(self.q("DELETE FROM doc_marks WHERE sha = ? AND user_key = ?"), (sha, user_key))
+            if state:
+                c.execute(self.q("INSERT INTO doc_marks (sha, user_key, state, name, kind, at) VALUES (?, ?, ?, ?, ?, ?)"),
+                          (sha, user_key, state, name, kind, now_iso()))
+
+    def doc_delete(self, user_key, sha):
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT name, kind FROM docs WHERE sha = ? AND user_key = ?"), (sha, user_key)).fetchone()
+            c.execute(self.q("DELETE FROM docs WHERE sha = ? AND user_key = ?"), (sha, user_key))
+        return row
 
     def doc_used(self, user_key):
         with self._conn() as c:
@@ -465,7 +488,10 @@ def inbox():
 
 # --------------------------------------------------------------------------
 # Documents: the extension backs up the files you read, the phone opens them.
-#   GET  /api/docs                 → { items: [{ sha, name, kind, size, createdAt }], used, limit }
+#   GET  /api/docs                 → { items: [{ sha, name, kind, state, … }], used, limit }
+#        state: "stored" (here) | "delivered" (a phone kept it; deleted here) | "wanted"
+#   DELETE /api/docs/<sha>         a phone kept it: delete it here, mark "delivered"
+#   POST /api/docs/<sha>/want      a phone lost it: the extension sends it again
 #   PUT  /api/docs/<sha>?name=&kind=   raw bytes (≤ 25 MB, ≤ 400 MB per account)
 #   GET  /api/docs/<sha>           → the file
 # --------------------------------------------------------------------------
@@ -508,7 +534,32 @@ def docs_put(sha):
         return jsonify(ok=False, code="DOCS_FULL", reason="Your account's document space (400 MB) is full."), 413
     kind = request.args.get("kind", "pdf")
     added = store.doc_put(k, sha, str(request.args.get("name", "document"))[:200], kind if kind in DOC_TYPES else "pdf", body)
+    store.doc_mark(k, sha, None)   # stored again: no "delivered" / "wanted" mark
     return jsonify(ok=True, added=added)
+
+
+@app.delete("/api/docs/<sha>")
+def docs_delivered(sha):
+    """A phone has kept the document: the server's copy goes."""
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    k = user_key_of(w)
+    row = store.doc_delete(k, sha)
+    if row:
+        store.doc_mark(k, sha, "delivered", row[0], row[1])
+    return jsonify(ok=True)
+
+
+@app.post("/api/docs/<sha>/want")
+def docs_want(sha):
+    """A phone needs it again: the extension sends it on its next sync."""
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    body = request.get_json(silent=True) or {}
+    store.doc_mark(user_key_of(w), sha, "wanted", str(body.get("name") or "")[:200], str(body.get("kind") or "pdf"))
+    return jsonify(ok=True)
 
 
 @app.get("/api/docs/<sha>")

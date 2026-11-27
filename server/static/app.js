@@ -365,9 +365,22 @@
       meta.textContent = "Downloading…";
       try {
         const r = await fetch(`/api/docs/${d.sha}`, { headers: { Authorization: `Bearer ${key}` } });
+        if (r.status === 404) {
+          // Delivered to a phone before (the server keeps no copy) and not on
+          // this one: ask the computer to send it again.
+          fetch(`/api/docs/${d.sha}/want`, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ name: d.name, kind: d.kind }) }).catch(() => {});
+          meta.textContent = "Not on this phone: asked your computer to send it again. It arrives after Lazy Notes next syncs there (open Chrome on your computer).";
+          return;
+        }
         if (!r.ok) { const j = await r.json().catch(() => ({})); meta.textContent = j.reason || `Couldn't download it (${r.status}).`; return; }
         res = r;
-        if (cache) await cache.put(`/doc-cache/${d.sha}`, r.clone());
+        if (cache) {
+          await cache.put(`/doc-cache/${d.sha}`, r.clone());
+          // Kept on the phone now: the server deletes its copy (it only passes
+          // documents on; the original stays on your computer).
+          fetch(`/api/docs/${d.sha}`, { method: "DELETE", headers: { Authorization: `Bearer ${key}` } }).catch(() => {});
+        }
       } catch (_) { meta.textContent = "Couldn't download it: check your internet."; return; }
     }
     const blob = await res.blob();

@@ -102,7 +102,10 @@ globalThis.LazyDocs = (() => {
     try { ({ lnDocsSent: sent = {} } = await chrome.storage.session.get("lnDocsSent")); } catch (_) {}
     if (sent[sha]) return;
     const list = await fetch(`${base}/api/docs`, { headers: auth }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (!list?.items?.some((d) => d.sha === sha)) {
+    // Sent before: kept on the server, or already delivered to a phone (the
+    // server then deleted its copy). Sent again only if a phone wants it.
+    const there = list?.items?.find((d) => d.sha === sha);
+    if (!there || there.state === "wanted") {
       const r = await fetch(`${base}/api/docs/${sha}?name=${encodeURIComponent(name)}&kind=${kind}`, { method: "PUT", headers: auth, body: bytes }).catch(() => null);
       if (!r?.ok) return;
     }

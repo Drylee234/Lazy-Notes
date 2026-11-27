@@ -1,4 +1,5 @@
 import { buildReport } from './bg_diag.js';
+import { sendWantedDocs } from './bg_docs.js';
 // Lazy Notes — sync your notes to your own server, so the phone site can
 // read them. The server is often asleep (free hosts) or off, so this is
 // patient and quiet: changes are marked pending, pushed after a short pause,
@@ -111,6 +112,7 @@ async function push({ manual = false } = {}) {
     if (!res.ok) return await scheduleRetry((st.failures || 0) + 1, `Server error (${res.status})`);
 
     await chrome.alarms.clear(ALARM_RETRY);
+    sendWantedDocs(cfg.url, cfg.key).catch(() => {});   // documents a phone asked for again
     return await setState({ pending: false, stopped: false, failures: 0, nextTryAt: null, lastError: null, lastOkAt: Date.now() });
   } finally {
     running = false;
