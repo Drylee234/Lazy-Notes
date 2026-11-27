@@ -59,7 +59,7 @@ own notes; a login gives a token that works everywhere the key does (sync, AI).
 | `SIGNUPS` | `invite` (default): new accounts need the invite code · `open` · `closed` |
 | `INVITE_CODE` | the code for `invite`; when unset, it's `LAZYNOTES_KEY` |
 
-Routes: `GET /api/signup-info`, `POST /api/signup {username, password, invite}`,
+Routes: `GET /api/signup-info`, `POST /api/signup {username, password, invite}` (only from the extension: `Origin: chrome-extension://…`; the phone site only logs in),
 `POST /api/login`, `POST /api/logout`, `GET /api/me`.
 Sharing: `POST /api/share {course, topic, notes, to?}` → `{url: /s/<id>}`, a
 read-only copy anyone with the link can open (`GET /api/share/<id>`); with

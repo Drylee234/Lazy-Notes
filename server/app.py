@@ -334,6 +334,10 @@ def signup():
     body = request.get_json(silent=True) or {}
     username = str(body.get("username") or "").strip().lower()
     password = str(body.get("password") or "")
+    # Accounts are made in the extension (a computer): the phone site only logs in.
+    if not request.headers.get("Origin", "").startswith("chrome-extension://"):
+        return jsonify(ok=False, code="SIGNUP_IN_EXTENSION",
+                       reason="Create your account in the Lazy Notes extension on your computer (Settings › Sync), then log in here."), 403
     if SIGNUPS == "closed":
         return jsonify(ok=False, code="SIGNUPS_CLOSED", reason="This server isn't taking new accounts."), 403
     if SIGNUPS != "open":

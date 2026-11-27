@@ -6,6 +6,12 @@
 // already ran it (see Re-injection below) without redeclaring names.
 (() => {
 
+  // crypto.randomUUID only exists on https pages; on a plain http:// site it's
+  // missing and every save threw "crypto.randomUUID is not a function".
+  const newId = () => (typeof crypto.randomUUID === "function" ? crypto.randomUUID()
+    : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+
   const REINIT_EVENT = "lazy-notes-reinit";
 
   // Pick order = number keys 1-7, Plain = 0. Stored names are unchanged
@@ -1772,7 +1778,7 @@
 
     const payload = {
       type:       "NEW_HIGHLIGHT",
-      id:         crypto.randomUUID(),
+      id:         newId(),
       text:       currentSelectedText,
       context,
       category:   selectedCategory,
@@ -1790,9 +1796,9 @@
       const t0 = Date.now();
       const sent = [
         ...(pendingHeading && headingToggleEl?.querySelector("input").checked && pendingHeading.text !== hs.head
-          ? [{ ...payload, id: crypto.randomUUID(), text: pendingHeading.text, category: pendingHeading.category, context: null, annotation: "" }] : []),
-        { ...payload, id: crypto.randomUUID(), text: hs.head, context: null, annotation: "" },
-        { ...payload, id: crypto.randomUUID(), text: hs.rest, category: "definition" }
+          ? [{ ...payload, id: newId(), text: pendingHeading.text, category: pendingHeading.category, context: null, annotation: "" }] : []),
+        { ...payload, id: newId(), text: hs.head, context: null, annotation: "" },
+        { ...payload, id: newId(), text: hs.rest, category: "definition" }
       ].map((m, i) => ({ ...m, timestamp: new Date(t0 + i).toISOString() }));
       pendingHeading = null;
       try { chrome.runtime.sendMessage({ type: "NEW_HIGHLIGHTS", items: sent }); } catch (err) { return; }
@@ -1809,7 +1815,7 @@
     if (withHeading.length && !(listSplit && selectedCategory === "list point" && splitToggleEl?.querySelector("input").checked)) {
       const t0 = Date.now();
       const sent = [
-        { ...payload, id: crypto.randomUUID(), text: withHeading[0].text, category: withHeading[0].category, context: null, annotation: "", timestamp: new Date(t0).toISOString() },
+        { ...payload, id: newId(), text: withHeading[0].text, category: withHeading[0].category, context: null, annotation: "", timestamp: new Date(t0).toISOString() },
         { ...payload, timestamp: new Date(t0 + 1).toISOString() }
       ];
       try { chrome.runtime.sendMessage({ type: "NEW_HIGHLIGHTS", items: sent }); } catch (err) { return; }
@@ -1824,7 +1830,7 @@
       ];
       const t0 = Date.now();
       const sent = parts.map((part, i) => ({
-        ...payload, id: crypto.randomUUID(), text: part.text, category: part.category, context: null,
+        ...payload, id: newId(), text: part.text, category: part.category, context: null,
         annotation: i === parts.length - 1 ? selectedAnnotation : "",
         timestamp: new Date(t0 + i).toISOString()
       }));
@@ -2057,7 +2063,7 @@
   // The new copy tells the old one to remove itself; the old one also checks
   // on each mouseup/keydown in case it never got the signal.
 
-  const instanceId = crypto.randomUUID();
+  const instanceId = newId();
   let dead = false;  // set once this copy has been replaced; every entry point checks it
 
   function tearDown() {
