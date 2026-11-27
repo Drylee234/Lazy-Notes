@@ -558,7 +558,8 @@ function refreshAiTab() {
     if (on) mountAiPanel();
     // If the AI goes off while you're looking at it, fall back to Home.
     if (!on && aiView?.classList.contains("visible")) {
-      document.querySelector('.view-tab[data-view="home"]')?.click();
+      const noHome = document.body.classList.contains("embedded") && !document.body.classList.contains("ln-show-home");
+      document.querySelector(`.view-tab[data-view="${noHome ? "study" : "home"}"]`)?.click();
     }
   });
 }
@@ -1217,6 +1218,11 @@ updatePdfBanner();
 (function embeddedMode() {
   if (!new URLSearchParams(location.search).has("embedded")) return;
   document.body.classList.add("embedded");
+  // The built-in panel shows Study and AI only (Home is for the Chrome-side
+  // view); "Show Home" in Settings › More options brings it back.
+  const showHome = (on) => document.body.classList.toggle("ln-show-home", on === true);
+  chrome.storage.local.get("lnEmbedHome", (r) => showHome(r?.lnEmbedHome));
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnEmbedHome" in c) showHome(c.lnEmbedHome.newValue); });
   const toStudy = () => document.querySelector('.view-tab[data-view="study"]')?.click();
   setTimeout(toStudy, 0);
   setTimeout(toStudy, 500);   // after init() has drawn the tabs

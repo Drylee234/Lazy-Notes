@@ -493,3 +493,8 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 #continue .open-doc-link { margin: 0; padding: 3px 6px; font-size: 13px; white-space: nowrap; }
 #saving-bar.no-doc { display: none; }
 
+
+/* Built into a page or reader: no name next to the logo (the title bar and the
+   toolbar already say it); Home tab only if switched on. */
+body.embedded #brand .brand-name { display: none; }
+body.embedded:not(.ln-show-home) .view-tab[data-view="home"] { display: none; }
