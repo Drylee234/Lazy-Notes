@@ -371,6 +371,11 @@ const LnFold = (() => {
       else el.style.removeProperty("--group-px");
     });
     els.forEach((el, id) => {
+      // Who owns it (for the nesting guides and their hover highlight).
+      const owner = parent.get(id);
+      if (owner) el.dataset.parent = owner; else delete el.dataset.parent;
+    });
+    els.forEach((el, id) => {
       el.querySelectorAll(".fold-btn, .fold-count").forEach((x) => x.remove());
       el.classList.toggle("note--folded-away", !!hiddenBy(id));
       const n = kids.get(id) || 0;

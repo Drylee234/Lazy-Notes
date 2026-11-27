@@ -537,6 +537,21 @@ const StudyPage = (() => {
   });
   noteList.addEventListener("mouseleave", () => { toolsNear?.classList.remove("tools-near"); toolsNear = null; });
 
+  // Hovering a note lights up the guides of everything nested under it.
+  let guided = [];
+  const clearGuides = () => { guided.forEach((n) => n.classList.remove("guide-on")); guided = []; };
+  noteList.addEventListener("mouseover", (e) => {
+    const el = e.target.closest?.(".note[data-id]");
+    clearGuides();
+    if (!el) return;
+    const mine = new Set([el.dataset.id]);
+    // Notes come in order, so owned notes follow their owner.
+    noteList.querySelectorAll(".note[data-parent]").forEach((n) => {
+      if (mine.has(n.dataset.parent)) { mine.add(n.dataset.id); if (n.dataset.nest) { n.classList.add("guide-on"); guided.push(n); } }
+    });
+  });
+  noteList.addEventListener("mouseleave", clearGuides);
+
   noteList.addEventListener("focusin", (e) => {
     const el = e.target.closest?.(".note[data-id]");
     if (el && e.target === el) setActiveNote(el, { focus: false });

@@ -450,3 +450,24 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 .pk-rename { border: 0; background: none; color: var(--dim); font: inherit; font-size: 11px; padding: 3px 5px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
 .pk-rename:hover { background: var(--hover); color: var(--accent); }
 @media (hover: none) { .pk-rename-wrap { opacity: 1; } }
+
+/* Nesting guides: an indented note draws a thin line under each level it sits
+   in (like a thread), so you can see what it belongs to. The line sits under
+   the owner's bullet; hovering the owner lights up everything it owns. */
+#note-list .note { --gbase: 8px; --guide: color-mix(in srgb, var(--dim) 42%, transparent); }
+#note-list .note[data-nest] { margin-top: 0; background-repeat: no-repeat; background-size: 1.5px 100%; }
+#note-list .note.guide-on { --guide: var(--accent); }
+#note-list .note[data-nest="1"] {
+  background-image: linear-gradient(var(--guide), var(--guide));
+  background-position: calc(var(--gbase) + 22px + var(--group-px, 0px)) 0;
+}
+#note-list .note[data-nest="2"] {
+  background-image: linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide));
+  background-position: calc(var(--gbase) + 22px + var(--group-px, 0px)) 0, calc(var(--gbase) + 40px + var(--group-px, 0px)) 0;
+  background-size: 1.5px 100%, 1.5px 100%;
+}
+#note-list .note[data-nest="3"] {
+  background-image: linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide));
+  background-position: calc(var(--gbase) + 22px + var(--group-px, 0px)) 0, calc(var(--gbase) + 40px + var(--group-px, 0px)) 0, calc(var(--gbase) + 58px + var(--group-px, 0px)) 0;
+  background-size: 1.5px 100%, 1.5px 100%, 1.5px 100%;
+}

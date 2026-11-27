@@ -146,3 +146,4 @@ seen → cause → what changed (commit) or what's still open.
 - Owner didn't want the small window on chrome:// pages (and its repeated name) → removed. Pages Chrome won't let us touch now just flash a "✕" on the toolbar icon. In any `?window=1` window the name beside the logo is hidden.
 - Reader/page panel title bar shows the current view (Study / AI / Home) and clicking it switches; the tab row inside is hidden in embedded panels (`ln-view` / `ln-next-view` messages).
 - Web pages can use a floating panel like the readers (drag, 8-edge resize, fold, fades): Settings › More options › "Panel on web pages" Docked | Floating (`lnPagePanelMode`, default docked).
+- Study tab: nested notes now show thread-style guide lines (one per level, under the owner's bullet), and hovering an owner lights up everything it owns. Ownership by indent was already in `noteParents` (fold hides the nested notes).
