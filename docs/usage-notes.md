@@ -204,3 +204,11 @@ seen → cause → what changed (commit) or what's still open.
 - **Documents "reading to different courses"**: owner suspects documents used by two courses. Logged as a design question (roadmap), not built.
 - **Same-indent spacing**: owner re-checked: false alarm.
 - Owner asked "when did I say that?" about *underline spelling in Study*, *Fit to width leaves room for the panel* and *Join to last figure*: these were Claude's own ideas from earlier sessions, not the owner's. Marked as such in the roadmap.
+
+## 2026-11-27 (late) · Stiff AI, misleading indents, Study on a search page, cramped settings
+
+- **AI chat too stiff** (owner screenshot: "hiii" → "The material doesn't include a response to a greeting"). Whose: ours: the chat was told to stick to the notes and tag anything else "(general)". Now a natural study buddy that uses the notes when relevant and its own knowledge freely.
+- **Indented list that looked like part of the wrong group** ("FACTORS AFFECTING NET RATE DIFFUSION" and its points sat inside the Simple Diffusion nest). Whose: ours: the new "keep the indent of the note above" rule also applied to list heads. Now list heads (and split lists' heads) start at the left. The owner's existing notes were not moved; Shift+↓ to pick them, Alt+← to fix.
+- **Study showed a topic on Google's search page.** Owner: Study should be empty when not on a document. Now empty with "Show it anyway" unless in a reader, on a page the notes came from, or with the highlighter on (`lnStudyAnywhere` brings back the old way).
+- **Settings felt cramped in the panel**; only All notes' settings felt like real settings → the panel's settings now fill the panel the same way.
+- Owner liked idea E (easier switching) → built (Alt+1/2/3, pinned Course › Topic); asked to see A as an image and B explained with an image before building.
