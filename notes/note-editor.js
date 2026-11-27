@@ -314,17 +314,15 @@ function editorButton(label, className) {
   return btn;
 }
 
-// Writes an edit straight to storage (extension pages may), marked as
-// edited. Returns the updated note, or null if it's gone (deleted elsewhere).
-async function saveHighlightEdit(id, courseName, topicName, fields) {
-  const { lazynotes } = await chrome.storage.local.get("lazynotes");
-  const topic = lazynotes?.courses?.[courseName]?.topics?.[topicName];
-  const note  = topic?.highlights?.[id];
-  if (!note) return null;
-
-  topic.highlights[id] = { ...note, ...fields, edited: new Date().toISOString() };
-  await chrome.storage.local.set({ lazynotes });
-  return topic.highlights[id];
+// Saves an edit through the background (so it queues with every other
+// change and can't undo one made at the same moment), marked as edited.
+// Returns the updated note, or null if it's gone (deleted elsewhere).
+function saveHighlightEdit(id, courseName, topicName, fields) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: "UPDATE_HIGHLIGHT", id, courseName, topicName, fields }, (reply) => {
+      resolve(chrome.runtime.lastError || !reply?.ok ? null : reply.note);
+    });
+  });
 }
 
 

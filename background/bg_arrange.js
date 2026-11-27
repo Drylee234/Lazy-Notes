@@ -8,7 +8,7 @@
 //           in shared/utils.js)
 //   indent  0-3
 
-import { getLazyNotes, setLazyNotes } from './bg_storage.js';
+import { getLazyNotes, setLazyNotes, oneAtATime } from './bg_storage.js';
 import { notifySidePanel } from './bg_sidepanel.js';
 
 async function setArrangement({ courseName, topicName, items }) {
@@ -30,7 +30,7 @@ async function setArrangement({ courseName, topicName, items }) {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "SET_ARRANGEMENT") return;
-  setArrangement(message)
+  oneAtATime(() => setArrangement(message))
     .then(sendResponse)
     .catch((err) => sendResponse({ ok: false, reason: String(err) }));
   return true;   // reply comes later

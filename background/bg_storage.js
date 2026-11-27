@@ -76,6 +76,18 @@ export async function getLazyNotes() {
   return lazynotes;
 }
 
+// One change to the notes at a time. Every change reads the whole notes
+// object, edits it and writes it back, so two changes running together
+// (two quick deletes, a delete while a list is still saving) would each
+// write their own copy and undo the other, bringing a deleted note back.
+// The message router runs every note-changing message through this.
+let notesQueue = Promise.resolve();
+export function oneAtATime(fn) {
+  const run = notesQueue.then(fn, fn);
+  notesQueue = run.catch(() => {});
+  return run;
+}
+
 export async function setLazyNotes(data) {
   await storageSet({ lazynotes: data });
   return data;

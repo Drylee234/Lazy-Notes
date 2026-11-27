@@ -55,7 +55,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** the owner keeps finding workarounds (Ctrl+B, indenting for spacing): a sign some tasks have only one, awkward path.
 - 📘 **Indenting fixes the spacing** (owner, 2026-11-27): indented notes read closer together and grouped, confirming the earlier spacing idea (same indent = closer than an indent change). Observation, nothing to build now.
 
-- 🐞 **Some list points won't delete** (owner, 2026-11-27): deleting failed for some list points; after refreshing the page it worked (or they were gone). Not reproduced yet.
+- ✅ **Fixed (2026-11-27):** cause found: note changes weren't queued, so two at once (two quick deletes, a delete while a list was still saving, an edit + an indent) each wrote their own copy and the second brought the deleted note back. Now every change waits its turn (`oneAtATime`, bg_storage.js); highlight edits go through the background too (UPDATE_HIGHLIGHT). Tested in Chromium: 3 deletes at once → all 3 gone.
+  Original report: 🐞 **Some list points won't delete** (owner, 2026-11-27): deleting failed for some list points; after refreshing the page it worked (or they were gone). Not reproduced yet.
   **Why:** a delete that doesn't show is scary ("is my note still there?").
   Suspects: the Study list not redrawing after DELETE_HIGHLIGHT, a stale note id after a split into list points, or the panel iframe missing the storage change. Need: which view (Study / All notes / panel), how deleted (× / Delete twice / editor).
 - 💡 **Indenting a head moves only the head** (answer to owner, 2026-11-27): ⇥ / Alt+→ changes just that one note; its list points stay where they were (each note keeps its own indent; `indentBy` in study-page.js). Idea: indenting a head (or any owner) takes everything under it along, with Undo.

@@ -19,6 +19,7 @@ import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
 import { handleAiTest, handleAiRun, handleAiReady, handleAiSaveNote } from './bg_ai.js';
+import { oneAtATime, updateHighlight } from './bg_storage.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -74,8 +75,15 @@ const REPLY_HANDLERS = {
   AI_TEST:            handleAiTest,
   AI_RUN:             handleAiRun,
   AI_READY:           handleAiReady,
-  AI_SAVE_NOTE:       handleAiSaveNote
+  AI_SAVE_NOTE:       handleAiSaveNote,
+  UPDATE_HIGHLIGHT:   async ({ id, courseName, topicName, fields }) => {
+    const note = id && fields ? await updateHighlight(id, courseName, topicName, fields) : null;
+    return note ? { ok: true, note } : { ok: false, reason: "That highlight was deleted." };
+  }
 };
+
+// These only read, or wait on the internet: they don't queue behind saves.
+const NOT_QUEUED = new Set(["AI_TEST", "AI_RUN", "AI_READY", "GET_LAST_HIGHLIGHT"]);
 
 // What gets counted in the usage report (actions, never their contents).
 const COUNTED = new Set(["NEW_HIGHLIGHT", "NEW_HIGHLIGHTS", "SAVE_TYPED_NOTE", "DELETE_HIGHLIGHT", "DELETE_TYPED_NOTE",
@@ -92,7 +100,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   const replyHandler = REPLY_HANDLERS[message.type];
   if (replyHandler) {
-    replyHandler(message)
+    (NOT_QUEUED.has(message.type) ? replyHandler(message) : oneAtATime(() => replyHandler(message)))
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, reason: String(err) }));
     return true;  // keep the channel open for the async reply
@@ -100,10 +108,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   switch (message.type) {
     case "NEW_HIGHLIGHT":
-      handleNewHighlight(message);
+      oneAtATime(() => handleNewHighlight(message));
       return;
     case "TIDY_NOTES":        // Settings › More options: run again / undo
-      (message.undo ? undoTidy() : tidyOldNotes({ force: true }))
+      oneAtATime(() => (message.undo ? undoTidy() : tidyOldNotes({ force: true })))
         .then((count) => sendResponse({ ok: true, count }))
         .catch((err) => sendResponse({ ok: false, reason: String(err) }));
       return true;
@@ -111,13 +119,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       requestSidePanel({ type: "FILL_COMPOSER", mode: message.mode, text: String(message.text || "") }, sender.tab);
       return;
     case "NEW_HIGHLIGHTS":   // several at once (a list split into points): one after another
-      (async () => { for (const h of message.items || []) await handleNewHighlight(h); })();
+      oneAtATime(async () => { for (const h of message.items || []) await handleNewHighlight(h); });
       return;
     case "CREATE_COURSE":
-      handleCreateCourse(message);
+      oneAtATime(() => handleCreateCourse(message));
       return;
     case "CREATE_TOPIC":
-      handleCreateTopic(message);
+      oneAtATime(() => handleCreateTopic(message));
       return;
     case "SET_ACTIVE_COURSE":
       handleCourseSelection(message.courseName);
