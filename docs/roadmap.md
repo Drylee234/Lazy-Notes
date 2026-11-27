@@ -29,7 +29,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ Settings regrouped (everyday · Fine-tuning · Old ways · ↺ · find box).
 - ✅ The "Where do these notes go?" box works with Enter; "+ New topic…"; the highlighter turns on after choosing.
 - ✅ Better type guessing (big or all-caps lines = Header); no Join after headings.
-- 💡 Quick note box offers the topic the panel is showing.
+- 💡 Quick note box offers the topic the panel is showing. **Meaning:** the pop-up note box (Ctrl+Shift+. in a reader) saves to the *active* topic (the one highlights go to). If the floating panel's Study view is showing a different topic, a quick note lands somewhere other than where you're looking. Idea: the box offers the panel's topic (or shows where it'll save). (Explained to owner 2026-11-27.)
 - ⚠️💡 Horizontal panel instead of the edge tab (a bottom drawer was rejected earlier).
   **Why:** opening and closing the edge tab doesn't feel smooth.
 
@@ -83,7 +83,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 📘 **PDF keyboard cursor off**: owner highlights with the mouse, so would turn the PDF cursor off. Already a switch: Settings › Fine-tuning › "Keyboard cursor in PDFs" (`lnDocCaret`).
 
 - 📘 **New topic when opening a new doc** (owner, 2026-11-27): had to create the topic first, then save the doc to it. Already built last night (owner hadn't reloaded yet): "+ New topic…" at the bottom of the topic list in "Where do these notes go?". Check it works for them.
-- 💡 **Open a document from a course in All notes** (owner, 2026-11-27): the course page lists its documents; add "+ Open a document…" there, and the new doc saves to that course straight away (only the topic asked).
+- ✅ **Done (2026-11-27):** All notes › a course › "+ Open a document…" beside "Documents in this course": the file opens in its reader with that course already picked; "Where do these notes go?" only asks the topic. Shared picker: `shared/open-doc.js` (side panel uses it too).
+  Was: 💡 **Open a document from a course in All notes** (owner, 2026-11-27): the course page lists its documents; add "+ Open a document…" there, and the new doc saves to that course straight away (only the topic asked).
   **Why:** fewer steps; you're already in the course.
 
 - 📘 **A list point indented itself** (owner, 2026-11-27, didn't know why): by design, a List point saved right after an indented note takes that note's indent (`insertHighlight`, bg_storage.js). Other types don't, which is why earlier notes landed outdented. Worth making the rule visible/consistent (see "New highlight lands outdented").

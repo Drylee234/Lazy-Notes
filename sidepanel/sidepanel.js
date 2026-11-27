@@ -1193,49 +1193,11 @@ rnTopic.addEventListener("change", () => {
   setSavingTo(rnCourse.value, rnTopic.value);
 });
 
-// "+ Open a document…": the computer's file picker right away. The file is
-// handed to its reader through that reader's IndexedDB store (same scheme as
-// readers/pdfreader.js openInSlidesReader) and opened in a new tab.
-const openDocFile = document.getElementById("open-doc-file");
+// "+ Open a document…": the computer's file picker right away (shared/open-doc.js).
 const openDocMsg  = document.getElementById("open-doc-msg");
-document.getElementById("open-doc-btn").addEventListener("click", () => { openDocMsg.hidden = true; openDocFile.click(); });
-openDocFile.addEventListener("change", async () => {
-  const file = openDocFile.files[0];
-  openDocFile.value = "";
-  if (!file) return;
-  const say = (t) => { openDocMsg.textContent = t; openDocMsg.hidden = !t; };
-  const kind = /\.pptx$/i.test(file.name) ? "pptx" : /\.docx$/i.test(file.name) ? "docx"
-    : (/\.pdf$/i.test(file.name) || file.type === "application/pdf") ? "pdf" : null;
-  if (!kind) {
-    say(/\.(doc|ppt)$/i.test(file.name)
-      ? "Old .doc / .ppt files can't be read: save it as .docx / .pptx or PDF first."
-      : "Pick a PDF, .pptx or .docx file.");
-    return;
-  }
-  try {
-    const { db: dbName, page } = { pdf: { db: "lazynotes-pdfs", page: "pdfreader.html" },
-      pptx: { db: "lazynotes-slides", page: "pptxreader.html" },
-      docx: { db: "lazynotes-docs", page: "docxreader.html" } }[kind];
-    const db = await new Promise((resolve, reject) => {
-      const req = indexedDB.open(dbName, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore("files", { keyPath: "id" });
-      req.onsuccess = () => resolve(req.result);
-      req.onerror   = () => reject(req.error);
-    });
-    const all = await new Promise((r) => { const q = db.transaction("files").objectStore("files").getAll(); q.onsuccess = () => r(q.result || []); });
-    const id = all.find((f) => f.name === file.name && f.size === file.size)?.id ?? crypto.randomUUID();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction("files", "readwrite");
-      tx.objectStore("files").put({ id, name: file.name, size: file.size, data: file, openedAt: Date.now() });
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
-    say("");
-    chrome.tabs.create({ url: chrome.runtime.getURL(`${page}?local=${encodeURIComponent(id)}`) });
-  } catch (err) {
-    say("Couldn't open that file: " + (err?.message || err));
-  }
+document.getElementById("open-doc-btn").addEventListener("click", () => {
+  openDocMsg.hidden = true;
+  LazyOpenDoc.pick({ onMessage: (t) => { openDocMsg.textContent = t; openDocMsg.hidden = !t; } });
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {

@@ -62,7 +62,10 @@ globalThis.LazyDocs = (() => {
       docs[key] = { ...prev, key, kind, name, pages, page: page ?? prev?.page ?? 1,
                     openedAt: Date.now(), course, topic };
     });
-    if (ask) askWhere(name, lazynotes);
+    // Opened from a course's page (All notes): that course is picked, so
+    // only the topic is asked.
+    const fromCourse = new URLSearchParams(location.search).get("course");
+    if (ask) askWhere(name, lazynotes, lazynotes?.courses?.[fromCourse] ? fromCourse : null);
   }
 
   // ── "Where do these notes go?" ─────────────────────────────────────────────
@@ -101,7 +104,7 @@ globalThis.LazyDocs = (() => {
     return { course, topic, ai: true };
   }
 
-  function askWhere(name, lazynotes) {
+  function askWhere(name, lazynotes, presetCourse = null) {
     const courses = lazynotes?.courses || {};
     const NEW = "\u0000new";
     const names = Object.keys(courses);
@@ -193,7 +196,10 @@ globalThis.LazyDocs = (() => {
     skip.addEventListener("click", () => finish(false));
     document.addEventListener("keydown", onKey, true);
     document.body.append(wrap);
-    (cs).focus();
+    if (presetCourse) {
+      fillC(presetCourse); fillT(null);
+      (ts.value ? ok : ts).focus();
+    } else (cs).focus();
 
     // Suggestion: the course code in the name is instant; the AI (if on)
     // fills in when it answers and nothing is picked yet.

@@ -44,8 +44,10 @@
   </div>
 
   <main id="topic-list"></main>
-  <section id="course-docs-page" hidden>
-    <h2 class="section-title">Documents in this course</h2>
+  <section id="course-docs-page">
+    <div class="course-docs-head"><h2 class="section-title">Documents in this course</h2>
+      <button type="button" id="course-open-doc" class="course-open-doc" title="Open a PDF, slides or Word file: its notes go to this course (you pick the topic)">+ Open a document…</button></div>
+    <p id="course-open-doc-msg" class="course-open-doc-msg" hidden></p>
     <div id="course-docs-page-list" class="course-docs-grid"></div>
   </section>
 </div>
@@ -58,6 +60,7 @@
 <script src="notes/note-editor.js"></script>
 <script src="shared/ai-providers.js"></script>
 <script src="shared/settings.js"></script>
+<script src="shared/open-doc.js"></script>
 <script src="notes/viewer.js"></script>
 </body>
 </html>

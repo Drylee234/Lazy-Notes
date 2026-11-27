@@ -416,3 +416,9 @@ body[data-page="courses"] #app { max-width: 900px; }
 /* The note under the mouse wins: a focused note's card steps aside. */
 .note-sheet:has(.tools-near) .note:not(.tools-near) > .note-tools { opacity: 0; pointer-events: none; }
 .note-sheet .note.tools-near > .note-tools { z-index: 4; }
+
+/* Course page: "+ Open a document…" beside "Documents in this course" */
+.course-docs-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.course-open-doc { margin-left: auto; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; }
+.course-open-doc:hover { text-decoration: underline; }
+.course-open-doc-msg { margin: 4px 0 8px; font-size: 13px; color: var(--danger, #c0392b); }

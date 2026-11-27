@@ -482,8 +482,13 @@ async function renderTopics() {
       wrap.append(a, x);
       return wrap;
     }));
-    box.hidden = !docs.length;
+    // The section stays for its "+ Open a document…" button.
+    box.hidden = !c;
   }
+  document.getElementById("course-open-doc")?.addEventListener("click", () => {
+    const msg = document.getElementById("course-open-doc-msg");
+    LazyOpenDoc.pick({ course: courseName, onMessage: (t) => { msg.textContent = t; msg.hidden = !t; } });
+  });
   drawDocs();
   chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lazynotes || c.lnDocs || c.lnCourseDocHide)) drawDocs(); });
   const sortSel = document.getElementById("topic-sort");
