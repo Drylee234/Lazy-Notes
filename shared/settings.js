@@ -15,7 +15,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnPanelHover", "lnReaderFullscreen", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnPanelHover", "lnReaderFullscreen", "lnPagePanelOwn", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -62,6 +62,7 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnPanelFade" /> Floating Notes box fades while the mouse is away from it</label>
       <label class="set-check"><input type="checkbox" data-key="lnPanelHover" /> Hovering the Notes tab (or the folded bar) opens the panel; moving away closes it</label>
       <label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label>
+      <label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" /> Lazy Notes' own panel on web pages (off: Chrome's side panel). Alt+Shift+L or the toolbar button opens it</label>
       <label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Also use Chrome's side panel inside readers (off = only the built-in Notes panel; the toolbar button toggles it)</label>
       <div class="set-label set-sub">Saving</div>
       <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>

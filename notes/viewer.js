@@ -37,6 +37,18 @@ function sendDelete(message) {
   });
 }
 
+// ✎ — rename (shows on hover, like Delete).
+function makeRenameButton(title, onRename) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "delete-btn rename-btn";
+  btn.textContent = "✎";
+  btn.title = title;
+  btn.setAttribute("aria-label", title);
+  btn.addEventListener("click", (e) => { e.stopPropagation(); onRename(); });
+  return btn;
+}
+
 // A delete button that needs a second click within a few seconds, so a stray
 // click can't wipe anything. confirmText says what will be lost.
 function makeDeleteButton(confirmText, onConfirm) {
@@ -158,6 +170,7 @@ async function renderCourses() {
       count.textContent = plural(topicCount, "topic");
       const noteTotal = countNotes(course);
       right.appendChild(count);
+      right.appendChild(makeRenameButton(`Rename "${name}"`, () => lnRenamePrompt({ type: "RENAME_COURSE", courseName: name }, name)));
       right.appendChild(makeDeleteButton(
         noteTotal ? `Delete ${plural(noteTotal, "note")}?` : "Confirm",
         () => sendDelete({ type: "DELETE_COURSE", courseName: name })
@@ -523,6 +536,7 @@ async function renderTopics() {
       meta.className = "list-row-meta";
       meta.textContent = plural(topic.highlightCount, "note");
       right.appendChild(meta);
+      right.appendChild(makeRenameButton(`Rename "${topic.name}"`, () => lnRenamePrompt({ type: "RENAME_TOPIC", courseName, topicName: topic.name }, topic.name)));
       right.appendChild(makeDeleteButton(
         topic.highlightCount ? `Delete ${plural(topic.highlightCount, "note")}?` : "Confirm",
         () => sendDelete({ type: "DELETE_TOPIC", courseName, topicName: topic.name })

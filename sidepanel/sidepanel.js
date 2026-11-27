@@ -828,7 +828,7 @@ async function handlePanelRequest(request) {
 
   if (request.windowId != null && request.windowId !== myWindowId) return;  // another window's panel
   // Web-page requests are for Chrome's side panel, not a reader's built-in one.
-  if (new URLSearchParams(location.search).has("embedded") && request.type === "FILL_COMPOSER") return;
+  if (new URLSearchParams(location.search).has("embedded") && !new URLSearchParams(location.search).has("page") && request.type === "FILL_COMPOSER") return;
   chrome.storage.local.remove("panelRequest");
   if (Date.now() - request.at > 60000) return;  // stale, e.g. panel never opened
 
@@ -1220,9 +1220,12 @@ updatePdfBanner();
   const toStudy = () => document.querySelector('.view-tab[data-view="study"]')?.click();
   setTimeout(toStudy, 0);
   setTimeout(toStudy, 500);   // after init() has drawn the tabs
-  const done = () => parent.postMessage({ type: "ln-panel-done" }, location.origin);
+  // In a web page (page=1) the parent is that page, not an extension page.
+  const inPage = new URLSearchParams(location.search).has("page");
+  const toParent = (m) => parent.postMessage(m, inPage ? "*" : location.origin);
+  const done = () => toParent({ type: "ln-panel-done" });
   addEventListener("message", (e) => {
-    if (e.origin !== location.origin || e.source !== parent) return;
+    if (e.source !== parent || (!inPage && e.origin !== location.origin)) return;
     if (e.data?.type !== "ln-focus-composer") return;
     toStudy();
     setTimeout(() => {
@@ -1234,7 +1237,7 @@ updatePdfBanner();
   addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === "/") {
       e.preventDefault();
-      parent.postMessage({ type: "ln-toggle-panel" }, location.origin);
+      toParent({ type: "ln-toggle-panel" });
       return;
     }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {

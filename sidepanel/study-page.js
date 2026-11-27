@@ -1431,6 +1431,20 @@ document.addEventListener("keydown", (e) => {
 (() => {
   const picker = document.getElementById("study-picker");
   if (!picker) return;
+  // ✎ rename — appears when the mouse is over the picker (or a button has focus).
+  const mk = (label, title, fn) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "pk-rename"; b.textContent = label; b.title = title; b.setAttribute("aria-label", title);
+    b.addEventListener("click", fn);
+    return b;
+  };
+  const courseSel = document.getElementById("study-course-select"), topicSel = document.getElementById("study-topic-select");
+  const rc = mk("✎ course", "Rename this course", () => { if (courseSel.value) lnRenamePrompt({ type: "RENAME_COURSE", courseName: courseSel.value }, courseSel.value); });
+  const rt = mk("✎ topic", "Rename this topic", () => { if (courseSel.value && topicSel.value) lnRenamePrompt({ type: "RENAME_TOPIC", courseName: courseSel.value, topicName: topicSel.value }, topicSel.value); });
+  const wrap = document.createElement("span");
+  wrap.className = "pk-rename-wrap";
+  wrap.append(rc, rt);
+  picker.appendChild(wrap);
   const buttons = () => [...picker.querySelectorAll(".hs:not([hidden]) .hs-button")];
   const sync = () => buttons().forEach((b, i) => { if (!b.closest(".hs--open")) b.tabIndex = i === 0 ? 0 : -1; });
   new MutationObserver(sync).observe(picker, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });

@@ -159,3 +159,65 @@ export async function handleDeleteHighlight({ id, courseName, topicName }) {
   const result = await deleteHighlight(id, courseName, topicName);
   return result === null ? { ok: false, reason: "Topic not found." } : { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Renames
+// ---------------------------------------------------------------------------
+// Same notes, new name: keeps the order of the list, and follows the name
+// everywhere it's remembered (the active course/topic, saved documents).
+
+const tidyName = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
+
+function renameKey(obj, from, to) {
+  const out = {};
+  Object.keys(obj).forEach((k) => { out[k === from ? to : k] = obj[k]; });
+  return out;
+}
+
+export async function handleRenameCourse({ courseName, newName }) {
+  const name = tidyName(newName);
+  const { lazynotes } = await storageGet("lazynotes");
+  const courses = lazynotes?.courses || {};
+  if (!courseName || !courses[courseName]) return { ok: false, reason: "Course not found." };
+  if (!name) return { ok: false, reason: "The name can't be empty." };
+  if (name.length > 80) return { ok: false, reason: "That name is too long." };
+  if (name === courseName) return { ok: true };
+  if (Object.keys(courses).some((k) => k !== courseName && sameName(k, name))) {
+    return { ok: false, reason: `You already have a course called "${name}".` };
+  }
+
+  lazynotes.courses = renameKey(courses, courseName, name);
+  const { activeCourse = null, lnDocs = {} } = await storageGet(["activeCourse", "lnDocs"]);
+  Object.values(lnDocs).forEach((d) => { if (d?.course === courseName) d.course = name; });
+  await storageSet({
+    lazynotes,
+    lnDocs,
+    ...(activeCourse === courseName ? { activeCourse: name } : {})
+  });
+  await refreshCourseContextMenuItems();
+  if (activeCourse === courseName) {
+    broadcastToAllTabs({ type: "ACTIVE_COURSE_CHANGED", activeCourse: name, activeTopic: (await storageGet("activeTopic")).activeTopic ?? null });
+  }
+  return { ok: true };
+}
+
+export async function handleRenameTopic({ courseName, topicName, newName }) {
+  const name = tidyName(newName);
+  const { lazynotes } = await storageGet("lazynotes");
+  const topics = lazynotes?.courses?.[courseName]?.topics || {};
+  if (!topics[topicName]) return { ok: false, reason: "Topic not found." };
+  if (!name) return { ok: false, reason: "The name can't be empty." };
+  if (name.length > 80) return { ok: false, reason: "That name is too long." };
+  if (name === topicName) return { ok: true };
+  if (Object.keys(topics).some((k) => k !== topicName && sameName(k, name))) {
+    return { ok: false, reason: `This course already has a topic called "${name}".` };
+  }
+
+  lazynotes.courses[courseName].topics = renameKey(topics, topicName, name);
+  const { activeCourse = null, activeTopic = null, lnDocs = {} } = await storageGet(["activeCourse", "activeTopic", "lnDocs"]);
+  Object.values(lnDocs).forEach((d) => { if (d?.course === courseName && d?.topic === topicName) d.topic = name; });
+  const wasActive = activeCourse === courseName && activeTopic === topicName;
+  await storageSet({ lazynotes, lnDocs, ...(wasActive ? { activeTopic: name } : {}) });
+  await refreshCourseContextMenuItems();
+  return { ok: true };
+}

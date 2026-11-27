@@ -130,3 +130,10 @@ seen → cause → what changed (commit) or what's still open.
 
 - The phone site showed "PIO 201….pdf, p. 2" under the first note (source line shows where the source changes, including the first note). Now only shown in a topic that mixes sources.
 - Phone site is an installable PWA (manifest, 192/512/maskable icons, service worker at /sw.js, app shell cached; notes always from the network). Chrome's "This app cannot be installed" came from the missing manifest/service worker.
+
+## 2026-11-27 · Own panel on web pages, rename, name soft-coded
+
+- Owner prefers a self-built panel everywhere (like Web Highlights) instead of Chrome's: web pages now get our docked panel (`content/page-panel.js`, iframe of sidepanel.html?embedded=1&page=1, resizable, Alt+Shift+L / toolbar button / Ctrl+.). Switch: `lnPagePanelOwn` (off = Chrome's panel). Falls back to Chrome's panel if the page can't hold ours.
+- Rename courses/topics (`RENAME_COURSE` / `RENAME_TOPIC`): ✎ on All notes rows; ✎ course / ✎ topic in the Study picker. Order kept; active course/topic and saved documents follow.
+- The outer "Lazy Notes" title above the panel's own header was redundant → removed (floating reader bar and page panel).
+- App name: one source, `name` in manifest.json (`shared/brand.js` swaps it into every extension page). Phone site: `APP_NAME` env var on Render.

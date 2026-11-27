@@ -8,9 +8,11 @@ import {
   handleTopicSelection,
   handleDeleteCourse,
   handleDeleteTopic,
+  handleRenameCourse,
+  handleRenameTopic,
   handleDeleteHighlight
 } from './bg_courses.js';
-import { requestSidePanel } from './bg_sidepanel.js';
+import { requestSidePanel, usesOwnPanel, pagePanel } from './bg_sidepanel.js';
 import { tidyOldNotes, undoTidy } from './bg_tidy.js';
 import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
@@ -61,6 +63,8 @@ export function ensureContentScripts() {
 const REPLY_HANDLERS = {
   DELETE_COURSE:      handleDeleteCourse,
   DELETE_TOPIC:       handleDeleteTopic,
+  RENAME_COURSE:      handleRenameCourse,
+  RENAME_TOPIC:       handleRenameTopic,
   DELETE_HIGHLIGHT:   handleDeleteHighlight,
   SAVE_TYPED_NOTE:    handleSaveTypedNote,
   DELETE_TYPED_NOTE:  handleDeleteTypedNote,
@@ -136,6 +140,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "toggle-highlighter") {
     handleToggleTrigger();
+  }
+  if (command === "toggle-panel") {
+    if (usesOwnPanel(tab)) pagePanel(tab.id, "toggle", (ok) => { if (!ok && tab?.windowId != null) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {}); });
+    else if (tab?.windowId != null) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
   }
   if (command === "create-course") {
     requestSidePanel({ type: "SHOW_CREATE_COURSE" }, tab);

@@ -183,3 +183,16 @@ async function hideCourseDoc(courseName, key) {
   lnCourseDocHide[courseName] = [...list];
   await chrome.storage.local.set({ lnCourseDocHide });
 }
+
+// Rename a course or topic: asks for the new name, then the background does it
+// (same notes, new name; the active course/topic and saved documents follow).
+// message: { type: "RENAME_COURSE", courseName } or { type: "RENAME_TOPIC", courseName, topicName }
+function lnRenamePrompt(message, current) {
+  const next = prompt(message.type === "RENAME_COURSE" ? "Rename course" : "Rename topic", current);
+  if (next === null) return;
+  if (!next.trim() || next.trim() === current) return;
+  chrome.runtime.sendMessage({ ...message, newName: next }, (reply) => {
+    if (chrome.runtime.lastError || !reply?.ok) alert(`Couldn't rename: ${reply?.reason || chrome.runtime.lastError?.message || "unknown error"}`);
+    // On success the storage listener redraws.
+  });
+}

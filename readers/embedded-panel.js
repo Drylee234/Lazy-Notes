@@ -38,14 +38,14 @@
   // ── Build ──
   const aside = document.createElement("aside");
   aside.id = "ln-embed";
-  aside.setAttribute("aria-label", "Lazy Notes");
+  aside.setAttribute("aria-label", chrome.runtime.getManifest().name);
   const divider = document.createElement("div");
   divider.className = "ln-embed-divider";
   divider.title = "Drag to resize · double-click to reset";
   const bar = document.createElement("div");
   bar.className = "ln-embed-bar";
   bar.innerHTML = `
-    <span class="ln-bar-title" title="Drag to move">Lazy Notes</span>
+    <span class="ln-bar-title" title="Drag to move"></span>
     <button type="button" class="ln-bar-btn ln-bar-help" title="How to use (shortcuts)" aria-label="How to use">?</button>
     <button type="button" class="ln-bar-btn ln-bar-fold" title="Fold to this bar" aria-label="Fold">−</button>
     <button type="button" class="ln-bar-btn ln-bar-mode" data-to=""></button>
@@ -54,7 +54,7 @@
     <button type="button" class="ln-bar-btn ln-bar-close" title="Hide (Ctrl+/)" aria-label="Hide">✕</button>`;
   const frame = document.createElement("iframe");
   frame.src = chrome.runtime.getURL("sidepanel.html?embedded=1");
-  frame.title = "Lazy Notes";
+  frame.title = chrome.runtime.getManifest().name;
   frame.setAttribute("allow", "clipboard-read; clipboard-write");
   aside.append(divider, bar, frame);
   document.body.appendChild(aside);
@@ -247,7 +247,7 @@
     if (document.getElementById("ln-howto")) return;
     const w = document.createElement("div");
     w.id = "ln-howto";
-    w.innerHTML = `<div class="ln-howto-card" role="dialog" aria-label="How to use"><button type="button" class="ln-howto-x" aria-label="Close">✕</button><h2>How to use Lazy Notes</h2>${window.lnHowtoHtml?.() || ""}<p><a href="${chrome.runtime.getURL("howto.html")}" target="_blank" rel="noopener">Open as a page</a></p></div>`;
+    w.innerHTML = `<div class="ln-howto-card" role="dialog" aria-label="How to use"><button type="button" class="ln-howto-x" aria-label="Close">✕</button><h2>How to use ${chrome.runtime.getManifest().name}</h2>${window.lnHowtoHtml?.() || ""}<p><a href="${chrome.runtime.getURL("howto.html")}" target="_blank" rel="noopener">Open as a page</a></p></div>`;
     const close = () => { w.remove(); removeEventListener("keydown", onKey, true); };
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } };
     addEventListener("keydown", onKey, true);

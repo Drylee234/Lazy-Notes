@@ -301,16 +301,27 @@ def too_big(_e):
 # Mobile site
 # --------------------------------------------------------------------------
 
+# The name shown on the phone site (and when installed). Change it any time
+# with the APP_NAME environment variable; default "Lazy Notes".
+APP_NAME = os.environ.get("APP_NAME", "Lazy Notes").strip() or "Lazy Notes"
+
+
+def _named(filename, mimetype):
+    with open(os.path.join(HERE, "static", filename), encoding="utf-8") as f:
+        text = f.read().replace("Lazy Notes", APP_NAME.replace('"', "'"))
+    r = Response(text, mimetype=mimetype)
+    r.headers["Cache-Control"] = "no-cache"
+    return r
+
+
 @app.get("/")
 def index():
-    return send_from_directory(os.path.join(HERE, "static"), "index.html")
+    return _named("index.html", "text/html")
 
 
 @app.get("/manifest.webmanifest")
 def web_manifest():
-    r = send_from_directory(os.path.join(HERE, "static"), "manifest.webmanifest", mimetype="application/manifest+json")
-    r.headers["Cache-Control"] = "no-cache"
-    return r
+    return _named("manifest.webmanifest", "application/manifest+json")
 
 
 @app.get("/sw.js")
@@ -320,6 +331,11 @@ def service_worker():
     r.headers["Cache-Control"] = "no-cache"
     r.headers["Service-Worker-Allowed"] = "/"
     return r
+
+
+@app.get("/static/app.js")
+def app_js():
+    return _named("app.js", "text/javascript")
 
 
 @app.get("/static/<path:name>")

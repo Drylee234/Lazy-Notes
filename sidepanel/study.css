@@ -443,3 +443,10 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 /* B / I buttons hidden unless switched on (rich-box.js, lnBoldItalic) */
 .fb-no-bi .fb-bi { display: none; }
 .fb-no-bi .fb-bi + .fb-sep, .fb-no-bi > .fb-sep:first-child { display: none; }
+
+/* ✎ course / ✎ topic: quiet, shown while the mouse is over the picker. */
+.pk-rename-wrap { margin-left: auto; display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s; }
+#study-picker:hover .pk-rename-wrap, .pk-rename-wrap:focus-within { opacity: 1; }
+.pk-rename { border: 0; background: none; color: var(--dim); font: inherit; font-size: 11px; padding: 3px 5px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+.pk-rename:hover { background: var(--hover); color: var(--accent); }
+@media (hover: none) { .pk-rename-wrap { opacity: 1; } }

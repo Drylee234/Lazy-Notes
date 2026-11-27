@@ -35,6 +35,11 @@
       "run_at": "document_idle"
     },
     {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content/page-panel.js"],
+      "run_at": "document_idle"
+    },
+    {
       "matches": ["http://*/*", "https://*/*", "file:///*"],
       "js": ["content/pdf-prompt.js"],
       "run_at": "document_idle"
@@ -48,6 +53,12 @@
       },
       "description": "Toggle the Lazy Notes highlighter on or off"
     },
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Show or hide the Lazy Notes panel"
+    },
     "create-course": {
       "suggested_key": {
         "default": "Alt+Shift+C"
@@ -55,6 +66,13 @@
       "description": "Open the create-course form"
     }
   },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["sidepanel.html"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
 
   "side_panel": {
     "default_path": "sidepanel.html"
