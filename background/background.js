@@ -46,6 +46,12 @@ function syncReaderPanel(tabId, url) {
 chrome.tabs.onUpdated.addListener((tabId, _info, tab) => syncReaderPanel(tabId, tab.url || tab.pendingUrl));
 chrome.tabs.onActivated.addListener(({ tabId }) => chrome.tabs.get(tabId, (t) => { if (t) syncReaderPanel(tabId, t.url); }));
 
+// A reader says it's open (on load and whenever it gets focus): make sure
+// Chrome's panel is off for it, whatever the tab events did.
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type === "READER_READY" && sender.tab?.id != null) syncReaderPanel(sender.tab.id, sender.tab.url);
+});
+
 // A reader asks for its window to go full screen (the API needs no click).
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg?.type !== "READER_FULLSCREEN" || sender.tab?.windowId == null) return;

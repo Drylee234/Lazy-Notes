@@ -1017,7 +1017,9 @@ async function updateReading() {
   readingNowEl.hidden = !key;
   continueEl.hidden = false;
   document.getElementById("continue-label").textContent = key ? "Other documents" : "Continue reading";
-  fillSavingTo(c, t);   // the top bar: always, with or without a document
+  fillSavingTo(c, t);
+  // "Saving to …" only while a document is open here; with none, just Open / Continue.
+  document.getElementById("saving-bar").classList.toggle("no-doc", !key);
 
   if (key) {
     const icon = document.getElementById("rn-icon");

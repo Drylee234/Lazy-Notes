@@ -369,6 +369,7 @@
     try {
       const ctx = await chrome.runtime.getContexts({ contextTypes: ["SIDE_PANEL"] });
       const open = ctx.length > 0;
+      if (open) chrome.storage.local.get("lnReaderNativePanel", (r) => { if (r?.lnReaderNativePanel !== true) ready(); });   // shut it for this tab
       if (open !== chromePanelOpen) {
         chromePanelOpen = open;
         if (!open) forced = false;
@@ -436,6 +437,12 @@
   aside.addEventListener("pointerdown", () => { hoverAuto = null; }, true);
   chrome.storage.local.get("lnPanelHover", (r) => { hoverOn = r?.lnPanelHover !== false; });
   chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnPanelHover" in c) hoverOn = c.lnPanelHover.newValue !== false; });
+
+  // Tell the background a reader is open: it switches Chrome's own side panel off here.
+  const ready = () => chrome.runtime.sendMessage({ type: "READER_READY" }, () => void chrome.runtime.lastError);
+  ready();
+  addEventListener("focus", ready);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ready(); });
 
   // The toolbar button (background) toggles this panel in readers.
   chrome.runtime.onMessage.addListener((m) => { if (m?.type === "LN_TOGGLE_PANEL") togglePanel(); });

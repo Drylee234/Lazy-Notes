@@ -119,3 +119,8 @@ seen → cause → what changed (commit) or what's still open.
 ## 2026-11-26 · "How to use"
 
 - Owner forgot the floating note typer shortcut (Ctrl+.). Added a shortcuts list (`shared/howto.js`, single source): `?` button in the reader panel's title bar (also the `?` key) opens it over the page; `howto.html` page; "How to use" link in the side panel footer. Keep the list updated when shortcuts change.
+
+## 2026-11-27 · Chrome panel still showing in a reader; "Saving to" with no document
+
+- Chrome's side panel still appeared beside a reader → the reader now tells the background it's open (on load, focus, and whenever it notices Chrome's panel is open) and the background disables + closes Chrome's panel for that tab (`READER_READY`).
+- Home showed "Saving to course › topic" even with no document open → the Saving-to row only shows while a document is open in the tab; otherwise just "+ Open a document…" and "Continue reading".
