@@ -1386,3 +1386,61 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
 })();
 
 init();
+
+
+// ---------------------------------------------------------------------------
+// Online status (header): is this computer online, and are notes reaching
+// your server? Click it for Settings › Sync. Off: Settings (lnOnlineStatus).
+// ---------------------------------------------------------------------------
+(() => {
+  const btn = document.getElementById("online");
+  if (!btn) return;
+  const label = btn.querySelector(".online-label");
+  const ago = (ms) => {
+    const s = Math.round((Date.now() - ms) / 1000);
+    return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : new Date(ms).toLocaleDateString();
+  };
+  async function show() {
+    const { lnSyncUrl, lnSyncKey, lnSyncUser, lnSyncState: st = {}, lnOnlineStatus } =
+      await chrome.storage.local.get(["lnSyncUrl", "lnSyncKey", "lnSyncUser", "lnSyncState", "lnOnlineStatus"]);
+    btn.hidden = lnOnlineStatus === false;
+    let tone, text, tip;
+    const who = lnSyncUser ? ` · logged in as ${lnSyncUser}` : "";
+    if (!navigator.onLine) {
+      tone = "off"; text = "Offline";
+      tip = "No internet. Your notes are saved on this computer and sync when you're back online. The AI's offline helpers still work.";
+    } else if (!lnSyncUrl || !lnSyncKey) {
+      tone = "local"; text = "Not syncing";
+      tip = "Your notes are only on this computer. Settings › Sync: log in to back them up and read them on your phone.";
+    } else if (st.stopped || /key|too big/i.test(st.lastError || "")) {
+      tone = "bad"; text = "Sync problem"; tip = `${st.lastError || "Sync stopped."} Click for Settings › Sync.`;
+    } else if (st.waking) {
+      tone = "wait"; text = "Waking server"; tip = "Your server was asleep (free plan). It takes about a minute to wake.";
+    } else if (st.pending) {
+      tone = "wait"; text = st.lastError ? "Waiting" : "Syncing";
+      tip = st.lastError ? `Can't reach your server yet: ${st.lastError}` : "Changes are on their way to your server.";
+    } else if (st.lastOkAt) {
+      tone = "ok"; text = "Online"; tip = `Synced ${ago(st.lastOkAt)}${who}.`;
+    } else {
+      tone = "wait"; text = "Online"; tip = `Not synced yet${who}.`;
+    }
+    btn.dataset.tone = tone;
+    label.textContent = text;
+    btn.title = tip;
+    btn.setAttribute("aria-label", `${text}: ${tip}`);
+  }
+  btn.addEventListener("click", () => setTimeout(() => {   // after the "click outside closes settings" handler
+    const settings = document.getElementById("settings");
+    if (!settings) return;
+    settings.open = true;
+    const sync = settings.querySelector(".set-sync:not(.set-more)");
+    if (sync) { sync.open = true; sync.scrollIntoView({ block: "nearest" }); }
+  }, 0));
+  chrome.storage.onChanged.addListener((c, a) => {
+    if (a === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey || c.lnSyncUser || c.lnOnlineStatus)) show();
+  });
+  addEventListener("online", show);
+  addEventListener("offline", show);
+  setInterval(show, 60000);   // "Synced 3 min ago" stays true
+  show();
+})();

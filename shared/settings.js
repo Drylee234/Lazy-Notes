@@ -19,7 +19,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -93,6 +93,7 @@ globalThis.LazySettings = (() => {
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDropPageNums" /> Leave out lone page numbers picked up from PDFs</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDupWarn" /> Warn when the words are already saved in the topic</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnHeadSplit" /> Offer to split “Heading: words…” into a heading + Definition</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnOnlineStatus" /> Online status in the panel's header (Online · Syncing · Offline · Not syncing)</label></div>
       <div class="set-label set-sub">Typing</div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label></div>

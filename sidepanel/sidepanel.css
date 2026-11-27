@@ -514,3 +514,18 @@ body.ln-win #brand .brand-name { display: none; }
 .share-out { color: var(--sec); display: grid; gap: 4px; }
 .share-out:empty { display: none; }
 .share-link { width: 100%; box-sizing: border-box; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--pri); font: 11.5px ui-monospace, monospace; }
+
+/* Online status in the header (sidepanel.js) */
+#online { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; margin-left: auto; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--sec); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
+#online[hidden] { display: none; }
+#online:hover { border-color: var(--border-strong); color: var(--pri); }
+#online + #toggle-btn { margin-left: 0; }
+.online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+#online[data-tone="ok"] .online-dot { background: #16a34a; }
+#online[data-tone="wait"] .online-dot { background: #d97706; }
+#online[data-tone="bad"] .online-dot { background: var(--danger, #c0392b); }
+#online[data-tone="local"] .online-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dim); }
+#brand { white-space: nowrap; }
+/* Narrow panel: just the dot (the words are in its tooltip). */
+@media (max-width: 400px) { #online .online-label { display: none; } #online { padding: 5px; } }

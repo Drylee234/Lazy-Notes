@@ -140,7 +140,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - 💡 **Textbooks** (future, owner 2026-11-27): a textbook can serve several courses. Ideas: jump to the chapter/pages for the topic you're studying; search the textbook for context related to a note. Could be offline (search the PDF's text) or online (AI).
   **Why:** real textbooks are big and shared across courses; finding the relevant part is slow.
-- 💡 **"Online" status bar** (future): once real online features exist (login, sync, AI), a small indicator says whether the extension is connected.
+- ✅ **Online status (2026-11-27):** a small pill in the panel header: Online (synced) · Syncing / Waiting / Waking server · Sync problem · Offline · Not syncing; tooltip says more, click opens Settings › Sync. Dot only on narrow panels. Switch: `lnOnlineStatus`.
+  Was: 💡 **"Online" status bar** (future): once real online features exist (login, sync, AI), a small indicator says whether the extension is connected.
   **Why:** know at a glance if sync / AI will work.
 - 💡 **AI background for a new course / document** (future): when a course or doc is opened, the AI fetches related info about the topic and doc, including things the lecture doesn't mention.
   **Why:** fill gaps in lecture notes.
