@@ -40,6 +40,10 @@ MAX_BODY = 30 * 1024 * 1024    # figures travel as data URLs
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BODY
+# Render sits in front (https): believe its X-Forwarded-Proto / Host, so the
+# Google sign-in return address is https://…onrender.com/…
+from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 KEY = os.environ.get("LAZYNOTES_KEY", "")
 INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()
@@ -322,7 +326,8 @@ def check_password(password, stored):
         return False
 
 
-USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
+# A username (3–32 letters, numbers, . _ -) or an email address.
+USERNAME_RE = re.compile(r"^(?:[a-z0-9_.-]{3,32}|[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,24})$")
 
 
 # --------------------------------------------------------------------------
@@ -381,7 +386,7 @@ def get_report():
 
 @app.get("/api/signup-info")
 def signup_info():
-    return jsonify(ok=True, signups=SIGNUPS)
+    return jsonify(ok=True, signups=SIGNUPS, google=bool(GOOGLE_ID and GOOGLE_SECRET))
 
 
 @app.post("/api/signup")
@@ -400,7 +405,7 @@ def signup():
         if not code or not hmac.compare_digest(str(body.get("invite") or "").strip().encode(), code.encode()):
             return jsonify(ok=False, code="INVITE_WRONG", reason="That invite code isn't right. Ask whoever runs this server."), 403
     if not USERNAME_RE.match(username):
-        return jsonify(ok=False, code="BAD_USERNAME", reason="Usernames are 3–32 letters, numbers, dots, dashes or underscores."), 400
+        return jsonify(ok=False, code="BAD_USERNAME", reason="Use your email address, or a username of 3–32 letters, numbers, dots, dashes or underscores."), 400
     if len(password) < 8:
         return jsonify(ok=False, code="SHORT_PASSWORD", reason="Use a password of at least 8 characters."), 400
     user_id = store.add_user(username, hash_password(password))
@@ -436,6 +441,84 @@ def me():
     if w is None:
         return jsonify(ok=False, reason="not logged in"), 401
     return jsonify(ok=True, username=None if w == OWNER else store.username(w), owner=w == OWNER)
+
+
+# --------------------------------------------------------------------------
+# Sign in with Google (optional: GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET from a
+# Google Cloud "OAuth client ID" of type Web application, with this redirect
+# URI: https://<your server>/auth/google/callback). The account is the Google
+# email. New accounts only when started from the extension (from=ext), like
+# the rest of sign-up; the phone can only log in to an existing one.
+# --------------------------------------------------------------------------
+GOOGLE_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_AUTH = os.environ.get("GOOGLE_AUTH_URL", "https://accounts.google.com/o/oauth2/v2/auth")
+GOOGLE_TOKEN = os.environ.get("GOOGLE_TOKEN_URL", "https://oauth2.googleapis.com/token")
+GOOGLE_USERINFO = os.environ.get("GOOGLE_USERINFO_URL", "https://openidconnect.googleapis.com/v1/userinfo")
+_google_states = {}   # state → (from, expires); one worker, so memory is fine
+
+
+def _done(fragment):
+    from flask import redirect
+    return redirect("/auth/done#" + urllib.parse.urlencode(fragment))
+
+
+@app.get("/auth/google")
+def google_start():
+    from flask import redirect
+    if not (GOOGLE_ID and GOOGLE_SECRET):
+        return _done({"error": "Google sign-in isn't set up on this server."})
+    src = "ext" if request.args.get("from") == "ext" else "phone"
+    state = secrets.token_urlsafe(24)
+    now = datetime.now(timezone.utc).timestamp()
+    for k in [k for k, v in _google_states.items() if v[1] < now]:
+        _google_states.pop(k, None)
+    _google_states[state] = (src, now + 600)
+    q = {"client_id": GOOGLE_ID, "redirect_uri": request.host_url.rstrip("/") + "/auth/google/callback",
+         "response_type": "code", "scope": "openid email", "state": state, "prompt": "select_account"}
+    return redirect(f"{GOOGLE_AUTH}?{urllib.parse.urlencode(q)}")
+
+
+@app.get("/auth/google/callback")
+def google_callback():
+    st = _google_states.pop(request.args.get("state", ""), None)
+    if not st or st[1] < datetime.now(timezone.utc).timestamp():
+        return _done({"error": "That sign-in took too long or was already used. Try again."})
+    src = st[0]
+    code = request.args.get("code", "")
+    if not code:
+        return _done({"error": "Google sign-in was cancelled.", "from": src})
+    try:
+        data = urllib.parse.urlencode({"code": code, "client_id": GOOGLE_ID, "client_secret": GOOGLE_SECRET,
+                                       "redirect_uri": request.host_url.rstrip("/") + "/auth/google/callback",
+                                       "grant_type": "authorization_code"}).encode()
+        with urllib.request.urlopen(urllib.request.Request(GOOGLE_TOKEN, data=data, headers={"User-Agent": "LazyNotesServer/1.0"}), timeout=20) as r:
+            tok = json.loads(r.read().decode())
+        req = urllib.request.Request(GOOGLE_USERINFO, headers={"Authorization": f"Bearer {tok.get('access_token', '')}", "User-Agent": "LazyNotesServer/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            info = json.loads(r.read().decode())
+    except Exception:
+        return _done({"error": "Couldn't reach Google. Try again.", "from": src})
+    email = str(info.get("email") or "").strip().lower()
+    if not email or info.get("email_verified") in (False, "false"):
+        return _done({"error": "Google didn't give a verified email address.", "from": src})
+    row = store.user_by_name(email)
+    if row:
+        user_id = row[0]
+    elif src != "ext":
+        return _done({"error": "No account for that email yet: create it in the Lazy Notes extension on your computer first.", "from": src})
+    elif SIGNUPS != "open":
+        return _done({"error": "This server only takes new accounts with an invite code: create yours with email + password in the extension.", "from": src})
+    else:
+        user_id = store.add_user(email, "google$" + secrets.token_hex(16))   # no password: Google only (until one is set)
+    token = secrets.token_urlsafe(32)
+    store.add_token(token_hash(token), user_id)
+    return _done({"token": token, "user": email, "from": src})
+
+
+@app.get("/auth/done")
+def auth_done():
+    return _named("auth-done.html", "text/html")
 
 
 # --------------------------------------------------------------------------

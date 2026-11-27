@@ -68,6 +68,14 @@ read-only copy anyone with the link can open (`GET /api/share/<id>`); with
 `to`, it also lands in that account's inbox (`GET /api/inbox`). Accounts can use
 the server's AI too.
 
+### Sign in with Google (optional)
+
+1. [Google Cloud Console](https://console.cloud.google.com/) › APIs & Services › **OAuth consent screen**: External, app name "Lazy Notes", your email; add yourself (and testers) under Test users, or publish it.
+2. **Credentials › Create credentials › OAuth client ID** › Web application. Authorized redirect URI: `https://<your server>/auth/google/callback` (for Render: `https://lazy-notes-c07b.onrender.com/auth/google/callback`).
+3. On Render › Environment add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The "Continue with Google" buttons appear by themselves (extension and phone).
+
+New Google accounts are only made from the extension; on the phone Google only logs in to an existing account. Email addresses work as usernames too.
+
 ## AI key on the server (so it isn't in Chrome)
 
 The extension can ask this server to do its AI jobs instead of holding an AI

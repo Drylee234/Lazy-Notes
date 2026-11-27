@@ -120,3 +120,28 @@ chrome.storage.local.get(["lnSyncUrl", "lnServerDefaulted"], (r) => {
   if (r?.lnServerDefaulted) return;
   chrome.storage.local.set({ lnServerDefaulted: true, ...(r?.lnSyncUrl ? {} : { lnSyncUrl: HOME_SERVER }) });
 });
+
+
+// "Continue with Google" (Settings › Account & sync): the server finishes at
+// <server>/auth/done#token=…&user=…; take the token from the address, keep it
+// like a password login, close the tab, and switch the AI on through the
+// account (unless you use your own AI key).
+chrome.tabs.onUpdated.addListener(async (tabId, info) => {
+  const url = info.url || "";
+  if (!url.includes("/auth/done#")) return;
+  const { lnSyncUrl = HOME_SERVER } = await chrome.storage.local.get("lnSyncUrl");
+  const base = String(lnSyncUrl).replace(/\/+$/, "");
+  if (!url.startsWith(base + "/auth/done#")) return;
+  const q = new URLSearchParams(url.split("#")[1] || "");
+  if (q.get("from") !== "ext" || !q.get("token")) return;   // errors stay on screen; phone sign-ins aren't ours
+  await chrome.storage.local.set({ lnSyncUrl: base, lnSyncKey: q.get("token"), lnSyncUser: q.get("user"), lnSyncState: {} });
+  setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 1500);
+  try {
+    const r = await fetch(`${base}/api/ai/status`, { headers: { Authorization: `Bearer ${q.get("token")}` } });
+    const st = await r.json().catch(() => ({}));
+    const { lnAiOn, lnAiProvider, lnAiKeys = {} } = await chrome.storage.local.get(["lnAiOn", "lnAiProvider", "lnAiKeys"]);
+    const ownKey = lnAiOn && lnAiProvider && lnAiProvider !== "server" && lnAiKeys[lnAiProvider];
+    if (r.ok && st.ok && !ownKey) await chrome.storage.local.set({ lnAiProvider: "server", lnAiOn: true });
+  } catch (_) { /* the offline helpers stay */ }
+  chrome.runtime.sendMessage({ type: "SYNC_NOW" }).catch(() => {});
+});

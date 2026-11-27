@@ -155,8 +155,9 @@
     searchWrap.hidden = true;
     status.textContent = "";
     view.innerHTML = `<form class="key-card" id="login-form">
-      <p>Log in with the account you made in the extension (Settings › Sync).</p>
-      <input id="login-user" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" required>
+      <p>Log in with the account you made in the extension (Settings › Account &amp; sync).</p>
+      <a class="btn btn-google" id="google-go" href="/auth/google?from=phone" hidden>Continue with Google</a>
+      <input id="login-user" type="text" autocomplete="username" autocapitalize="none" placeholder="Email or username" required>
       <input id="login-pass" type="password" autocomplete="current-password" placeholder="Password" required>
       <button class="btn" type="submit">Log in</button>
       <div class="err" id="key-err">${esc(error)}</div>
@@ -164,6 +165,7 @@
         <input id="key-input" type="password" autocomplete="off" placeholder="Server key (LAZYNOTES_KEY)">
         <button class="btn" type="button" id="key-go">Open my notes</button></details></form>`;
     const useKey = (k) => { key = k; store.set("ln-key", key); route(); load(); };
+    fetch("/api/signup-info").then((r) => r.json()).then((i) => { if (i.google) $("google-go").hidden = false; }).catch(() => {});
     $("login-form").onsubmit = async (e) => {
       e.preventDefault();
       keyError("Logging in…");

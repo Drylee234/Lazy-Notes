@@ -198,7 +198,8 @@ globalThis.LazySettings = (() => {
         <div class="set-acc-in" hidden>Logged in as <b class="set-acc-name"></b> · your notes sync to your account by themselves.
           <button type="button" class="set-btn set-acc-out">Log out</button></div>
         <div class="set-acc-form">
-          <label class="set-field"><span>Username</span><input type="text" class="set-acc-user" autocomplete="username" spellcheck="false" /></label>
+          <button type="button" class="set-btn set-acc-google" hidden><span aria-hidden="true">G</span> Continue with Google</button>
+          <label class="set-field"><span>Email or username</span><input type="text" class="set-acc-user" autocomplete="username" spellcheck="false" placeholder="you@gmail.com" /></label>
           <label class="set-field"><span>Password</span><input type="password" class="set-acc-pass" autocomplete="current-password" /></label>
           <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="from the person who gave you Lazy Notes" /></label>
           <div class="set-backup">
@@ -550,6 +551,17 @@ globalThis.LazySettings = (() => {
       enter("/api/signup");
     });
     acc(".set-acc-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enter("/api/login"); } });
+    // Google: only when the server has it set up. The sign-in runs in a tab;
+    // the background picks the result up from its address (bg: auth watcher).
+    chrome.storage.local.get("lnSyncUrl", ({ lnSyncUrl }) => {
+      if (!lnSyncUrl) return;
+      fetch(`${String(lnSyncUrl).replace(/\/+$/, "")}/api/signup-info`).then((r) => r.json())
+        .then((info) => { acc(".set-acc-google").hidden = !info?.google; }).catch(() => {});
+    });
+    acc(".set-acc-google").addEventListener("click", () => {
+      accStatus.textContent = "Finish signing in with Google in the new tab…";
+      chrome.tabs.create({ url: `${serverUrl()}/auth/google?from=ext` });
+    });
     acc(".set-acc-out").addEventListener("click", async () => {
       api("/api/logout", { method: "POST", headers: await authed() }).catch(() => {});
       // Your notes stay on this computer; only the link to the account goes.
