@@ -17,6 +17,8 @@ and the 5 before it are kept.
 """
 
 import hashlib
+import io
+import zipfile
 import hmac
 import json
 import re
@@ -631,6 +633,54 @@ def _named(filename, mimetype):
 @app.get("/")
 def index():
     return _named("index.html", "text/html")
+
+
+# --------------------------------------------------------------------------
+# Download the extension: /get (a page with the steps) and
+# /download/lazy-notes.zip (the extension's files, zipped from this deploy, so
+# it's always the latest code on main). Render keeps the whole repo next to
+# server/, so the zip is made from there; left out: the server, docs, tools.
+# --------------------------------------------------------------------------
+
+EXT_ROOT = os.path.dirname(HERE)
+SKIP_TOP = {"server", "docs", "tools", ".git", ".github", "node_modules", "test-bench-out"}
+_zip_cache = None
+
+
+def extension_zip():
+    global _zip_cache
+    if _zip_cache is None:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for folder, dirs, files in os.walk(EXT_ROOT):
+                rel_dir = os.path.relpath(folder, EXT_ROOT)
+                top = rel_dir.split(os.sep)[0]
+                if top in SKIP_TOP:
+                    dirs[:] = []
+                    continue
+                dirs[:] = [d for d in dirs if not (rel_dir == "." and d in SKIP_TOP) and not d.startswith(".")]
+                for f in files:
+                    if f.startswith(".") or f.endswith((".md", ".db", ".pyc")) or f == "render.yaml":
+                        continue
+                    path = os.path.join(folder, f)
+                    z.write(path, os.path.join("lazy-notes", os.path.relpath(path, EXT_ROOT)))
+        _zip_cache = buf.getvalue()
+    return _zip_cache
+
+
+@app.get("/get")
+def get_page():
+    return _named("get.html", "text/html")
+
+
+@app.get("/download/lazy-notes.zip")
+def download_zip():
+    if not os.path.exists(os.path.join(EXT_ROOT, "manifest.json")):
+        return jsonify(ok=False, reason="The extension's files aren't on this server."), 404
+    r = Response(extension_zip(), mimetype="application/zip")
+    r.headers["Content-Disposition"] = 'attachment; filename="lazy-notes.zip"'
+    r.headers["Cache-Control"] = "no-cache"
+    return r
 
 
 @app.get("/s/<share_id>")

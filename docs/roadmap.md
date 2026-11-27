@@ -209,6 +209,9 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - ✅ **AI as a chat with threads (2026-11-27, owner):** the ✨ AI view is now a chat: each conversation a thread (kept in ☰, deletable), messages read Document / Page / My notes plus the thread's last 8 messages; Summarise / Quiz me are messages; Copy / Keep as note on answers. Thread list grouped by **Course / Document / None** (switch in ☰) so the owner can decide the grouping. Old answers list: Settings › Old ways (`lnAiView`). Background `AI_CHAT` (offline helper fallback too).
 
+- ✅ **Download page (2026-11-27):** `https://lazy-notes-c07b.onrender.com/get`: a Download button (`/download/lazy-notes.zip`, zipped from the deployed code, always the latest main; server/docs/tools left out) and 5 install steps. A github.io page needs a public repo (this one is private) or a paid plan: owner to decide.
+- ✅ **New-user rough edges (2026-11-27):** owner's server filled in on first run; Account & sync shows only Log in / Create account (rest under Advanced); the AI switches on through the account after login (no key); plain wording, no server jargon for account users; sign-ups open unless `INVITE_CODE` is set (never the owner key); "+ New course…" in Where do these notes go?
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.

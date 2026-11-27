@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#4f46e5" />
+<title>Get Lazy Notes</title>
+<link rel="icon" type="image/png" href="/static/icon-192.png" />
+<style>
+  /* One page, one job: get the extension into Chrome. Same palette as the
+     phone site (style.css). */
+  :root { --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --bg: #fff; --surface: #f6f6fa; --border: #e3e3e8;
+    --pri: #16161a; --sec: #55555f; --dim: #8e8e99; --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --on-accent: #fff; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #18181b; --surface: #1f1f23; --border: #2c2c32; --pri: #ececf0; --sec: #a1a1aa; --dim: #71717a;
+    --accent: #818cf8; --accent-soft: rgba(129, 140, 248, .12); --on-accent: #111114; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--pri); font: 16px/1.6 var(--font); }
+  main { max-width: 640px; margin: 0 auto; padding: 48px max(20px, env(safe-area-inset-left, 0px)) 64px; }
+  .logo { width: 44px; height: 44px; border-radius: 11px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 14px 0 6px; text-wrap: balance; }
+  .lead { color: var(--sec); margin: 0 0 24px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px; background: var(--accent); color: var(--on-accent);
+    font-weight: 650; text-decoration: none; }
+  .btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  .note { font-size: 13.5px; color: var(--dim); margin: 10px 0 0; }
+  h2 { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin: 36px 0 10px; }
+  ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+  ol li { counter-increment: step; position: relative; padding: 12px 14px 12px 50px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  ol li::before { content: counter(step); position: absolute; left: 14px; top: 12px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+  code { font: 14px ui-monospace, Consolas, monospace; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+  .copy { margin-left: 6px; font: inherit; font-size: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--sec); border-radius: 6px; padding: 1px 7px; cursor: pointer; }
+  .phone { margin-top: 28px; padding: 14px; border: 1px dashed var(--border); border-radius: 10px; color: var(--sec); font-size: 14.5px; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/static/icon-192.png" alt="" />
+  <h1>Get Lazy Notes for Chrome</h1>
+  <p class="lead">Highlight lecture PDFs, slides and web pages, keep them as tidy notes by course and topic, and ask the AI about them. Works in Chrome on a computer.</p>
+  <a class="btn" href="/download/lazy-notes.zip" download>⬇ Download Lazy Notes (.zip)</a>
+  <p class="note">Always the newest version. The first download can take up to a minute while the server wakes up.</p>
+
+  <h2>Put it in Chrome (one time, about 1 minute)</h2>
+  <ol>
+    <li><b>Unzip</b> the file you downloaded (right-click › Extract All). Keep the <code>lazy-notes</code> folder somewhere it won't be deleted, like Documents.</li>
+    <li>In Chrome, open <code>chrome://extensions</code><button type="button" class="copy" data-copy="chrome://extensions">Copy</button> (paste it in the address bar).</li>
+    <li>Switch on <b>Developer mode</b> (top right).</li>
+    <li>Click <b>Load unpacked</b> and pick the <code>lazy-notes</code> folder. A short tour opens.</li>
+    <li>Click the puzzle piece in Chrome's toolbar and <b>pin Lazy Notes</b>. Then open it, go to ⚙ Settings › <b>Account &amp; sync</b> and create your account: that's all, the AI comes with it.</li>
+  </ol>
+  <div class="phone">📱 On your phone, open <b class="site"></b> and log in with the same account to read your notes anywhere.</div>
+</main>
+<script>
+  document.querySelector(".site").textContent = location.host;
+  document.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; } catch (_) { b.textContent = "Select and copy it"; }
+  }));
+</script>
+</body>
+</html>
