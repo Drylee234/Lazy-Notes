@@ -1288,7 +1288,18 @@ updatePdfBanner();
 (function initSettings() {
   // The controls themselves live in shared/settings.js (also used by All notes).
   const settings = document.getElementById("settings");
-  LazySettings.build(document.getElementById("settings-menu"));
+  const menu = document.getElementById("settings-menu");
+  // Roomy, like All notes' settings: the whole panel, a title and ×.
+  // Settings › Old ways › lnSettingsSmall: the old small dropdown.
+  const head = document.createElement("div");
+  head.className = "settings-head";
+  head.innerHTML = `<h2>Settings</h2><button type="button" class="settings-close" aria-label="Close settings" title="Close (Esc)">×</button>`;
+  head.querySelector("button").addEventListener("click", (e) => { e.stopPropagation(); settings.open = false; });
+  menu.appendChild(head);
+  LazySettings.build(menu);
+  const setSmall = (v) => document.documentElement.classList.toggle("ln-settings-small", v === true);
+  chrome.storage.local.get("lnSettingsSmall", (r) => setSmall(r?.lnSettingsSmall));
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnSettingsSmall" in c) setSmall(c.lnSettingsSmall.newValue); });
   document.addEventListener("click", (e) => { if (!settings.contains(e.target)) settings.open = false; });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") settings.open = false; });
 })();
