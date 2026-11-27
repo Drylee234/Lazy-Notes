@@ -478,3 +478,7 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 #note-list .note.in-box { opacity: 0.45; }
 #composer.box-editing #composer-type { display: none; }
 #note-list .edit-form.compact { margin: 0; }
+
+/* The Course › Topic line stays at the top while the notes scroll, so
+   switching topic never means scrolling back up. */
+#study-picker { position: sticky; top: -14px; z-index: 6; background: var(--bg); padding-top: 4px; padding-bottom: 4px; box-shadow: 0 6px 6px -6px rgba(0, 0, 0, 0.12); }

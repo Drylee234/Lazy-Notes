@@ -326,6 +326,18 @@
     }
   });
 
+  // Alt+1 / 2 / 3 in the document: open the panel on Home / Study / AI.
+  document.addEventListener("keydown", (e) => {
+    if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const view = { 1: "home", 2: "study", 3: "ai" }[e.key];
+    if (!view) return;
+    e.preventDefault();
+    if (!shown()) togglePanel();
+    currentView = view;
+    frame.contentWindow?.postMessage({ type: "ln-set-view", view }, location.origin);
+    apply({ refit: false });
+  }, true);
+
   // Tab mode: clicking back in the document slides the panel away.
   document.addEventListener("mousedown", (e) => {
     if (!slides() || !slidOut) return;

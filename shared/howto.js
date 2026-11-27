@@ -28,6 +28,9 @@
       ["Type a question, Enter", "Ask it; Summarise / Quiz me work on the same choice"],
       ["Keep as note", "The only way an answer reaches your notes"],
     ]},
+    { title: "Switching views", rows: [
+      ["Alt + 1 · Alt + 2 · Alt + 3", "Home · Study · AI (in the panel, and in the readers)"],
+    ]},
     { title: "In the reader", rows: [
       ["← →", "Previous / next page"],
       [`${C} + +  /  ${C} + −  /  ${C} + 0`, "Zoom in / out / reset (pinch works too)"],

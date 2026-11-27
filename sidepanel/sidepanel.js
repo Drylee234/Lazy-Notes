@@ -1483,3 +1483,14 @@ init();
   chrome.tabs.onUpdated.addListener((_id, info) => { if (info.url) again(); });
   chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && (c.highlighterActive || c.lnStudyAnywhere)) again(); });
 })();
+
+// Alt+1 / Alt+2 / Alt+3: Home / Study / AI from anywhere in the panel (the
+// readers pass the keys on too: embedded-panel.js).
+document.addEventListener("keydown", (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  const view = { 1: "home", 2: "study", 3: "ai" }[e.key];
+  const tab = view && document.querySelector(`.view-tab[data-view="${view}"]:not([hidden])`);
+  if (!tab) return;
+  e.preventDefault();
+  tab.click();
+}, true);
