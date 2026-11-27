@@ -4,6 +4,8 @@ The single list of what's done and what's waiting, by group, so it's easy to see
 **Add every new idea or change here** (newest at the bottom of its group). Each idea carries **Why** (the problem the owner hit), so a different solution can be chosen later. Details live in `usage-notes.md` / `handoff-lazy-notes.md`.
 ✅ done · 💡 idea, not built · ⚠️ check with owner first
 
+**Not every report needs code.** Some are fixed by using the extension differently or understanding it (an existing shortcut, a setting). Check that first, and say so: mark those 📘 "usage/understanding" with the explanation.
+
 ## 1. Notes feel like one note (owner's idea, 2026-11-27)
 Today a topic reads like a pile of highlights. The parts that already feel like real notes are heading → sub topic → list head with things nested under them.
 - 💡 Make the whole topic read as one written note: fewer visible seams between separate highlights (marker, gaps, hover boxes), with headings and nesting carrying the structure.
@@ -26,6 +28,11 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 Editing a highlight opens too big (owner screenshots, 2026-11-27). A one-line list point "Mechanically gated channels" becomes a tall card: text box + "List point › Annotation › Context ›" row + Tidy/Explain/Define + Delete/Cancel/Save.
   **Why:** the jump in size breaks reading flow; the note should still look like itself while you edit it (ties to "feel like one note").
   Possible fixes: edit the words in place (same font and position), show the type/annotation/AI/buttons only on demand (a small ⋯ or after a key), and Enter saves / Esc cancels with no buttons visible.
+
+- 💡 New highlight lands outdented (owner screenshot, 2026-11-27). After indented typed lines ("Also play roles in generation electrical signals"), a new highlight ("Liquid gated ion channels, also known as ionotropic receptors…") was saved at indent 0, left of them.
+  **Cause:** only *list points* take the indent of the note above (`insertHighlight`, bg_storage.js); every other type starts at 0.
+  **Why:** you're still writing inside that nest; jumping out breaks it and you have to indent by hand.
+  Possible fixes: every new note takes the last note's indent (Alt+← to leave), or a setting for that. Or it's a habit change: press Alt+→ / ⇥ after saving.
 
 ## 2b. Unclear to the owner (explain, or redesign)
 - 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.

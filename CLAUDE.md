@@ -9,7 +9,7 @@ The owner's standing instruction: **after testing a change (in Chromium/Playwrig
 Full project context, style rules and history are in `docs/handoff-lazy-notes.md`. Read it before starting work.
 
 ## Roadmap
-`docs/roadmap.md`: every change and idea by group (Notes-as-one-note, UX, UI, Reader, All notes, V3 online, Onboarding). Add new ideas there, each with its **Why** (the problem behind it), so another solution can be picked later.
+`docs/roadmap.md`: every change and idea by group (Notes-as-one-note, UX, UI, Reader, All notes, V3 online, Onboarding). Add new ideas there, each with its **Why** (the problem behind it), so another solution can be picked later. Not every report needs code: some just need a different habit or an explanation (mark 📘).
 
 ## Usage notes
 `docs/usage-notes.md` records how the owner really uses the extension (from their notes, screenshots, recordings), the slips seen, whose they were, and what changed because of them. Read it before changing behaviour that looks odd, and **add an entry** whenever the owner shares real notes or reports a slip.
