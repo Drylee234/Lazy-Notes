@@ -56,8 +56,10 @@ own notes; a login gives a token that works everywhere the key does (sync, AI).
 
 | Variable | Meaning |
 |---|---|
-| `SIGNUPS` | `invite` (default): new accounts need the invite code · `open` · `closed` |
-| `INVITE_CODE` | the code for `invite`; when unset, it's `LAZYNOTES_KEY` |
+| `INVITE_CODE` | optional: new accounts must type this code |
+| `SIGNUPS` | `open` (default without `INVITE_CODE`) · `invite` (default with one) · `closed` |
+
+Never give out `LAZYNOTES_KEY` as an invite: it opens the owner's own notes.
 
 Routes: `GET /api/signup-info`, `POST /api/signup {username, password, invite}` (only from the extension: `Origin: chrome-extension://…`; the phone site only logs in),
 `POST /api/login`, `POST /api/logout`, `GET /api/me`.

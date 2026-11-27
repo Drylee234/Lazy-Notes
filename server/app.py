@@ -5,8 +5,7 @@ site at / shows it on a phone. Every /api call needs
 `Authorization: Bearer <token>`: either LAZYNOTES_KEY (the server owner, as
 before) or a login token from POST /api/login (an account; each account has
 its own notes). Accounts: SIGNUPS = "invite" (default: new accounts need the
-invite code INVITE_CODE, or LAZYNOTES_KEY when that isn't set) | "open" |
-"closed". Shared topics: POST /api/share → a link anyone can read (/s/<id>),
+invite code INVITE_CODE; when that isn't set, "open") | "open" | "closed". Shared topics: POST /api/share → a link anyone can read (/s/<id>),
 optionally sent to another account's inbox (GET /api/inbox).
 
     LAZYNOTES_KEY=your-secret python app.py          # http://0.0.0.0:8787
@@ -41,8 +40,11 @@ app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BODY
 
 KEY = os.environ.get("LAZYNOTES_KEY", "")
-SIGNUPS = os.environ.get("SIGNUPS", "invite").strip().lower()      # invite | open | closed
-INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()             # empty = LAZYNOTES_KEY
+INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()
+# open (default, when there's no INVITE_CODE) | invite (default when there is
+# one) | closed. Never falls back to LAZYNOTES_KEY: handing that out as an
+# invite would give the owner's own notes away.
+SIGNUPS = (os.environ.get("SIGNUPS", "").strip().lower() or ("invite" if INVITE_CODE else "open"))
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 # AI help: the extension asks this server, and this server adds the AI key —
@@ -341,7 +343,7 @@ def signup():
     if SIGNUPS == "closed":
         return jsonify(ok=False, code="SIGNUPS_CLOSED", reason="This server isn't taking new accounts."), 403
     if SIGNUPS != "open":
-        code = INVITE_CODE or KEY
+        code = INVITE_CODE
         if not code or not hmac.compare_digest(str(body.get("invite") or "").strip().encode(), code.encode()):
             return jsonify(ok=False, code="INVITE_WRONG", reason="That invite code isn't right. Ask whoever runs this server."), 403
     if not USERNAME_RE.match(username):

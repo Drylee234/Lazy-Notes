@@ -133,8 +133,11 @@ globalThis.LazyDocs = (() => {
     box.append(title, doc, hint, lc, lt, row);
     wrap.append(box);
 
+    // "+ New course…": someone just starting has none, and shouldn't have
+    // to leave the document to make one.
     const fillC = (v) => {
-      cs.replaceChildren(new Option(names.length ? "Pick a course…" : "No courses yet", ""), ...names.map((n) => new Option(n, n)));
+      cs.replaceChildren(new Option(names.length ? "Pick a course…" : "No courses yet: make one ↓", ""), ...names.map((n) => new Option(n, n)),
+        new Option("+ New course…", NEW));
       cs.value = names.includes(v) ? v : "";
     };
     const fillT = (v) => {
@@ -157,7 +160,24 @@ globalThis.LazyDocs = (() => {
       (g.topic ? ok : ts).focus();
     };
     fillC(""); fillT("");
-    cs.addEventListener("change", () => { hint.style.display = "none"; fillT(null); (ts.value ? ok : cs.value ? ts : cs).focus(); });
+    cs.addEventListener("change", async () => {
+      hint.style.display = "none";
+      if (cs.value === NEW) {
+        const name = (prompt("Name of the new course (e.g. BME213 Physiology):") || "").replace(/\s+/g, " ").trim();
+        cs.value = "";
+        if (name) {
+          await chrome.runtime.sendMessage({ type: "CREATE_COURSE", name }).catch(() => {});
+          for (let i = 0; i < 20; i++) {
+            const { lazynotes: fresh } = await chrome.storage.local.get("lazynotes");
+            const made = Object.keys(fresh?.courses || {}).find((c) => c.toLowerCase() === name.toLowerCase());
+            if (made) { courses[made] = fresh.courses[made]; if (!names.includes(made)) names.push(made); fillC(made); break; }
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        }
+      }
+      fillT(null);
+      (ts.value ? ok : cs.value ? ts : cs).focus();
+    });
     ts.addEventListener("change", async () => {
       if (ts.value === NEW) {
         // A new lecture usually wants a new topic: make it right here.
