@@ -766,7 +766,14 @@ async function renderDisplay() {
       }
     });
 
-    card.replaceWith(form);
+    const words = form.inPlace && card.querySelector(":scope > .note-text");
+    if (words) {
+      // Start exactly where the words started (after a bullet, a marker…).
+      const dx = words.getBoundingClientRect().left - card.getBoundingClientRect().left - parseFloat(getComputedStyle(card).paddingLeft);
+      if (dx > 0) form.style.marginLeft = `${dx}px`;
+    }
+    if (words) { words.replaceWith(form); card.classList.add("editing-inplace"); card.draggable = false; }
+    else card.replaceWith(form);
     form.focusText();
   }
 

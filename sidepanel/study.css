@@ -477,3 +477,4 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 #composer-editing[hidden] { display: none; }
 #note-list .note.in-box { opacity: 0.45; }
 #composer.box-editing #composer-type { display: none; }
+#note-list .edit-form.compact { margin: 0; }

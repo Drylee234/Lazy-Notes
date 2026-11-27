@@ -33,7 +33,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ⚠️💡 Horizontal panel instead of the edge tab (a bottom drawer was rejected earlier).
   **Why:** opening and closing the edge tab doesn't feel smooth.
 
-- 💡 Editing a highlight opens too big (owner screenshots, 2026-11-27). A one-line list point "Mechanically gated channels" becomes a tall card: text box + "List point › Annotation › Context ›" row + Tidy/Explain/Define + Delete/Cancel/Save.
+- ✅ **Done (2026-11-27):** editing a highlight now happens in place: the note keeps its spot, bullet and indent; only a thin box around the words, "Enter saves · Esc cancels" and ⋯ (Alt+M) for type / annotation / context / AI / delete. Study and All notes. Old big card: Settings › Old ways (`lnEditCard`).
+  Was: 💡 Editing a highlight opens too big (owner screenshots, 2026-11-27). A one-line list point "Mechanically gated channels" becomes a tall card: text box + "List point › Annotation › Context ›" row + Tidy/Explain/Define + Delete/Cancel/Save.
   **Why:** the jump in size breaks reading flow; the note should still look like itself while you edit it (ties to "feel like one note").
   Possible fixes: edit the words in place (same font and position), show the type/annotation/AI/buttons only on demand (a small ⋯ or after a key), and Enter saves / Esc cancels with no buttons visible.
 

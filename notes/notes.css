@@ -360,3 +360,19 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 }
 :root[data-theme="dark"] :is(.note--figure .note-figure, .edit-form .edit-figure) { filter: brightness(0.78); transition: filter 0.15s; }
 :root[data-theme="dark"] :is(.note--figure .note-figure, .edit-form .edit-figure):hover { filter: none; }
+
+/* Compact editing (note-editor.js): the note keeps its place and look. */
+.edit-form.compact { margin: 0; padding: 0; gap: 2px; border: 0; background: transparent; box-shadow: none; font-size: inherit; }
+.edit-form.compact .edit-text { padding: 0 3px; margin: 0 -3px; border: 0; border-radius: 3px; background: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); line-height: inherit; }
+.edit-form.compact .edit-text:focus { border: 0; box-shadow: 0 0 0 1.5px var(--accent); }
+.edit-form.compact:not(.show-more) :is(.edit-folds, .edit-ai, .edit-form-footer) { display: none; }
+.edit-form.compact.show-more { gap: 6px; }
+.edit-compact-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); }
+.edit-form:not(.compact) .edit-compact-row { display: none; }
+.edit-more-btn { margin-left: auto; height: 18px; padding: 0 7px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--sec); font: inherit; font-size: 11px; line-height: 1; cursor: pointer; }
+.edit-more-btn:hover { border-color: var(--border-strong); color: var(--pri); }
+.note.editing-inplace > :is(.note-meta, .typed-delete, .note-tools, .fold-btn, .fold-count) { display: none; }
+.note.editing-inplace { cursor: auto; }
+.note.editing-inplace, .note.editing-inplace:hover, .note.editing-inplace:focus-within { background: transparent; }
+.edit-form.compact .edit-text { margin: 0; }

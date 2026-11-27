@@ -13,9 +13,21 @@
 //   onAiNote({ text, category }) → promise of true: save a brand-new note in
 //     the same topic (used by 📖 Define). Without it, Define isn't offered.
 // form.focusText() puts the cursor at the end of the text.
+// Compact (default): the note keeps its own place and look while you edit its
+// words; type / annotation / context / AI / Delete sit behind "⋯" (Alt+M).
+// The caller puts a compact form where the note's text was (form.inPlace).
+// Settings › Old ways › "Big edit card" (lnEditCard = "full") = the old card.
+let lnEditCardFull = false;
+try {
+  chrome.storage.local.get("lnEditCard", (r) => { lnEditCardFull = r?.lnEditCard === "full"; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && c.lnEditCard) lnEditCardFull = c.lnEditCard.newValue === "full"; });
+} catch (_) {}
+
 function noteEditor(note, { onSave, onCancel, onDelete, onConvert, onAiNote }) {
   const form = document.createElement("div");
   form.className = "edit-form";
+  form.inPlace = !lnEditCardFull;
+  if (form.inPlace) form.classList.add("compact");
   form.addEventListener("click", (e) => e.stopPropagation());
 
   const isFigure   = note.category === "figure";   // a picture: only its caption is text
@@ -228,7 +240,22 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert, onAiNote }) {
   }
 
   footer.append(del, cancel, save);
-  form.append(text, more, aiRow, footer);
+  // Compact: a quiet line under the words; "⋯" shows everything else.
+  const row = document.createElement("div");
+  row.className = "edit-compact-row";
+  const hint = document.createElement("span");
+  hint.textContent = "Enter saves · Esc cancels";
+  const moreBtn = editorButton("⋯", "edit-more-btn");
+  moreBtn.title = "Type, annotation, context, AI, delete (Alt+M)";
+  moreBtn.setAttribute("aria-expanded", "false");
+  const toggleMore = () => {
+    const on = form.classList.toggle("show-more");
+    moreBtn.setAttribute("aria-expanded", String(on));
+    moreBtn.textContent = on ? "Less" : "⋯";
+  };
+  moreBtn.addEventListener("click", toggleMore);
+  row.append(hint, moreBtn);
+  form.append(text, row, more, aiRow, footer);
   // A figure: show the picture above its caption; its type stays Figure.
   if (isFigure && note.image) {
     const img = document.createElement("img");
@@ -264,6 +291,11 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert, onAiNote }) {
       e.preventDefault();
       e.stopPropagation();
       onCancel();
+      return;
+    }
+    if (e.altKey && (e.key === "m" || e.key === "M") && form.inPlace) {
+      e.preventDefault();
+      toggleMore();
       return;
     }
     if (e.key !== "Enter") return;

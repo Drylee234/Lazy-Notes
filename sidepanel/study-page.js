@@ -1032,7 +1032,15 @@ const StudyPage = (() => {
     });
 
     hlEditing = { id: note.id };
-    el.replaceWith(form);
+    // Compact: edit right where the words are (indent, bullet and all).
+    const words = form.inPlace && el.querySelector(":scope > .note-text");
+    if (words) {
+      // Start exactly where the words started (after a bullet, a marker…).
+      const dx = words.getBoundingClientRect().left - el.getBoundingClientRect().left - parseFloat(getComputedStyle(el).paddingLeft);
+      if (dx > 0) form.style.marginLeft = `${dx}px`;
+    }
+    if (words) { words.replaceWith(form); el.classList.add("editing-inplace"); el.draggable = false; el.removeAttribute("title"); }
+    else el.replaceWith(form);
     form.focusText();
   }
 
