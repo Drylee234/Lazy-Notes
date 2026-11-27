@@ -41,6 +41,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   Possible fixes: every new note takes the last note's indent (Alt+← to leave), or a setting for that. Or it's a habit change: press Alt+→ / ⇥ after saving.
 
 ## 2b. Unclear to the owner (explain, or redesign)
+- 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. Teach it in the tour / How to use. It's also a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
 - 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
 
 ## 3. UI (how it looks)
@@ -65,6 +66,9 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** the owner shouldn't have to press Sync by hand; an account also makes backup and sharing possible.
 - 💡 Share notes from one account to another (after login).
 - 💡 Ask the AI about the open PDF (document vs selection).
+
+- 💡 **Usage reports that show habits, not just errors** (owner, 2026-11-27): with "Send usage & error reports" on, also record which features/shortcuts are used and never used, and signs of struggle (repeated undo, delete-and-redo, editing right after saving, re-indenting by hand, dismissing the pop-up, opening How to use). Never note text or keys.
+  **Why:** alpha testers won't send live bug reports like the owner does; the data should show what's unused, unknown or stressful so it can be fixed or taught.
 
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
