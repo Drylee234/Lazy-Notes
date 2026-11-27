@@ -74,6 +74,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Open a document from a course in All notes** (owner, 2026-11-27): the course page lists its documents; add "+ Open a document…" there, and the new doc saves to that course straight away (only the topic asked).
   **Why:** fewer steps; you're already in the course.
 
+- 📘 **A list point indented itself** (owner, 2026-11-27, didn't know why): by design, a List point saved right after an indented note takes that note's indent (`insertHighlight`, bg_storage.js). Other types don't, which is why earlier notes landed outdented. Worth making the rule visible/consistent (see "New highlight lands outdented").
+
 ## 3. UI (how it looks)
 - 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.
