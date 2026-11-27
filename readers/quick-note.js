@@ -37,7 +37,7 @@
   const UNDO_MS = 6000;
 
   // Settings (all on unless switched off).
-  const SETTING_KEYS = ["lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode", "lnListHeadType", "lnPlainInBoxes"];
+  const SETTING_KEYS = ["lnQuickWhenFolded", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnPanelMode", "lnListHeadType", "lnPlainInBoxes"];
   const settings = {};
   const on = (k) => settings[k] !== false;
   chrome.storage.local.get(SETTING_KEYS, (r) => Object.assign(settings, r));
@@ -289,9 +289,21 @@
 
   // Ctrl/⌘+. (edge-tab mode; in docked mode it jumps into the panel instead,
   // see embedded-panel.js). With text selected, it opens as a quote.
+  // Ctrl/⌘+Shift+. — the pop-up note box in every panel mode (so it's there
+  // even while the floating panel is showing).
+  addEventListener("keydown", (e) => {
+    if (!((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === "." || e.key === ">" || e.code === "Period"))) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!box.hidden) { close(); return; }
+    if (globalThis.LazyNotesPopupHandOff?.("quote")) return;
+    open({ mode: "note" });
+  }, true);
+
   addEventListener("keydown", (e) => {
     if (!((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".")) return;
-    if (settings.lnPanelMode !== "tab") return;   // float / docked: Ctrl+. goes into the panel
+    // Floating panel folded or hidden + lnQuickWhenFolded: the pop-up box (embedded-panel.js asks via LazyNotesQuick.ctrlDot).
+    if (settings.lnPanelMode !== "tab" && !globalThis.LazyNotesPanelIdle?.()) return;   // float / docked: Ctrl+. goes into the panel
     e.preventDefault();
     e.stopImmediatePropagation();
     if (!box.hidden) { close(); return; }

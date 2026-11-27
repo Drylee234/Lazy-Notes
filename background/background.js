@@ -28,7 +28,25 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
 const READER_RE = new RegExp("^" + chrome.runtime.getURL("").replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(pdf|pptx|docx)reader\\.html");
 const isReader = (url) => READER_RE.test(url || "");
 
+// New tab pages: Chrome's own side panel (the full panel with Home, to pick
+// a document) — the owner's choice; every other page uses ours.
+const isNewTab = (url) => /^chrome:\/\/(newtab|new-tab-page)\b/i.test(url || "") || /^chrome-search:\/\/local-ntp/i.test(url || "");
+function enableOnNewTab(tabId, url) {
+  if (isNewTab(url)) { chrome.sidePanel.setOptions({ tabId, path: "sidepanel.html", enabled: true }).catch(() => {}); return; }
+  // Left the new tab page for a normal page: Chrome's panel goes (ours takes over).
+  if (url && !isReader(url)) chrome.storage.local.get("lnPagePanelOwn", (r) => {
+    if (r?.lnPagePanelOwn !== false) chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {});
+  });
+}
+chrome.tabs.onUpdated.addListener((tabId, _i, tab) => enableOnNewTab(tabId, tab.url || tab.pendingUrl));
+chrome.tabs.onCreated.addListener((tab) => enableOnNewTab(tab.id, tab.pendingUrl || tab.url));
+
 chrome.action.onClicked.addListener((tab) => {
+  if (isNewTab(tab.url || tab.pendingUrl)) {
+    enableOnNewTab(tab.id, tab.url || tab.pendingUrl);
+    chrome.sidePanel.open({ tabId: tab.id }).catch(() => {});   // inside the click: allowed
+    return;
+  }
   if (isReader(tab.url)) {
     chrome.tabs.sendMessage(tab.id, { type: "LN_TOGGLE_PANEL" }, () => void chrome.runtime.lastError);
   } else {

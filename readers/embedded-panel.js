@@ -259,15 +259,8 @@
   addEventListener("keydown", (e) => {
     if (e.key === "?" && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !e.target.isContentEditable && !e.ctrlKey && !e.metaKey) showHowto();
   });
-  {
-    const t = bar.querySelector(".ln-bar-title");
-    let down = null;
-    t.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
-    t.addEventListener("pointerup", (e) => {
-      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4 || t.dataset.multi !== "1") return;
-      frame.contentWindow.postMessage({ type: "ln-next-view" }, location.origin);
-    });
-  }
+  const viewSwitch = lnViewSwitch(bar.querySelector(".ln-bar-title"),
+    (view) => frame.contentWindow?.postMessage({ type: "ln-set-view", view }, location.origin));
   bar.querySelector(".ln-bar-pop").addEventListener("click", popOut);
 
   // Ctrl/⌘+/ shows or hides the panel (also from inside it).
@@ -277,12 +270,7 @@
   addEventListener("message", (e) => {
     if (e.origin !== location.origin || e.source !== frame.contentWindow) return;
     if (e.data?.type === "ln-toggle-panel") togglePanel();
-    if (e.data?.type === "ln-view") {   // the title names the view (Study / AI / Home)
-      const t = bar.querySelector(".ln-bar-title");
-      t.textContent = e.data.name || "";
-      t.dataset.multi = e.data.count > 1 ? "1" : "";
-      t.title = e.data.count > 1 ? "Click to switch (Study / AI)" : "Drag to move";
-    }
+    if (e.data?.type === "ln-view") viewSwitch.update(e.data);   // the title names the view (Study / AI / Home)
   });
 
   // Tab mode: clicking back in the document slides the panel away.
@@ -367,8 +355,15 @@
     // Keep the PDF caret/selection; otherwise just give the page focus.
     if (!sel || !sel.rangeCount) document.querySelector("#viewer")?.focus?.();
   }
+  // lnQuickWhenFolded (off unless switched on): while the floating panel is
+  // folded or hidden, Ctrl+. opens the pop-up note box instead.
+  let quickWhenFolded = false;
+  chrome.storage.local.get("lnQuickWhenFolded", (r) => { quickWhenFolded = r?.lnQuickWhenFolded === true; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnQuickWhenFolded" in c) quickWhenFolded = c.lnQuickWhenFolded.newValue === true; });
+  globalThis.LazyNotesPanelIdle = () => quickWhenFolded && mode === "float" && (state.folded || state.floatOpen === false);
   addEventListener("keydown", (e) => {
     if (mode === "tab") return;   // tab mode: quick-note.js opens the pop-up note box
+    if (globalThis.LazyNotesPanelIdle()) return;   // folded/hidden + setting: quick-note.js does it
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {
       e.preventDefault();
       focusPanel();

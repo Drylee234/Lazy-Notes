@@ -1236,16 +1236,20 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
   // The host's title bar shows which view you're in (Study / AI / Home) and
   // switches on click, so the tab row inside is hidden (CSS).
   const NAMES = { home: "Home", study: "Study", ai: "AI" };
-  const tabsNow = () => [...document.querySelectorAll(".view-tab")].filter((t) => !t.hidden && (t.dataset.view !== "home" || document.body.classList.contains("ln-show-home")));
+  const tabsNow = () => [...document.querySelectorAll(".view-tab")].filter((t) => !t.hidden);
   const announce = () => {
     const act = document.querySelector(".view-tab.active");
-    toParent({ type: "ln-view", name: NAMES[act?.dataset.view] || "Study", count: tabsNow().length });
+    const views = tabsNow().map((t) => ({ view: t.dataset.view, name: NAMES[t.dataset.view] || t.textContent.trim() }));
+    toParent({ type: "ln-view", name: NAMES[act?.dataset.view] || "Study", active: act?.dataset.view || "study", views, count: views.length });
   };
   new MutationObserver(announce).observe(document.getElementById("view-tabs"), { subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
-  new MutationObserver(announce).observe(document.body, { attributes: true, attributeFilter: ["class"] });
   setTimeout(announce, 100); setTimeout(announce, 700);
   addEventListener("message", (e) => {
     if (e.source !== parent || (!inPage && e.origin !== location.origin)) return;
+    if (e.data?.type === "ln-set-view") {
+      document.querySelector(`.view-tab[data-view="${String(e.data.view).replace(/[^a-z]/g, "")}"]`)?.click();
+      return;
+    }
     if (e.data?.type === "ln-next-view") {
       const ts = tabsNow();
       const i = ts.findIndex((t) => t.classList.contains("active"));

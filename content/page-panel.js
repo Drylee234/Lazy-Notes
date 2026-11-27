@@ -18,7 +18,7 @@
   let on = true, floating = false, fade = true;
   let dockW = 380;
   let fl = { x: null, y: null, w: 360, h: null, folded: false };
-  let loaded = false, pending = [], viewCount = 1;
+  let loaded = false, pending = [], viewSwitch = null;
 
   const store = {
     get: (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } },
@@ -71,7 +71,7 @@
     host = document.createElement("div");
     host.id = "lazy-notes-page-panel";
     host.style.cssText = "all:initial;position:fixed;top:0;right:0;width:0;height:0;z-index:2147483646;";
-    root = host.attachShadow({ mode: "closed" });
+    root = host.attachShadow({ mode: "open" });   // open: the view switcher needs composedPath()
     root.innerHTML = `
       <style>
         :host { all: initial; }
@@ -82,14 +82,12 @@
         .wrap.float.fade { opacity: .45; transition: opacity .18s; }
         .wrap.float.fade:hover, .wrap.float.fade.active, .wrap.float.fade.busy { opacity: 1; }
         @media (prefers-color-scheme: dark) { .wrap { background: #18181b; border-color: #3f3f46; } }
-        .bar { display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 12px; background: #6366f1; color: #fff; flex: none; font-weight: 600; user-select: none; }
+        .bar { position: relative; display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 12px; background: #6366f1; color: #fff; flex: none; font-weight: 600; user-select: none; }
         .dock .bar { background: #f4f4f5; color: #3f3f46; }
         @media (prefers-color-scheme: dark) { .dock .bar { background: #27272a; color: #e4e4e7; } }
         .float .bar { cursor: grab; }
         .busy .bar { cursor: grabbing; }
         .title { flex: 1; }
-        .title.multi { cursor: pointer; }
-        .title.multi::after { content: " ⇄"; opacity: .7; font-weight: 400; }
         .bar button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 1px 8px; border-radius: 6px; opacity: .85; }
         .bar button:hover { background: rgba(127,127,127,.25); opacity: 1; }
         .fold { display: none; font-size: 17px; line-height: 1; }
@@ -128,12 +126,8 @@
     frame.addEventListener("focus", () => wrap.classList.add("active"));
     frame.addEventListener("blur", () => wrap.classList.remove("active"));
 
-    // Title: click switches view (Study / AI); drag (floating) moves the box.
-    let down = null;
-    title.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
-    title.addEventListener("pointerup", (e) => {
-      if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5 && viewCount > 1) send({ type: "ln-next-view" });
-    });
+    // Title: names the view; rest on it or click it to switch (Study / AI / Home).
+    viewSwitch = lnViewSwitch(title, (view) => send({ type: "ln-set-view", view }));
 
     if (floating) {
       placeFloat();
@@ -236,11 +230,7 @@
     if (!frame || e.source !== frame.contentWindow) return;
     if (e.data?.type === "ln-toggle-panel") toggle();
     if (e.data?.type === "ln-panel-done") { frame.blur(); window.focus(); }
-    if (e.data?.type === "ln-view") {
-      viewCount = e.data.count || 1;
-      const t = root?.querySelector(".title");
-      if (t) { t.textContent = e.data.name || ""; t.classList.toggle("multi", viewCount > 1); }
-    }
+    if (e.data?.type === "ln-view") viewSwitch?.update(e.data);
   });
 
   // Ctrl/⌘+. from the page: into the note box.

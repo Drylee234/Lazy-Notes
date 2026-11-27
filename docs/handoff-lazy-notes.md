@@ -41,6 +41,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 5. Do not create pull requests unless asked. Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and the session's `Claude-Session:` line (new session gets its own; branch name also comes from the new environment).
 6. Unfinished worker work goes to the working branch only (WIP commit), never to `main` until tested.
 7. "make all and make them togglable" → new ways of doing something are all built, each with an on/off switch (Settings › More options).
+8. "i always say perhaps before all my decisions so if thers a better way using already existing tools tell me and also if any of my decision will revert a benefit i gave myself before alert me" (also in CLAUDE.md).
 
 ## 5. Corrections log
 | # | Claude did | The user wanted |

@@ -54,7 +54,7 @@ export function pagePanel(tabId, action, done) {
     const ok = !chrome.runtime.lastError && r?.ok;
     if (ok || !chrome.scripting) { done?.(!!ok); return; }
     // An already-open tab that never got the script: add it, then ask again.
-    chrome.scripting.executeScript({ target: { tabId }, files: ["content/page-panel.js"] })
+    chrome.scripting.executeScript({ target: { tabId }, files: ["shared/view-switch.js", "content/page-panel.js"] })
       .then(() => setTimeout(() => chrome.tabs.sendMessage(tabId, { type: "LN_PAGE_PANEL", action }, (r2) => done?.(!chrome.runtime.lastError && !!r2?.ok)), 80))
       .catch(() => done?.(false));
   });

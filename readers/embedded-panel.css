@@ -96,8 +96,6 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 #ln-embed.ln-folded { resize: none; height: auto !important; min-height: 0; }
 #ln-embed.ln-folded iframe { display: none; }
 #ln-embed:not(.ln-floating) .ln-bar-title { flex: 1; font: 600 13px var(--font); color: var(--pri); padding-left: 6px; user-select: none; }
-#ln-embed:not(.ln-floating) .ln-bar-title[data-multi="1"] { cursor: pointer; }
-#ln-embed:not(.ln-floating) .ln-bar-title[data-multi="1"]::after { content: " ⇄"; opacity: 0.6; font-weight: 400; }
 .ln-bar-fold[hidden] { display: none; }
 
 /* Resize handles of the floating box (all edges and corners). */
@@ -128,5 +126,5 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 .ln-howto-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; color: var(--dim); font-size: 16px; cursor: pointer; }
 #ln-embed.ln-floating .ln-bar-help { font-weight: 700; padding: 1px 8px; }
 
-#ln-embed.ln-floating .ln-bar-title[data-multi="1"] { cursor: pointer; }
-#ln-embed.ln-floating .ln-bar-title[data-multi="1"]::after { content: " ⇄"; opacity: 0.7; font-weight: 400; }
+
+#ln-embed .ln-embed-bar { position: relative; }

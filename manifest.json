@@ -36,7 +36,7 @@
     },
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/page-panel.js"],
+      "js": ["shared/view-switch.js", "content/page-panel.js"],
       "run_at": "document_idle"
     },
     {

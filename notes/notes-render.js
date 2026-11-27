@@ -110,7 +110,7 @@ function renderNote(note, { compact = false, page = false } = {}) {
   else if (note.category === "table") text.appendChild(renderTable(note.text));
   else if (page) fillPageText(text, note);
   else if (note.category === "definition" && splitTerm(note.text)) fillTermDefinition(text, splitTerm(note.text), false);
-  else text.textContent = note.text;
+  else text.textContent = trimBlankLines(note.text);
   // A list head introduces its points: show it with a colon (display only).
   if (note.category === "list head" && !/[:：]\s*$/.test(note.text || "")) {
     const colon = document.createElement("span");
@@ -276,6 +276,12 @@ function sentenceAround(text, at, len) {
 // note: { id, text, timestamp, edited }. Quotes (lines starting ">", often a
 // highlight dragged in) show as block quotes. Returns a <div class="note
 // note--typed"> with a meta line ("Your note · date") like a highlight's.
+// Blank lines at the start/end of a note (a trailing Enter, a PDF selection
+// that took the line break with it) only add space: not shown.
+function trimBlankLines(t) {
+  return String(t ?? "").replace(/^(?:[ \t]*\r?\n)+/, "").replace(/(?:\r?\n[ \t]*)+$/, "");
+}
+
 function renderTypedNote(note) {
   const el = document.createElement("div");
   el.className = "note note--typed";
@@ -284,7 +290,7 @@ function renderTypedNote(note) {
 
   const body = document.createElement("div");
   body.className = "note-text";
-  body.innerHTML = typedNoteHtml(note.text);   // escaped first: see utils.js
+  body.innerHTML = typedNoteHtml(trimBlankLines(note.text));   // escaped first: see utils.js
   el.appendChild(body);
 
   const meta = document.createElement("div");

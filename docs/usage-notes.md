@@ -147,3 +147,11 @@ seen → cause → what changed (commit) or what's still open.
 - Reader/page panel title bar shows the current view (Study / AI / Home) and clicking it switches; the tab row inside is hidden in embedded panels (`ln-view` / `ln-next-view` messages).
 - Web pages can use a floating panel like the readers (drag, 8-edge resize, fold, fades): Settings › More options › "Panel on web pages" Docked | Floating (`lnPagePanelMode`, default docked).
 - Study tab: nested notes now show thread-style guide lines (one per level, under the owner's bullet), and hovering an owner lights up everything it owns. Ownership by indent was already in `noteParents` (fold hides the nested notes).
+
+## 2026-11-27 · Spacing, Ctrl+. with the floating panel, Home back, Chrome panel on new tab
+
+- Extra space between notes: blank lines at the start/end of a note (a trailing Enter, a PDF line break) were shown → trimmed when displayed (`trimBlankLines`).
+- Floating panel showing (even folded) = Ctrl+. goes into its note box. Now: Ctrl+Shift+. always opens the pop-up note box; optional "Ctrl+. while the floating panel is folded or hidden" (`lnQuickWhenFolded`, off). Already-existing ways: double-click blank space, right-click › Quick note here, ✎ Note in the save pop-up.
+- Hiding Home cost the owner the document list/Open → Home is back in the built-in panel via the title-bar view switcher (rest ~0.5s or click → Home / Study / AI; hover-opened list closes 0.4s after leaving, like the dropdowns). `lnEmbedHome` now means "also show the tab row".
+- New tab pages use Chrome's own side panel (full Home); every other page uses ours.
+- Owner's standing preference saved in CLAUDE.md: "perhaps" = tell me if something existing already does it; warn me if it reverts an earlier benefit.
