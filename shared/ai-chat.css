@@ -1,0 +1,52 @@
+/* Lazy Notes — the AI view as a chat with threads (shared/ai-chat.js). */
+.ln-ai-chat { --aic-purple: #d8b4fe; display: flex; flex-direction: column; min-height: 0; flex: 1; position: relative; font-size: 13px; color: var(--pri); }
+.aic-head { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.aic-list-btn, .aic-new { border: 1px solid var(--border); background: var(--surface); color: var(--sec); border-radius: var(--radius-sm); font: inherit; font-size: 12px; padding: 3px 8px; cursor: pointer; }
+.aic-list-btn:hover, .aic-new:hover { border-color: var(--border-strong); color: var(--pri); }
+.aic-list-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.aic-title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-drawer { position: absolute; z-index: 20; top: 34px; left: 0; right: 0; max-height: 70%; overflow-y: auto; background: var(--bg);
+  border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: 0 10px 28px rgba(0, 0, 0, .18); padding: 8px; }
+.aic-drawer[hidden] { display: none; }
+.aic-group { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--dim); margin-bottom: 6px; }
+.aic-group button { border: 1px solid var(--border); background: transparent; color: var(--sec); border-radius: 999px; padding: 1px 9px; font: inherit; cursor: pointer; }
+.aic-group button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.aic-group-name { margin: 8px 2px 2px; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+.aic-thread { display: flex; align-items: center; border-radius: var(--radius-sm); }
+.aic-thread.on, .aic-thread:hover { background: var(--hover); }
+.aic-thread-open { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 6px; border: 0; background: none; color: var(--pri); font: inherit; text-align: left; cursor: pointer; }
+.aic-thread-title { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-thread-meta { font-size: 11px; color: var(--dim); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-thread-del { border: 0; background: none; color: var(--dim); cursor: pointer; font: inherit; padding: 2px 8px; border-radius: 4px; }
+.aic-thread-del:hover, .aic-thread-del[data-armed="1"] { color: #fff; background: var(--danger, #c0392b); }
+.aic-none { color: var(--dim); padding: 6px; }
+.aic-msgs { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 2px; }
+.aic-empty { color: var(--sec); line-height: 1.5; padding: 14px 6px; }
+.aic-empty b { color: var(--pri); }
+.aic-msg { max-width: 92%; padding: 7px 10px; border-radius: 12px; line-height: 1.45; }
+.aic-user { align-self: flex-end; background: var(--accent); color: var(--on-accent, #fff); border-bottom-right-radius: 4px; }
+.aic-ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.aic-ai.aic-failed { border-color: var(--danger, #c0392b); color: var(--danger, #c0392b); }
+.aic-text { white-space: pre-wrap; word-wrap: break-word; }
+.aic-badge { display: inline-block; font-size: 10px; font-weight: 700; color: #6b21a8; background: #f3e8ff; border-radius: 4px; padding: 0 4px; margin-bottom: 3px; }
+:root[data-theme="dark"] .aic-badge { color: #e9d5ff; background: #3b2a55; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .aic-badge { color: #e9d5ff; background: #3b2a55; } }
+.aic-acts { display: flex; gap: 4px; margin-top: 5px; }
+.aic-acts button { border: 1px solid var(--border); background: var(--bg); color: var(--sec); border-radius: 6px; padding: 1px 8px; font: inherit; font-size: 11px; cursor: pointer; }
+.aic-acts button:hover:not(:disabled) { color: var(--pri); border-color: var(--border-strong); }
+.aic-form { border-top: 1px solid var(--border); padding-top: 8px; display: grid; gap: 6px; }
+.aic-scopes { display: flex; gap: 4px; }
+.aic-scopes button { flex: 1 1 0; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--sec); font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-scopes button.on { border-color: var(--accent); color: var(--pri); background: var(--accent-soft); }
+.aic-scopes button:disabled { opacity: .45; cursor: default; }
+.aic-row { display: flex; gap: 6px; align-items: flex-end; }
+.aic-input { flex: 1; min-width: 0; resize: none; min-height: 34px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--pri); font: inherit; font-size: 13px; line-height: 1.35; }
+.aic-input:focus { outline: none; border-color: var(--accent); }
+.aic-send { width: 34px; height: 34px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent, #fff); font-size: 16px; font-weight: 700; cursor: pointer; }
+.aic-quick { display: flex; align-items: center; gap: 4px; }
+.aic-quick button { border: 1px solid var(--border); background: var(--surface); color: var(--sec); border-radius: 999px; padding: 2px 10px; font: inherit; font-size: 11.5px; cursor: pointer; }
+.aic-quick button:hover { color: var(--pri); border-color: var(--border-strong); }
+.aic-hint { margin-left: auto; font-size: 10.5px; color: var(--dim); }
+/* The chat fills the panel: only its messages scroll, the box stays at the bottom. */
+#body:has(> #ai-view.visible.ln-ai-chat) { display: flex; flex-direction: column; overflow: hidden; min-height: 0; padding-bottom: 8px; }
+#ai-view.visible.ln-ai-chat { flex: 1; min-height: 0; }

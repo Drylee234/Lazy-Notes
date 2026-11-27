@@ -170,5 +170,5 @@ globalThis.LazyAIAsk = (() => {
     return { focus: () => input.focus(), refresh };
   }
 
-  return { mount, notesText };
+  return { mount, notesText, sources };
 })();

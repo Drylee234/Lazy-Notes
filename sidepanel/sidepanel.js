@@ -526,8 +526,36 @@ const aiView = document.getElementById("ai-view");
 const aiTab  = document.getElementById("ai-tab");
 let aiPanel  = null;
 
-function mountAiPanel() {
-  if (aiPanel || !aiView || !globalThis.LazyAIPanel) return;
+// Keep an AI answer as a note in the topic you're saving to.
+async function keepAiAnswer(entry) {
+  const { activeCourse, activeTopic } = await chrome.storage.local.get(["activeCourse", "activeTopic"]);
+  if (!activeCourse || !activeTopic) return false;
+  const reply = await new Promise((done) => {
+    try {
+      chrome.runtime.sendMessage({
+        type: "AI_SAVE_NOTE", text: entry.text,
+        category: /quiz/.test(entry.task) ? "generic" : /summarise/.test(entry.task) ? "summary" : "note",
+        courseName: activeCourse, topicName: activeTopic
+      }, (r) => { void chrome.runtime.lastError; done(r); });
+    } catch (_) { done(null); }
+  });
+  return !!reply?.ok;
+}
+
+// The AI view: a chat with threads (shared/ai-chat.js), or the old answers
+// list + Ask bar (Settings › Old ways › lnAiView = "answers").
+let aiMounting = false;
+async function mountAiPanel() {
+  if (aiPanel || aiMounting || !aiView) return;
+  aiMounting = true;
+  const { lnAiView } = await chrome.storage.local.get("lnAiView");
+  aiMounting = false;
+  if (aiPanel) return;
+  if (lnAiView !== "answers" && globalThis.LazyAIChat) {
+    aiPanel = LazyAIChat.mount(aiView, { onKeep: keepAiAnswer });
+    return;
+  }
+  if (!globalThis.LazyAIPanel) return;
   aiPanel = LazyAIPanel.mount(aiView, {
     onKeep: async (entry) => {
       const { activeCourse, activeTopic } = await chrome.storage.local.get(["activeCourse", "activeTopic"]);

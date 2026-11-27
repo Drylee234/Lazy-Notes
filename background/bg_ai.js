@@ -345,6 +345,46 @@ export async function handleAiRun(message) {
   return note && out.ok ? { ...out, note } : out;
 }
 
+// ── Chat (the AI view's threads, shared/ai-chat.js) ──────────────────────────
+// AI_CHAT { question, scope: "doc"|"page"|"notes", page?, text? (notes),
+//           history: [{ role: "user"|"ai", text }], title? }
+//   → { ok, text, offline?, note? } | { ok: false, reason }
+const CHAT_SYSTEM = "You are a study helper inside a student's note-taking app. Answer clearly and briefly, in plain text (simple numbered or dashed lists are fine, no markdown headings or tables). Never invent facts about what the student's material says.";
+
+export async function handleAiChat(m) {
+  const question = String(m?.question || "").trim();
+  if (!question) return { ok: false, reason: "Type a question first." };
+  let ctx = String(m.text || "").trim(), note = "";
+  if (m.scope === "doc" || m.scope === "page") {
+    const doc = await documentText({ scope: m.scope === "page" ? "page" : "all", page: m.page });
+    if (!doc.ok) return doc;
+    ctx = doc.text;
+    note = doc.note;
+  }
+  if (!ctx) return { ok: false, reason: m.scope === "notes" ? "That topic has no notes yet." : "Nothing to read." };
+  if (ctx.length > 240000) return { ok: false, reason: "That document is too long to send in one go. Use Page instead." };
+
+  const cfg = await config();
+  const offlineOn = await offlineHelpers();
+  const aiReady = cfg.on && !!cfg.key;
+  const task = m.scope === "notes" ? "ask" : "askDoc";
+  if (offlineOn && (!aiReady || !navigator.onLine)) {
+    return offline(task, ctx, question, note, aiReady ? "You're offline, so this is the offline helper (no AI)." : "Offline helper (no AI set up): the sentences that match your words.");
+  }
+  if (!cfg.on) return { ok: false, reason: "The AI is switched off. Turn it on in Settings › AI." };
+
+  const history = (Array.isArray(m.history) ? m.history : []).slice(-8)
+    .map((x) => `${x.role === "user" ? "Student" : "You"}: ${String(x.text || "").slice(0, 2000)}`).join("\n\n");
+  const prompt = `What the student is studying${m.title ? ` (${m.title})` : ""}:\n--- material ---\n${ctx}\n--- end of material ---\n\n` +
+    (history ? `The conversation so far:\n${history}\n\n` : "") +
+    `Student: ${question}\n\nAnswer the student's last message. Use the material first; if it doesn't cover it, say so in one line, then give the general answer marked "(general)".`;
+  const out = await ask(cfg, { system: CHAT_SYSTEM, prompt, maxTokens: 1500 });
+  if (!out.ok && offlineOn && /\[(UNREACHABLE|OFFLINE|TIMEOUT|SERVER_WAKING)/.test(out.reason || "")) {
+    return offline(task, ctx, question, note, "Couldn't reach the AI, so this is the offline helper (no AI).");
+  }
+  return note && out.ok ? { ...out, note } : out;
+}
+
 async function offlineHelpers() {
   const { lnAiOffline } = await chrome.storage.local.get("lnAiOffline");
   return lnAiOffline !== false;

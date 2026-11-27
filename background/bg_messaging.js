@@ -19,7 +19,7 @@ import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
 import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js';
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
-import { handleAiTest, handleAiRun, handleAiReady, handleAiSaveNote } from './bg_ai.js';
+import { handleAiTest, handleAiRun, handleAiReady, handleAiSaveNote, handleAiChat } from './bg_ai.js';
 import { oneAtATime, updateHighlight } from './bg_storage.js';
 import { watchHabits, countHabit } from './bg_habits.js';
 
@@ -78,6 +78,7 @@ const REPLY_HANDLERS = {
   AI_RUN:             handleAiRun,
   AI_READY:           handleAiReady,
   AI_SAVE_NOTE:       handleAiSaveNote,
+  AI_CHAT:            handleAiChat,
   IMPORT_TOPIC:       handleImportTopic,
   UPDATE_HIGHLIGHT:   async ({ id, courseName, topicName, fields }) => {
     const note = id && fields ? await updateHighlight(id, courseName, topicName, fields) : null;
@@ -86,7 +87,7 @@ const REPLY_HANDLERS = {
 };
 
 // These only read, or wait on the internet: they don't queue behind saves.
-const NOT_QUEUED = new Set(["AI_TEST", "AI_RUN", "AI_READY", "GET_LAST_HIGHLIGHT"]);
+const NOT_QUEUED = new Set(["AI_TEST", "AI_RUN", "AI_READY", "AI_CHAT", "GET_LAST_HIGHLIGHT"]);
 
 // What gets counted in the usage report (actions, never their contents).
 const COUNTED = new Set(["NEW_HIGHLIGHT", "NEW_HIGHLIGHTS", "SAVE_TYPED_NOTE", "DELETE_HIGHLIGHT", "DELETE_TYPED_NOTE",

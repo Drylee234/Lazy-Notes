@@ -207,6 +207,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   Was: 💡 **AI on the phone / web note viewer** (owner, 2026-11-27): the phone site is read-only; at least let you ask the AI about the notes you're reading (explain, quiz me, define). The server already has `/api/ai` with the key on Render, so the phone can use it without a key on the phone.
   **Why:** on the phone you can't edit, but you still study and get stuck.
 
+- ✅ **AI as a chat with threads (2026-11-27, owner):** the ✨ AI view is now a chat: each conversation a thread (kept in ☰, deletable), messages read Document / Page / My notes plus the thread's last 8 messages; Summarise / Quiz me are messages; Copy / Keep as note on answers. Thread list grouped by **Course / Document / None** (switch in ☰) so the owner can decide the grouping. Old answers list: Settings › Old ways (`lnAiView`). Background `AI_CHAT` (offline helper fallback too).
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.
