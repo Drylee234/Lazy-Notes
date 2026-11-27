@@ -199,6 +199,79 @@
       </span><span class="chev">›</span></a></li>`).join("")}</ul>` : `<div class="empty">No topics yet.</div>`;
   }
 
+  // ── Ask the AI about a topic (the server holds the AI key) ──
+  // Same wording as the extension's jobs (background/bg_ai.js), so answers
+  // match. Answers are for reading only: the phone never changes your notes.
+  const AI_SYSTEM = "You help a student keep study notes. Answer with the result only — no greeting, no explanation of what you did, no markdown code fences. Keep the student's own wording wherever it is already fine. Never invent facts that are not in what you were given.";
+  const AI_JOBS = {
+    summarise: { label: "Summary", maxTokens: 1500, prompt: (t) =>
+      `Here are a student's notes on one topic. Write a short summary of them: 3 to 6 lines, each a single point, no numbering, no heading. Only use what is in the notes.\n\n---\n${t}` },
+    quiz: { label: "Test questions", maxTokens: 1500, prompt: (t) =>
+      `Write 5 short test-yourself questions from these notes, one per line, numbered. Each must be answerable from the notes. No answers.\n\n---\n${t}` },
+    ask: { label: "", maxTokens: 1200, prompt: (t, q) =>
+      `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${q}\n\n--- passage ---\n${t}` }
+  };
+  let aiState = null;   // null = not checked yet, true = ready, string = why not
+  async function aiCheck() {
+    if (aiState !== null) return aiState;
+    try {
+      const r = await fetch("/api/ai/status", { headers: { Authorization: `Bearer ${key}` }, cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      aiState = r.ok && j.ok ? true : (j.reason || "The AI isn't set up on your server.");
+    } catch (_) { return "Needs the internet."; }
+    return aiState;
+  }
+  function plainNotes(notes) {
+    return notes.filter((n) => n.category !== "figure").map((n) => {
+      const pad = "  ".repeat(Math.max(0, Math.min(3, n.indent || 0)));
+      const extra = n.annotation ? ` (my note: ${n.annotation})` : "";
+      return n.text ? pad + String(n.text).split("\n").join(`\n${pad}`) + extra : "";
+    }).filter(Boolean).join("\n");
+  }
+  function aiBar(notes) {
+    const box = document.createElement("section");
+    box.className = "ai";
+    box.innerHTML = `<form class="ai-row" autocomplete="off">
+        <input class="ai-q" type="text" enterkeyhint="send" placeholder="Ask about this topic…" aria-label="Ask the AI about this topic">
+        <button class="ai-go" type="submit">Ask</button></form>
+      <div class="ai-row"><button type="button" class="ai-job" data-job="summarise">Summarise</button>
+        <button type="button" class="ai-job" data-job="quiz">Quiz me</button><span class="ai-why"></span></div>
+      <div class="ai-answers"></div>`;
+    const q = box.querySelector(".ai-q"), answers = box.querySelector(".ai-answers"), why = box.querySelector(".ai-why");
+    const controls = box.querySelectorAll("button, input");
+    aiCheck().then((st) => {
+      if (st === true) return;
+      controls.forEach((c) => { c.disabled = true; });
+      why.textContent = st;
+    });
+    async function run(job, question = "") {
+      const text = plainNotes(notes);
+      if (!text) return;
+      const card = document.createElement("article");
+      card.className = "ai-card";
+      card.innerHTML = `<div class="ai-card-head"><span class="ai-badge">AI</span><b></b></div><div class="ai-text">Thinking…</div>`;
+      card.querySelector("b").textContent = question || AI_JOBS[job].label;
+      answers.prepend(card);
+      const out = card.querySelector(".ai-text");
+      try {
+        const r = await fetch("/api/ai", {
+          method: "POST", cache: "no-store",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ system: AI_SYSTEM, prompt: AI_JOBS[job].prompt(text, question), max_tokens: AI_JOBS[job].maxTokens })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) out.textContent = j.text;
+        else { card.classList.add("failed"); out.textContent = `${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}`; }
+      } catch (_) {
+        card.classList.add("failed");
+        out.textContent = "Couldn't reach your server. The AI needs the internet.";
+      }
+    }
+    box.querySelector("form").onsubmit = (e) => { e.preventDefault(); const v = q.value.trim(); if (v) { q.value = ""; run("ask", v); } };
+    box.querySelectorAll(".ai-job").forEach((b) => { b.onclick = () => run(b.dataset.job); });
+    return box;
+  }
+
   function topicScreen(courseName, topicName) {
     const t = courses()[courseName]?.topics?.[topicName];
     setBar(topicName, courseName, `#/course/${enc(courseName)}`);
@@ -208,6 +281,7 @@
     view.innerHTML = notes.length
       ? `<div class="notes">${(mixedSources = new Set(notes.filter((n) => n.kind !== "typed").map((n) => n.sourceTitle || n.sourceUrl || "")).size > 1, "")}${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>`
       : `<div class="empty">No notes in this topic yet.</div>`;
+    if (notes.length) view.prepend(aiBar(notes));
     window.scrollTo(0, 0);
   }
 
