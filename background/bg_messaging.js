@@ -12,7 +12,7 @@ import {
   handleRenameTopic,
   handleDeleteHighlight
 } from './bg_courses.js';
-import { requestSidePanel, usesOwnPanel, pagePanel } from './bg_sidepanel.js';
+import { requestSidePanel, togglePanelFor, openPanelWindow } from './bg_sidepanel.js';
 import { tidyOldNotes, undoTidy } from './bg_tidy.js';
 import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
@@ -128,6 +128,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case "TOGGLE_HIGHLIGHTER_REQUEST":
       handleToggleTrigger();
       return;
+    case "OPEN_PANEL_WINDOW":   // our panel in a small window (pages that can't hold it)
+      openPanelWindow(sender.tab);
+      return;
     case "OPEN_PDF_IN_READER":
       openPdfInReader(sender, message);
       return;
@@ -141,10 +144,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "toggle-highlighter") {
     handleToggleTrigger();
   }
-  if (command === "toggle-panel") {
-    if (usesOwnPanel(tab)) pagePanel(tab.id, "toggle", (ok) => { if (!ok && tab?.windowId != null) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {}); });
-    else if (tab?.windowId != null) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
-  }
+  if (command === "toggle-panel") togglePanelFor(tab);
   if (command === "create-course") {
     requestSidePanel({ type: "SHOW_CREATE_COURSE" }, tab);
   }

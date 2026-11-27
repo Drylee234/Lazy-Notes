@@ -1,7 +1,7 @@
 // Lazy Notes — Background Service Worker (thin entry point)
 
 import './bg_diag.js';
-import { usesOwnPanel, pagePanel } from './bg_sidepanel.js';
+import { togglePanelFor } from './bg_sidepanel.js';
 import './bg_storage.js';
 import './bg_validators.js';
 import './bg_highlights.js';
@@ -31,21 +31,29 @@ const isReader = (url) => READER_RE.test(url || "");
 chrome.action.onClicked.addListener((tab) => {
   if (isReader(tab.url)) {
     chrome.tabs.sendMessage(tab.id, { type: "LN_TOGGLE_PANEL" }, () => void chrome.runtime.lastError);
-  } else if (usesOwnPanel(tab)) {
-    // Our own panel in the page; if the page can't hold it (script blocked),
-    // fall back to Chrome's (we're still inside the click here only if fast, so best effort).
-    pagePanel(tab.id, "toggle", (ok) => { if (!ok && tab.windowId != null) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {}); });
-  } else if (tab.windowId != null) {
-    chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});   // inside the click: allowed
+  } else {
+    togglePanelFor(tab);   // ours on the page (or in a small window on pages that can't hold it)
   }
 });
 
+// Chrome's own side panel: off everywhere while our own panel is in use
+// (lnPagePanelOwn, default on). Readers can keep it with lnReaderNativePanel.
+function applyGlobalPanel() {
+  chrome.storage.local.get("lnPagePanelOwn", (r) => {
+    chrome.sidePanel.setOptions({ enabled: r?.lnPagePanelOwn === false }).catch(() => {});
+  });
+}
+applyGlobalPanel();
+chrome.runtime.onInstalled.addListener(applyGlobalPanel);
+chrome.runtime.onStartup.addListener(applyGlobalPanel);
+chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnPagePanelOwn" in c) applyGlobalPanel(); });
+
 function syncReaderPanel(tabId, url) {
-  if (!isReader(url)) { chrome.sidePanel.setOptions({ tabId, enabled: true }).catch(() => {}); return; }
-  chrome.storage.local.get("lnReaderNativePanel", (r) => {
-    const keep = r?.lnReaderNativePanel === true;
+  if (!isReader(url)) return;   // other tabs follow the global setting above
+  chrome.storage.local.get(["lnReaderNativePanel", "lnPagePanelOwn"], (r) => {
+    const keep = r?.lnReaderNativePanel === true || r?.lnPagePanelOwn === false;
     chrome.sidePanel.setOptions({ tabId, enabled: keep }).catch(() => {});
-    if (!keep) chrome.sidePanel.close?.({ tabId })?.catch?.(() => {});   // already open from the page before: shut it
+    if (!keep) chrome.sidePanel.close?.({ tabId })?.catch?.(() => {});   // already open: shut it
   });
 }
 chrome.tabs.onUpdated.addListener((tabId, _info, tab) => syncReaderPanel(tabId, tab.url || tab.pendingUrl));
