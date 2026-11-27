@@ -332,7 +332,7 @@ function noteParents(notes) {
     const isHead = c === "header" || c === "sub topic";
     if (c === "header") { parent.set(id, null); header = id; sub = null; head = null; }
     else if (c === "sub topic") { parent.set(id, header); sub = id; head = null; }
-    else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed")) {
+    else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed" && lvl <= (notes[i + 1].indent || 0))) {
       parent.set(id, sub || header); head = id;
     } else if (c === "list point") parent.set(id, head || sub || header);
     else { parent.set(id, sub || header); head = null; }

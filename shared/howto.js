@@ -18,6 +18,7 @@
     { title: "Highlighting & saving", rows: [
       ["Select words", "The save pop-up appears: pick a type (number keys 1–8) or press Enter for the lit one"],
       ["Tab (in the pop-up)", "Jump from the text box to the type chips"],
+      ["Explains: [point]", "After a list, the pop-up offers which list point these words explain (guessed); Enter saves them right under that point, in any order"],
       ["S", "Snip a figure (PDF)"],
       ["Click text, then arrows", "PDF keyboard cursor: ←→↑↓, Home/End = line ends, Shift+arrows select, Enter saves the selection"],
       ["Alt + Shift + H", "Highlighter on / off (anywhere)"],

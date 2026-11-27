@@ -61,7 +61,7 @@ function isPointLike(note) {
 // points is their list head.
 function isPlainHead(notes, i) {
   const n = notes[i];
-  return n.kind !== "typed" && n.category === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed";
+  return n.kind !== "typed" && n.category === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed" && (n.indent || 0) <= (notes[i + 1].indent || 0);
 }
 // A list point's indent (Alt+←/→ in Study) as nesting: 2 spaces per step.
 function pointIndent(note) {

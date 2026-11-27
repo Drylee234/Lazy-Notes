@@ -180,6 +180,58 @@
     dupWarnEl.style.display = "";
   }
 
+  // ── "Explains: [point]" (list first, then explain each item) ──────────────
+  // When the topic's latest block is a list, a note that isn't a heading or a
+  // point can be tied to one of its points: it's saved straight under that
+  // point (one level in), in whatever order you read the explanations. The
+  // point is guessed from the shared words; "—" saves it as usual.
+  let explainsEl = null;
+  const EXPLAIN_TYPES = ["generic", "definition", "note", "summary", "formula"];
+  function listPointsToExplain() {
+    const topic = courseTree?.[selectedCourse]?.topics?.[selectedTopic];
+    if (!topic) return [];
+    const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));
+    const all = [...Object.entries(topic.highlights || {}).map(([id, n]) => ({ id, ...n })),
+                 ...Object.entries(topic.notes || {}).map(([id, n]) => ({ id, kind: "typed", ...n }))].sort((a, b) => ord(a) - ord(b));
+    const isHead = (n, i) => n.kind !== "typed" && (n.category === "list head" || (n.category === "generic" && all[i + 1]?.category === "list point" && all[i + 1]?.kind !== "typed" && (n.indent || 0) <= (all[i + 1].indent || 0)));
+    for (let i = all.length - 1; i >= Math.max(0, all.length - 25); i--) {
+      if (!isHead(all[i], i)) continue;
+      const lvl = all[i].indent || 0, points = [];
+      for (let k = i + 1; k < all.length; k++) {
+        const n = all[k];
+        if (n.kind !== "typed" && n.category === "list point") { points.push(n); continue; }
+        if ((n.indent || 0) > lvl) continue;   // an explanation already under a point
+        break;
+      }
+      return points;
+    }
+    return [];
+  }
+  function updateExplains() {
+    if (!explainsEl) return;
+    const sel = explainsEl.querySelector("select");
+    const points = EXPLAIN_TYPES.includes(selectedCategory) && !listSplit ? listPointsToExplain() : [];
+    explainsEl.style.display = points.length ? "" : "none";
+    if (!points.length) { sel.value = ""; return; }
+    // Only the words that tell the points apart count ("gated", "channels"
+    // in every point say nothing); no telling word in common = no guess.
+    const words = (t) => new Set((String(t).toLowerCase().match(/[a-z]{3,}/g) || []).map((w) => w.replace(/(ing|ed|es|s)$/, "")));
+    const mine = words(currentSelectedText);
+    const sets = points.map((p) => words(p.text));
+    const seen = new Map();
+    sets.forEach((ws) => ws.forEach((w) => seen.set(w, (seen.get(w) || 0) + 1)));
+    let best = "", bestScore = 0, second = 0;
+    points.forEach((p, i) => {
+      const score = [...sets[i]].filter((w) => mine.has(w) && seen.get(w) < points.length).length;
+      if (score > bestScore) { second = bestScore; bestScore = score; best = p.id; }
+      else if (score > second) second = score;
+    });
+    if (bestScore === second) best = "";   // a tie is no guess
+    const keep = sel.dataset.touched === "1" ? sel.value : best;
+    sel.replaceChildren(new Option("— (not tied to a point)", ""), ...points.map((p) => new Option(p.text.length > 48 ? p.text.slice(0, 47) + "…" : p.text, p.id)));
+    sel.value = points.some((p) => p.id === keep) ? keep : "";
+  }
+
   // "Membrane Proteins: are the proteins inside the membrane" saved as a
   // heading: offer the words before ":" as the heading and the rest as a
   // Definition under it.
@@ -402,6 +454,8 @@
       .lazy-notes-join-key { margin-left: auto; padding: 0 4px; border-radius: 3px; background: #3a3a44; color: #c4c4cc; font-size: 9.5px; }
       .lazy-notes-split { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 11.5px; color: #d4d4d8; cursor: pointer; }
       .lazy-notes-split input { accent-color: #6366f1; margin: 0; }
+      .lazy-notes-explains { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 12px; color: #c4c4cc; }
+      .lazy-notes-explains select { flex: 1; min-width: 0; max-width: 260px; padding: 3px 6px; border-radius: 6px; border: 1px solid #4f46e5; background: #26262e; color: #f0f0f0; font: inherit; font-size: 12px; }
       .lazy-notes-dup { margin: -2px 0 8px; padding: 4px 6px; border-radius: 6px; background: #3a2f12; color: #fcd34d; font-size: 11.5px; }
       .lazy-notes-chip-caption { font-size: 10.5px; color: #8e8e99; margin-bottom: 8px; }
       .lazy-notes-popup-side { width: 260px; min-width: 0; }
@@ -811,6 +865,16 @@
     heading.after(headSplit);
     headSplitEl = headSplit;
 
+    const explains = document.createElement("label");
+    explains.className = "lazy-notes-explains";
+    explains.innerHTML = `<span>Explains:</span> <select aria-label="The list point this explains"></select>`;
+    explains.style.display = "none";
+    explains.title = "Saved straight under that point. Guessed from the words; ↑ ↓ to change";
+    explains.addEventListener("mousedown", (e) => e.stopPropagation());
+    explains.querySelector("select").addEventListener("change", (e) => { e.target.dataset.touched = "1"; });
+    headSplit.after(explains);
+    explainsEl = explains;
+
     const dup = document.createElement("div");
     dup.className = "lazy-notes-dup";
     dup.style.display = "none";
@@ -1125,6 +1189,7 @@
     });
     showChipCaption(cat);
     updateHeadSplit();
+    updateExplains();
 
     if (categoryBtnEl) categoryBtnEl.textContent = cat;
 
@@ -1646,6 +1711,7 @@
     const last = sessionCategoryMemory[selectedTopic];
     selectCategoryOption(guess || (last === "list point" ? last : "generic"));
     updateDupWarning();
+    if (explainsEl) { explainsEl.querySelector("select").dataset.touched = ""; updateExplains(); }
     setTimeout(() => chipEls[selectedCategory]?.focus(), 50);
   }
 
@@ -1789,7 +1855,9 @@
       annotation: selectedAnnotation,
       sourceUrl:  host?.sourceUrl ? host.sourceUrl(currentParagraphElement) : window.location.href,
       sourceTitle: host?.sourceTitle ? host.sourceTitle(currentParagraphElement) : document.title || null,
-      anchor:     host?.anchorFor ? host.anchorFor(currentRange) : null
+      anchor:     host?.anchorFor ? host.anchorFor(currentRange) : null,
+      ...(explainsEl && explainsEl.style.display !== "none" && explainsEl.querySelector("select").value
+        ? { explains: explainsEl.querySelector("select").value } : {})
     };
 
     // "Heading: words…" saved as a heading → heading + Definition under it.

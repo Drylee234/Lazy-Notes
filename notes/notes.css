@@ -376,3 +376,14 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .note.editing-inplace { cursor: auto; }
 .note.editing-inplace, .note.editing-inplace:hover, .note.editing-inplace:focus-within { background: transparent; }
 .edit-form.compact .edit-text { margin: 0; }
+/* …unless it sits deeper than the point after it: then it's an explanation
+   of the point above (Explains: …), not the head of what follows. */
+:is(.note--generic[data-nest="1"]:has(+ .note--list-point:not([data-nest])),
+    .note--generic[data-nest="2"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"])),
+    .note--generic[data-nest="3"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"], [data-nest="2"]))) .note-text { font-weight: inherit; }
+:is(.note--generic[data-nest="1"]:has(+ .note--list-point:not([data-nest])),
+    .note--generic[data-nest="2"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"])),
+    .note--generic[data-nest="3"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"], [data-nest="2"]))) .note-text :is(:last-child, :not(:has(*)))::after,
+:is(.note--generic[data-nest="1"]:has(+ .note--list-point:not([data-nest])),
+    .note--generic[data-nest="2"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"])),
+    .note--generic[data-nest="3"]:has(+ .note--list-point:is(:not([data-nest]), [data-nest="1"], [data-nest="2"]))) .note-text::after { content: none; }

@@ -194,10 +194,27 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 
   if (!topic.highlights) topic.highlights = {};
 
-  const inheritIndent = await followIndent(topic, payload.listStart ? "list head" : payload.category);
+  let inheritIndent = await followIndent(topic, payload.listStart ? "list head" : payload.category);
+  // "Explains: [point]": straight under that list point, one level in, after
+  // anything already explaining it (so the explanations of a list can come
+  // in any order).
+  let placeOrder = null;
+  const point = payload.explains && topic.highlights[payload.explains];
+  if (point) {
+    const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));
+    const all = [...Object.values(topic.highlights), ...Object.values(topic.notes || {})].sort((a, b) => ord(a) - ord(b));
+    const lvl = point.indent || 0;
+    let i = all.indexOf(point);
+    while (i + 1 < all.length && (all[i + 1].indent || 0) > lvl) i++;
+    const last = all[i], next = all[i + 1];
+    placeOrder = next ? (ord(last) + ord(next)) / 2 : ord(last) + 1000;
+    inheritIndent = Math.min(3, lvl + 1);
+  }
+
 
   topic.highlights[id] = {
     ...(inheritIndent ? { indent: inheritIndent } : {}),
+    ...(placeOrder !== null ? { order: placeOrder } : {}),
     text:       payload.text ?? "",
     category:   payload.category,
     ...(payload.category === "figure" && payload.image ? { image: payload.image } : {}),   // figures: data URL

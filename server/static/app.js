@@ -123,7 +123,7 @@
         if (m) text = `<span class="term">${esc(m[1])}</span>${esc(m[2])}${esc(m[3])}`;
       }
       const ended = /[:：]\s*$/.test(n.text || "");
-      const listHead = cat === "list head" || (cat === "generic" && next?.category === "list point" && next.kind !== "typed");
+      const listHead = cat === "list head" || (cat === "generic" && next?.category === "list point" && next.kind !== "typed" && (n.indent || 0) <= (next.indent || 0));
       if (listHead && !ended) text += ":";
       if (cat === "note") text = `<span class="callout">Important:</span> ${text}`;
       body = `<span class="note-text"><span class="hl">${text}</span></span>`;
@@ -410,7 +410,7 @@
       const isHead = c === "header" || c === "sub topic";
       if (c === "header") { parent.set(id, null); header = id; sub = null; head = null; }
       else if (c === "sub topic") { parent.set(id, header); sub = id; head = null; }
-      else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed")) { parent.set(id, sub || header); head = id; }
+      else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed" && lvl <= (notes[i + 1].indent || 0))) { parent.set(id, sub || header); head = id; }
       else if (c === "list point") parent.set(id, head || sub || header);
       else { parent.set(id, sub || header); head = null; }
       if (isHead) { lastAt = []; return; }
