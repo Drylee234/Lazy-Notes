@@ -65,6 +65,11 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Rethink the edge arrange buttons**: (a) a horizontal bar instead of the vertical stack, or (b) drop the ⇤ ⇥ buttons and just drag: drag left/right to indent, up/down to move (keyboard Alt+arrows stays).
   **Why:** the mouse path is awkward even after making the buttons bigger; the owner already avoids it. ⚠️ Removing buttons = keep them behind a setting (togglable rule). Show image options first.
 
+- 💡 **Indent a whole list at once** (owner, 2nd time, 2026-11-27): had to indent list points one by one again. Ideas: indenting a head takes its points along; or select several notes (Shift+↑↓) and Alt+→ them together.
+  **Why:** repeated manual work on every list.
+- 📘 **Keyboard focus to the panel** (owner, 2026-11-27): wants to move focus to the side panel, not just show/hide it. Already exists: **Ctrl+.** jumps into the panel's note box and back to the page; from the note box **Ctrl+↑** goes to the last note, then ↑↓ / Alt+arrows. Maybe not discoverable enough. 💡 Idea: a key that focuses the notes list directly.
+- 📘 **PDF keyboard cursor off**: owner highlights with the mouse, so would turn the PDF cursor off. Already a switch: Settings › Fine-tuning › "Keyboard cursor in PDFs" (`lnDocCaret`).
+
 ## 3. UI (how it looks)
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
