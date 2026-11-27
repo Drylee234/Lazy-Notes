@@ -132,5 +132,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Some AI offline** (future): a small local model (or simpler non-AI helpers) for tidy / define when there's no connection.
   **Why:** studying often happens without internet.
 
+- 💡 **AI on the phone / web note viewer** (owner, 2026-11-27): the phone site is read-only; at least let you ask the AI about the notes you're reading (explain, quiz me, define). The server already has `/api/ai` with the key on Render, so the phone can use it without a key on the phone.
+  **Why:** on the phone you can't edit, but you still study and get stuck.
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
