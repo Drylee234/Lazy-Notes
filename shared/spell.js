@@ -567,6 +567,7 @@
 @keyframes ln-spell-in { from { opacity: 0; transform: translateY(4px); } }
 .ln-spell-bar[hidden] { display: none; }
 .ln-spell-bar .w { color: var(--dim, #8e8e99); text-decoration: line-through; margin-right: 2px; }
+.ln-spell-bar .q { color: var(--sec, #55555f); font-size: 12px; }
 .ln-spell-bar button { border: 0; border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
   background: var(--surface, #f7f7f8); color: var(--pri, #16161a); }
 .ln-spell-bar button:hover { background: var(--hover, #efeff2); }
@@ -614,17 +615,25 @@
       barTimer = setTimeout(hideBar, 3500);
     } else {
       const sugg = suggestions(word);
+      // Say what this is: owners couldn't tell the crossed-out word was
+      // their typo and the buttons were fixes.
       const w = document.createElement("span");
       w.className = "w";
       w.textContent = word;
-      bar.append(w);
+      w.title = "Looks misspelled";
+      const ask = document.createElement("span");
+      ask.className = "q";
+      ask.textContent = sugg.length ? "Did you mean" : "Not in the dictionary";
+      bar.append(w, ask);
       sugg.forEach((s) => bar.append(button(s, "fix", () => {
         const v = view(field);
         if (v && v.text.slice(start, start + word.length) === word) replace(field, v, start, start + word.length, s);
         if (!/\s/.test(s)) learn(word, s);   // next time it's fixed by itself
         hideBar();
       })));
-      bar.append(button("Add to dictionary", "quiet", () => { remember(word); hideBar(); }));
+      const keep = button("Keep my spelling", "quiet", () => { remember(word); hideBar(); });
+      keep.title = `Add “${word}” to your dictionary, so it isn't flagged again`;
+      bar.append(keep);
     }
     place(field);
   }

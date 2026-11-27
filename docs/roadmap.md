@@ -14,7 +14,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **"List first, then explain each item"** (owner screenshot, 2026-11-27): a head ("Protein channels are gated… through various methods:") → list points (Voltage / Liquid / Mechanically gated channels) → then a paragraph explaining each one ("Voltage-gated channels open based on…", "Liquid gated ion channels, also known as ionotropic receptors…").
   **Why:** this is how real lecture notes are written; today the explanations are just lines in a typed note, not tied to their list item, and the structure doesn't show.
   To investigate: link each explanation to its list point (e.g. the explanation shows under a mini-heading of that item, or the list item becomes a jump link), and a "List → explain" layout.
-- 💡 **Can't separate with blank lines** (same screenshot): extra empty lines in a typed note are squashed, so the owner can't space blocks apart.
+- ✅ **Done (2026-11-27):** an empty line typed in a note now shows as one empty line (`tn-blank`, utils.js).
+  Was: 💡 **Can't separate with blank lines** (same screenshot): extra empty lines in a typed note are squashed, so the owner can't space blocks apart.
   **Why:** a blank line is the natural way to separate thoughts. Check `trimBlankLines` / typed-note rendering; keep one blank line between blocks as a visible gap.
 - 💡 **Investigate what makes notes feel "real"**: structure (head → items → explanations), spacing that follows meaning, fewer per-highlight seams, no edit-box jump. Show options as labelled images before building.
 - ✅ Tight spacing: separate notes 2px apart, like typed lines.
@@ -43,9 +44,11 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 ## 2b. Unclear to the owner (explain, or redesign)
 - 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. **Just a usage observation, not an official method**: don't teach it or build on it unless the owner decides later. Possibly a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
-- 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
+- ✅ **Done (2026-11-27):** the bar now reads “~~word~~ Did you mean [fix] · Keep my spelling” (no key added: Tab is already Save as).
+  Was: 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
 
-- 💡 **Two kinds of bullet for the same list** (owner screenshot, 2026-11-27): under "Passive Transport:", "Simple Diffusion:" (a typed "- " point: accent-coloured dot, folded with "13 more") and "Facilitated diffusion" (a highlighted List point: grey dot, slightly different position) look like different lists.
+- ✅ **Done (2026-11-27):** typed "- " points use the same grey dot as highlighted List points (hollow / square when nested, same as highlights).
+  Was: 💡 **Two kinds of bullet for the same list** (owner screenshot, 2026-11-27): under "Passive Transport:", "Simple Diffusion:" (a typed "- " point: accent-coloured dot, folded with "13 more") and "Facilitated diffusion" (a highlighted List point: grey dot, slightly different position) look like different lists.
   **Why:** one list should look like one list whether a point was typed or highlighted; mixed bullets break the "one note" feel.
   Likely cause: typed-note lists (`.tn-list li` / `.rich-box li::marker`, accent) and highlight list points (`.note--list-point::before`, grey `--sec`) are styled separately.
 
@@ -95,7 +98,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
-- 💡 Dim white pictures (snips) in dark mode.
+- ✅ Dim white pictures (snips) in dark mode (78% brightness; full on hover).
 - 💡 Underline spelling mistakes in the Study view.
 
 ## 4. Reader improvements

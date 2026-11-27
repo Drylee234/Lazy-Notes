@@ -258,9 +258,16 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .note--typed .tn-h3 { font-size: 1em; color: var(--sec); }
 .note--typed .tn-list { margin: 0; padding-left: 0; list-style: none; counter-reset: none; }
 .note--typed .tn-list li { position: relative; padding-left: calc(var(--lvl, 0) * 16px + 16px); }
+/* Same dot as a highlighted List point, so one list looks like one list
+   whether its points were typed or highlighted. */
 .note--typed ul.tn-list li::before {
-  content: "•"; position: absolute; left: calc(var(--lvl, 0) * 16px + 3px); color: var(--accent);
+  content: ""; position: absolute; left: calc(var(--lvl, 0) * 16px + 4px); top: calc(0.78em - 2.5px);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--sec);
 }
+.note--typed ul.tn-list li[style*="--lvl:1"]::before { background: transparent; box-shadow: inset 0 0 0 1.3px var(--sec); }
+.note--typed ul.tn-list li:is([style*="--lvl:2"], [style*="--lvl:3"], [style*="--lvl:4"])::before { border-radius: 1px; }
+/* An empty line typed in a note: shown as one empty line. */
+.note--typed .tn-blank { height: 0.9em; }
 .note--typed ol.tn-list { list-style: decimal; padding-left: 20px; }
 .note--typed ol.tn-list li { padding-left: calc(var(--lvl, 0) * 16px + 2px); }
 .note--typed ol.tn-list li::marker { color: var(--accent); font-variant-numeric: tabular-nums; }
@@ -344,3 +351,12 @@ a.note-source:hover { color: var(--accent); text-decoration: underline; }
 .edit-ai-btn { font-size: 11px; padding: 3px 7px; border-color: var(--border); color: var(--sec); white-space: nowrap; }
 .edit-ai-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .edit-ai-btn:disabled { opacity: .6; cursor: default; }
+
+/* Dark mode: a white snip from a PDF glares on the dark page, so it's dimmed
+   a little; hovering it shows it at full brightness. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(.note--figure .note-figure, .edit-form .edit-figure) { filter: brightness(0.78); transition: filter 0.15s; }
+  :root:not([data-theme="light"]) :is(.note--figure .note-figure, .edit-form .edit-figure):hover { filter: none; }
+}
+:root[data-theme="dark"] :is(.note--figure .note-figure, .edit-form .edit-figure) { filter: brightness(0.78); transition: filter 0.15s; }
+:root[data-theme="dark"] :is(.note--figure .note-figure, .edit-form .edit-figure):hover { filter: none; }

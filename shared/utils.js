@@ -105,7 +105,9 @@ function typedNoteHtml(text) {
   String(text ?? "").split("\n").forEach((raw) => {
     const line = raw.replace(/\s+$/, "");
     let m;
-    if (!line.trim()) { flushAll(); return; }
+    // A blank line keeps its room: one empty line typed = one empty line
+    // shown (the notes sit tight, so without this blocks ran together).
+    if (!line.trim()) { flushAll(); out.push('<div class="tn-blank"></div>'); return; }
     if ((m = line.match(/^>\s?(.*)$/))) { flushPara(); flushList(); quote.push(m[1]); return; }
     flushQuote();
     if ((m = line.match(/^(#{1,3})\s+(.+)$/))) {
@@ -128,6 +130,8 @@ function typedNoteHtml(text) {
     para.push(line);
   });
   flushAll();
+  while (out[0] === '<div class="tn-blank"></div>') out.shift();
+  while (out[out.length - 1] === '<div class="tn-blank"></div>') out.pop();
   return out.join("");
 }
 
