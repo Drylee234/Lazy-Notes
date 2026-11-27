@@ -10,6 +10,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 Same-indent notes closer together than the gap where an indent starts or ends.
 - ✅ Tight spacing: separate notes 2px apart, like typed lines.
 - ✅ Nesting: ownership by indent, guide lines, folding.
+- 💡 Editing your most recent typed note happens back in the note box (where you type), not in place in the list.
 
 ## 2. UX (how it behaves)
 - ✅ Bigger ⋮⋮ ⇤ ⇥ arrange buttons on the left edge.
@@ -18,6 +19,9 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ Better type guessing (big or all-caps lines = Header); no Join after headings.
 - 💡 Quick note box offers the topic the panel is showing.
 - ⚠️💡 Horizontal panel instead of the edge tab (a bottom drawer was rejected earlier).
+
+## 2b. Unclear to the owner (explain, or redesign)
+- 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. Owner didn't know how to use it → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
 
 ## 3. UI (how it looks)
 - ✅ How-to tour with screenshots, opens on reload.
@@ -28,6 +32,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 ## 4. Reader improvements
 - ✅ PDF snap-to-word, Home/End, full screen, floating panel.
 - 💡 "Fit to width" leaves room for the floating panel.
+- 💡 BUG (owner, 2026-11-27): PDF keyboard cursor: ↓ jumps to the end of the word; ← / → at the edge of a word needs two presses before the cursor visibly moves.
 - 💡 "Join to last figure": stack a table snip that runs over a page break.
 
 ## 5. All notes / editing
