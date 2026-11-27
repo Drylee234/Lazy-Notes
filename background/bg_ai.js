@@ -80,6 +80,14 @@ const TASKS = {
       `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${extra || "What does this mean?"}\n\n--- passage ---\n${text}`
   },
 
+  // Your own question about the open document (or the page you're on).
+  // Same rules as "ask"; the Doc ending makes handleAiRun read the document.
+  askDoc: {
+    maxTokens: 1500,
+    prompt: (text, extra) =>
+      `Answer this question about the lecture document below, for a student revising. Use only what the document says, and say which page it is on when the pages are marked. If the document doesn't say, answer "The document doesn't say" and then give the general answer in one or two lines, marked "(general)". Keep it under 10 lines.\n\nQuestion: ${extra || "What is this document about?"}\n\n--- document ---\n${text}`
+  },
+
   // The document itself, not the notes taken from it: the notes are an
   // abridged version, so summarising them would summarise a summary.
   summariseDoc: {

@@ -118,3 +118,38 @@
   font-size: 11px; color: var(--dim); line-height: 1.4;
 }
 .ln-ai-panel .aip-foot b { color: var(--sec); font-weight: 600; }
+
+/* ── Ask bar (shared/ai-ask.js): what the AI reads, then a question ── */
+.ln-ai-panel .aia-bar {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 2px 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.ln-ai-panel .aia-scopes { display: flex; gap: 4px; }
+.ln-ai-panel .aia-scopes button {
+  flex: 1 1 0; padding: 4px 6px; min-width: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--sec);
+  font: inherit; font-size: 11.5px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ln-ai-panel .aia-scopes button:hover:not(:disabled) { border-color: var(--border-strong); color: var(--pri); }
+.ln-ai-panel .aia-scopes button.on { border-color: var(--aip-purple-line); background: color-mix(in srgb, var(--aip-purple) 18%, var(--surface)); color: var(--pri); }
+.ln-ai-panel .aia-scopes button:disabled { opacity: 0.45; cursor: default; }
+.ln-ai-panel .aia-input {
+  width: 100%; box-sizing: border-box; resize: none; min-height: 32px;
+  padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg, var(--surface)); color: var(--pri);
+  font: inherit; font-size: 13px; line-height: 1.35;
+}
+.ln-ai-panel .aia-input:focus { outline: none; border-color: var(--aip-purple-line); }
+.ln-ai-panel .aia-row { display: flex; align-items: center; gap: 4px; }
+.ln-ai-panel .aia-row button {
+  padding: 3px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--sec); font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.ln-ai-panel .aia-row button:hover:not(:disabled) { border-color: var(--border-strong); color: var(--pri); background: var(--hover); }
+.ln-ai-panel .aia-row button:disabled { opacity: 0.45; cursor: default; }
+.ln-ai-panel .aia-hint { margin-left: auto; color: var(--dim); font-size: 10.5px; }
+.ln-ai-panel .aia-row .aia-go { border-color: var(--aip-purple-line); color: var(--pri); }
+.ln-ai-panel .aia-status { margin: 0; color: var(--dim); font-size: 11.5px; }
+.ln-ai-panel .aia-status[hidden] { display: none; }

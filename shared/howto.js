@@ -22,6 +22,11 @@
       ["Alt + Shift + H", "Highlighter on / off (anywhere)"],
       ["Alt + Shift + C", "Create a course"],
     ]},
+    { title: "Asking the AI (once it's on in Settings › AI)", rows: [
+      ["✨ AI view › Document · Page · My notes", "Pick what the AI reads: the open document, the page you're on, or your notes on this topic"],
+      ["Type a question, Enter", "Ask it; Summarise / Quiz me work on the same choice"],
+      ["Keep as note", "The only way an answer reaches your notes"],
+    ]},
     { title: "In the reader", rows: [
       ["← →", "Previous / next page"],
       [`${C} + +  /  ${C} + −  /  ${C} + 0`, "Zoom in / out / reset (pinch works too)"],

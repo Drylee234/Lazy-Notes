@@ -35,6 +35,7 @@ globalThis.LazyAIPanel = (() => {
     quiz: "Test questions",
     quizDoc: "Test questions",
     ask: "Question",
+    askDoc: "Question",
     suggestType: "Suggested type"
   };
 

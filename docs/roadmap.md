@@ -121,7 +121,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 Login: no login = no backup; logged in = automatic desktop ↔ phone sync (no "Sync now").
   **Why:** the owner shouldn't have to press Sync by hand; an account also makes backup and sharing possible.
 - 💡 Share notes from one account to another (after login).
-- 💡 Ask the AI about the open PDF (document vs selection).
+- ✅ **Ask the AI about the open document, the page you're on, or your topic's notes** (2026-11-27): Ask bar at the top of the ✨ AI view (`shared/ai-ask.js`): Document / Page N / My notes, type a question (Enter) or Summarise / Quiz me. Answers stay in the AI list until Keep as note. New job `askDoc` (bg_ai.js). Tested in Chromium against a fake AI server, not yet the real Render one.
+  ⚠️ Free Groq allows ~8k tokens a minute: a whole long PDF may hit RATE_LIMIT; then use Page.
 
 - 💡 **Usage reports that show habits, not just errors** (owner, 2026-11-27): with "Send usage & error reports" on, also record which features/shortcuts are used and never used, and signs of struggle (repeated undo, delete-and-redo, editing right after saving, re-indenting by hand, dismissing the pop-up, opening How to use). Never note text or keys.
   **Why:** alpha testers won't send live bug reports like the owner does; the data should show what's unused, unknown or stressful so it can be fixed or taught.

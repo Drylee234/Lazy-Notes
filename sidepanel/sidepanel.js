@@ -547,6 +547,8 @@ function mountAiPanel() {
     }
   });
   globalThis.LazyAIAnswers = aiPanel;   // so other parts of the panel can add to it
+  // Ask about the document, the page you're on, or your notes (shared/ai-ask.js).
+  if (globalThis.LazyAIAsk) globalThis.LazyAIAskBar = LazyAIAsk.mount(aiView, aiPanel);
 }
 
 // Show the tab only while the AI is switched on and has a key.
