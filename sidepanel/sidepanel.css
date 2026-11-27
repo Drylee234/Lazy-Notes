@@ -487,3 +487,8 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 #reading-now { margin-bottom: 12px; }
 
 #saving-bar.no-doc > .rn-label, #saving-bar.no-doc #rn-picker, #saving-bar.no-doc .rn-where { display: none !important; }
+
+/* "+ Open a document…" sits in the top right of the documents list. */
+#continue .list-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#continue .open-doc-link { margin: 0; padding: 3px 6px; font-size: 13px; white-space: nowrap; }
+#saving-bar.no-doc { display: none; }

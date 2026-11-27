@@ -124,3 +124,4 @@ seen → cause → what changed (commit) or what's still open.
 
 - Chrome's side panel still appeared beside a reader → the reader now tells the background it's open (on load, focus, and whenever it notices Chrome's panel is open) and the background disables + closes Chrome's panel for that tab (`READER_READY`).
 - Home showed "Saving to course › topic" even with no document open → the Saving-to row only shows while a document is open in the tab; otherwise just "+ Open a document…" and "Continue reading".
+- "+ Open a document…" moved to the top right of the documents list (same row as "Continue reading" / "Other documents"); the Saving-to bar is hidden entirely when no document is open.

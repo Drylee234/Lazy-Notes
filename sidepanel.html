@@ -83,14 +83,16 @@
         <select id="rn-topic" aria-label="Topic these notes go to"></select>
       </div>
       <div class="rn-where none" id="rn-where" hidden>Pick a course and topic for your notes</div>
-      <button id="open-doc-btn" class="open-doc-link" type="button">+ Open a document…</button>
-      <input id="open-doc-file" type="file" accept=".pdf,.pptx,.docx,application/pdf" hidden />
-      <div id="open-doc-msg" hidden></div>
     </div>
 
     <!-- Anywhere else: documents to go back to. -->
     <div id="continue" hidden>
-      <div class="list-head"><span class="field-label" id="continue-label">Continue reading</span></div>
+      <div class="list-head">
+        <span class="field-label" id="continue-label">Continue reading</span>
+        <button id="open-doc-btn" class="open-doc-link" type="button">+ Open a document…</button>
+      </div>
+      <input id="open-doc-file" type="file" accept=".pdf,.pptx,.docx,application/pdf" hidden />
+      <div id="open-doc-msg" hidden></div>
       <div id="continue-list"></div>
     </div>
 
