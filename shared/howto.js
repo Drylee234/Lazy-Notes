@@ -13,6 +13,7 @@
       ["Right-click › ✎ Quick note here", "Same pop-up note box"],
       ["Hover the Notes tab", "Opens the panel; move away and it closes"],
       ["Enter · Tab · 0–8", "In a note box: Enter saves · Tab picks the type · a number saves as that type · Esc closes"],
+      ["↑ when suggestions show", "Step into the suggestions under the box (word endings or spelling fixes): ← → choose, Enter or Tab takes it, Esc goes back to typing. → alone takes the first ending"],
     ]},
     { title: "Highlighting & saving", rows: [
       ["Select words", "The save pop-up appears: pick a type (number keys 1–8) or press Enter for the lit one"],

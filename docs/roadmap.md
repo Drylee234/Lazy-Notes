@@ -98,7 +98,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Bold (and other formatting) inside highlights**, like typed notes have (Ctrl+B etc.): part of blurring highlights vs typed notes ("one note" goal).
   **Why:** today only typed notes can be formatted, so highlights and typed lines look and behave differently.
 
-- 💡 **Autocorrect as a pick-list, not a slider** (owner, 2026-11-27): instead of Off / Mild / Strong / Toxic, tick the autocorrect features you want (e.g. fix typos, fix capitals, punctuation spacing, finish words from the document…).
+- ✅ **Done (2026-11-27), as the owner meant it:** suggestions you pick from with the keyboard, like Windows' text suggestions: up to 3 word endings (or the spelling fixes) show under the box; ↑ from the first line (↓ from the last) steps in, ←/→ choose, Enter/Tab take it, Esc back to typing, any other key keeps typing. Checked: Enter doesn't also save the note, Ctrl+↑ is untouched, ↑ only enters from the first line (multi-line notes still move up normally). The pop-up note box shows its hint in its own footer, so there it's still → only.
+  Was: 💡 **Autocorrect as a pick-list, not a slider** (owner, 2026-11-27): instead of Off / Mild / Strong / Toxic, tick the autocorrect features you want (e.g. fix typos, fix capitals, punctuation spacing, finish words from the document…).
   **Why:** a strength slider hides what each level actually does; the owner wants to choose behaviours, not a level.
 
 ## 3. UI (how it looks)

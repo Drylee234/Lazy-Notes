@@ -472,7 +472,68 @@
     return true;
   }
 
+  // ── Picking from the bar with the keyboard (like the Windows suggestion
+  // bar): ↑ from the first line (or ↓ from the last) steps into the list,
+  // ←/→ (or ↑/↓) move, Enter / Tab take it, Esc goes back to typing, and any
+  // other key just keeps typing. Ctrl+↑ is untouched (it goes to your notes).
+  let barField = null, picking = null;
+  const pickButtons = () => (bar && !bar.hidden ? [...bar.querySelectorAll("button")] : []);
+  function drawPick() {
+    pickButtons().forEach((b, i) => b.classList.toggle("picked", !!picking && i === picking.i));
+  }
+  function caretOnEdgeLine(field, top) {
+    if (!field.isContentEditable) {
+      const v = field.value, c = field.selectionStart;
+      return top ? !v.slice(0, c).includes("\n") : !v.slice(c).includes("\n");
+    }
+    const sel = getSelection();
+    if (!sel.rangeCount) return false;
+    const r = sel.getRangeAt(0).cloneRange();
+    r.collapse(true);
+    let rect = r.getClientRects()[0];
+    if (!rect) { const n = sel.anchorNode; rect = (n?.nodeType === 1 ? n : n?.parentElement)?.getBoundingClientRect(); }
+    if (!rect) return true;
+    const f = field.getBoundingClientRect();
+    const line = parseFloat(getComputedStyle(field).lineHeight) || 20;
+    return top ? rect.top - f.top < line * 1.3 + 8 : f.bottom - rect.bottom < line * 1.3 + 8;
+  }
+  function pickKey(e) {
+    const plain = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey;
+    if (picking && picking.field === e.target) {
+      const btns = pickButtons();
+      if (!btns.length) { picking = null; return false; }
+      if (plain && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        const d = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1;
+        picking.i = (picking.i + d + btns.length) % btns.length;
+      } else if ((e.key === "Enter" || e.key === "Tab") && !e.ctrlKey && !e.metaKey) {
+        const b = btns[picking.i];
+        picking = null;
+        b?.click();
+      } else if (e.key === "Escape") {
+        picking = null;
+      } else {
+        picking = null;   // anything else: back to typing, and the key types
+        drawPick();
+        return false;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      drawPick();
+      return true;
+    }
+    if (plain && (e.key === "ArrowUp" || e.key === "ArrowDown") && barField === e.target && pickButtons().length &&
+        caretOnEdgeLine(e.target, e.key === "ArrowUp")) {
+      picking = { field: e.target, i: 0 };
+      e.preventDefault();
+      e.stopPropagation();
+      drawPick();
+      return true;
+    }
+    return false;
+  }
+
   function onKeydown(e) {
+    if (pickKey(e)) return;
     if (hint && hint.field === e.target) {
       if (e.key === "ArrowRight" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (acceptHint()) { e.preventDefault(); e.stopPropagation(); return; }
@@ -495,20 +556,23 @@
   // (3+ letters); → accepts it, typing on ignores it.
   let hint = null;   // { field, start, typed, word }
 
-  function bestCompletion(prefix) {
+  function bestCompletion(prefix) { return completions(prefix, 1)[0] || null; }
+  // The best few, best first (pick with ↑ then ←/→; → alone takes the first).
+  function completions(prefix, n = 3) {
     const p = prefix.toLowerCase();
-    let best = null, bestScore = 0;
-    const consider = (w, n, bonus) => {
+    const scores = new Map();
+    const consider = (w, c, bonus) => {
       if (w.length < p.length + 2 || !w.startsWith(p) || w === p) return;
-      const score = n * bonus + (w.length >= 6 ? 0.5 : 0);
-      if (score > bestScore) { best = w; bestScore = score; }
+      const score = c * bonus + (w.length >= 6 ? 0.5 : 0);
+      if (score > (scores.get(w) || 0)) scores.set(w, score);
     };
     if (docOn) DOCW.forEach((d, w) => consider(w, d.c, 2));
-    VOCAB.forEach((n, w) => consider(w, n, 1));
-    if (!best) return null;
-    const form = docOn ? DOCW.get(best)?.form : null;
-    // Keep what was typed; finish it as the document writes it.
-    return prefix + (form && form.toLowerCase() === best ? form : best).slice(prefix.length);
+    VOCAB.forEach((c, w) => consider(w, c, 1));
+    return [...scores.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([best]) => {
+      const form = docOn ? DOCW.get(best)?.form : null;
+      // Keep what was typed; finish it as the document writes it.
+      return prefix + (form && form.toLowerCase() === best ? form : best).slice(prefix.length);
+    });
   }
 
   function updateHint(field) {
@@ -520,9 +584,10 @@
     if (!atEnd) return;
     const m = v.text.slice(0, v.caret).match(/[A-Za-z][A-Za-z'-]*$/);
     if (!m || m[0].length < 3) return;
-    const word = bestCompletion(m[0]);
+    const words = completions(m[0], 3);
+    const word = words[0];
     if (!word) return;
-    hint = { field, start: v.caret - m[0].length, typed: m[0], word };
+    hint = { field, start: v.caret - m[0].length, typed: m[0], word, words };
     // A box with room of its own for the hint (the readers' pop-up note
     // box) takes the "ln-typing-hint" event and shows it there instead.
     if (!field.dispatchEvent(new CustomEvent("ln-typing-hint", { cancelable: true, detail: { word, accept: acceptHint } }))) return;
@@ -534,13 +599,13 @@
     hint = null;
   }
 
-  function acceptHint() {
+  function acceptHint(word) {
     const h = hint;
     clearHint();
     if (!h) return false;
     const v = view(h.field);
     if (!v || !v.collapsed || v.text.slice(h.start, v.caret) !== h.typed) return false;
-    replace(h.field, v, h.start, v.caret, h.word);
+    replace(h.field, v, h.start, v.caret, typeof word === "string" ? word : h.word);
     hideBar();
     return true;
   }
@@ -573,13 +638,14 @@
 .ln-spell-bar button:hover { background: var(--hover, #efeff2); }
 .ln-spell-bar button.fix { color: var(--accent, #4f46e5); font-weight: 650; background: var(--accent-soft, rgba(79,70,229,.08)); }
 .ln-spell-bar button.quiet { background: transparent; color: var(--dim, #8e8e99); }
+.ln-spell-bar button.picked { outline: 2px solid var(--accent, #4f46e5); outline-offset: 1px; }
 .ln-spell-bar .k { font-size: 11px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border, #e3e3e8); color: var(--dim, #8e8e99); }`;
       document.head.appendChild(st);
     }
     return bar;
   }
 
-  function hideBar() { if (bar) bar.hidden = true; clearTimeout(barTimer); }
+  function hideBar() { if (bar) bar.hidden = true; clearTimeout(barTimer); picking = null; }
 
   function place(field) {
     const r = field.getBoundingClientRect();
@@ -601,12 +667,14 @@
 
   function showBar(field, { undo, word, start, hint: h }) {
     ensureBar();
+    barField = field;
+    picking = null;
     bar.replaceChildren();
     if (h) {
       const k = document.createElement("span");
       k.className = "k";
       k.textContent = "→";
-      bar.append(k, button(h.word, "fix", () => { hint = h; acceptHint(); }));
+      bar.append(k, ...(h.words || [h.word]).map((w) => button(w, "fix", () => { hint = h; acceptHint(w); })));
     } else if (undo) {
       const t = document.createElement("span");
       t.textContent = `Fixed “${undo.original}” → “${undo.fixed}”`;
