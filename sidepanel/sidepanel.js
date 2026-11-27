@@ -763,6 +763,7 @@ function exportTarget() {
 }
 
 function updateExportBtn() {
+  updateShareBtn();
   const target = exportTarget();
   exportBtn.disabled = !target;
   exportBtn.textContent = homeView.classList.contains("visible") ? "Export course" : "Export topic";
@@ -770,6 +771,58 @@ function updateExportBtn() {
     ? `Download ${target.topicName ? `"${target.topicName}"` : `all of "${target.courseName}"`} as Markdown`
     : (homeView.classList.contains("visible") ? "Select a course first" : "Select a topic first");
 }
+
+// ── Share a topic (server/app.py /api/share): needs sync set up. ──
+const shareBtn = document.getElementById("share-btn");
+let sharePop = null;
+async function updateShareBtn() {
+  const { lnSyncUrl, lnSyncKey } = await chrome.storage.local.get(["lnSyncUrl", "lnSyncKey"]);
+  const t = exportTarget();
+  shareBtn.hidden = !(lnSyncUrl && lnSyncKey && t?.topicName && studyView.classList.contains("visible"));
+}
+function closeSharePop() { sharePop?.remove(); sharePop = null; }
+shareBtn.addEventListener("click", () => {
+  if (sharePop) { closeSharePop(); return; }
+  const t = exportTarget();
+  if (!t?.topicName) return;
+  sharePop = document.createElement("form");
+  sharePop.className = "share-pop";
+  sharePop.innerHTML = `<div class="share-title"></div>
+    <label class="share-row"><span>Send to</span><input type="text" class="share-to" placeholder="username (optional)" spellcheck="false" autocomplete="off"></label>
+    <div class="share-row"><button type="submit" class="share-go">Make link</button><button type="button" class="share-cancel">Cancel</button></div>
+    <div class="share-out" aria-live="polite"></div>`;
+  sharePop.querySelector(".share-title").textContent = `Share “${t.topicName}” (a copy, as it is now)`;
+  document.getElementById("footer").appendChild(sharePop);
+  sharePop.querySelector(".share-to").focus();
+  sharePop.querySelector(".share-cancel").addEventListener("click", closeSharePop);
+  sharePop.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeSharePop(); shareBtn.focus(); } });
+  sharePop.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const out = sharePop.querySelector(".share-out");
+    const to = sharePop.querySelector(".share-to").value.trim();
+    out.textContent = "Sharing… (a sleeping server can take a minute)";
+    const { lnSyncUrl, lnSyncKey } = await chrome.storage.local.get(["lnSyncUrl", "lnSyncKey"]);
+    const topic = t.course.topics[t.topicName];
+    try {
+      const r = await fetch(`${lnSyncUrl.replace(/\/+$/, "")}/api/share`, {
+        method: "POST", headers: { Authorization: `Bearer ${lnSyncKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ course: t.courseName, topic: t.topicName, to, notes: { highlights: topic.highlights || {}, notes: topic.notes || {} } })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(`${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}`);
+      let copied = false;
+      try { await navigator.clipboard.writeText(j.url); copied = true; } catch (_) {}
+      out.replaceChildren(document.createTextNode(`${to ? `Sent to ${to}. ` : ""}${copied ? "Link copied: " : "Link: "}`));
+      const link = document.createElement("input");
+      link.className = "share-link"; link.readOnly = true; link.value = j.url;
+      link.addEventListener("focus", () => link.select());
+      out.appendChild(link);
+    } catch (err) {
+      out.textContent = err.message;
+    }
+  });
+});
+chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && (c.lnSyncUrl || c.lnSyncKey)) updateShareBtn(); });
 
 exportBtn.addEventListener("click", () => {
   const target = exportTarget();

@@ -47,6 +47,25 @@ All `/api` calls except health need `Authorization: Bearer <LAZYNOTES_KEY>`.
 
 The latest snapshot and the 5 before it are kept.
 
+## Accounts and sharing
+
+`LAZYNOTES_KEY` still works and is "the owner" (the notes you already synced).
+People can also make accounts (extension: Settings › Sync › Create account; the
+phone site logs in with the same username and password). Each account has its
+own notes; a login gives a token that works everywhere the key does (sync, AI).
+
+| Variable | Meaning |
+|---|---|
+| `SIGNUPS` | `invite` (default): new accounts need the invite code · `open` · `closed` |
+| `INVITE_CODE` | the code for `invite`; when unset, it's `LAZYNOTES_KEY` |
+
+Routes: `GET /api/signup-info`, `POST /api/signup {username, password, invite}`,
+`POST /api/login`, `POST /api/logout`, `GET /api/me`.
+Sharing: `POST /api/share {course, topic, notes, to?}` → `{url: /s/<id>}`, a
+read-only copy anyone with the link can open (`GET /api/share/<id>`); with
+`to`, it also lands in that account's inbox (`GET /api/inbox`). Accounts can use
+the server's AI too.
+
 ## AI key on the server (so it isn't in Chrome)
 
 The extension can ask this server to do its AI jobs instead of holding an AI

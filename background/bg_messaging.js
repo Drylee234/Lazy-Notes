@@ -10,7 +10,8 @@ import {
   handleDeleteTopic,
   handleRenameCourse,
   handleRenameTopic,
-  handleDeleteHighlight
+  handleDeleteHighlight,
+  handleImportTopic
 } from './bg_courses.js';
 import { requestSidePanel, togglePanelFor } from './bg_sidepanel.js';
 import { tidyOldNotes, undoTidy } from './bg_tidy.js';
@@ -76,6 +77,7 @@ const REPLY_HANDLERS = {
   AI_RUN:             handleAiRun,
   AI_READY:           handleAiReady,
   AI_SAVE_NOTE:       handleAiSaveNote,
+  IMPORT_TOPIC:       handleImportTopic,
   UPDATE_HIGHLIGHT:   async ({ id, courseName, topicName, fields }) => {
     const note = id && fields ? await updateHighlight(id, courseName, topicName, fields) : null;
     return note ? { ok: true, note } : { ok: false, reason: "That highlight was deleted." };

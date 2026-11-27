@@ -128,9 +128,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 ## 6. V3: online (anything that needs the internet)
 - ✅ Sync server + phone site (PWA) on Render.
 - ✅ AI help (Groq etc.).
-- 💡 Login: no login = no backup; logged in = automatic desktop ↔ phone sync (no "Sync now").
+- ✅ **Login (2026-11-27):** accounts on your server (username + password, hashed; invite code by default: `SIGNUPS`, `INVITE_CODE`). Settings › Sync › Log in / Create account; the phone site logs in too. Each account has its own notes; the old server key = owner. Sync was already automatic (changes push ~20s later).
+  Was: 💡 Login: no login = no backup; logged in = automatic desktop ↔ phone sync (no "Sync now").
   **Why:** the owner shouldn't have to press Sync by hand; an account also makes backup and sharing possible.
-- 💡 Share notes from one account to another (after login).
+- ✅ **Share (2026-11-27):** Study footer › Share: a read-only link (`/s/<id>`, opens on any phone) and optionally sent to a username's inbox. Settings › Sync › Shared with you / Add shared notes: adds it as a NEW topic (never mixed into yours).
 - ✅ **Ask the AI about the open document, the page you're on, or your topic's notes** (2026-11-27): Ask bar at the top of the ✨ AI view (`shared/ai-ask.js`): Document / Page N / My notes, type a question (Enter) or Summarise / Quiz me. Answers stay in the AI list until Keep as note. New job `askDoc` (bg_ai.js). Tested in Chromium against a fake AI server, not yet the real Render one.
   ⚠️ Free Groq allows ~8k tokens a minute: a whole long PDF may hit RATE_LIMIT; then use Page.
 

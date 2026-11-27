@@ -154,19 +154,49 @@
     setBar("Lazy Notes");
     searchWrap.hidden = true;
     status.textContent = "";
-    view.innerHTML = `<form class="key-card" id="key-form">
-      <p>Enter the key you set for your Lazy Notes server (the same one the extension syncs with).</p>
-      <input id="key-input" type="password" autocomplete="current-password" placeholder="Your key" required>
-      <button class="btn" type="submit">Open my notes</button>
-      <div class="err" id="key-err">${esc(error)}</div></form>`;
-    $("key-form").onsubmit = (e) => {
+    view.innerHTML = `<form class="key-card" id="login-form">
+      <p>Log in with the account you made in the extension (Settings › Sync).</p>
+      <input id="login-user" type="text" autocomplete="username" autocapitalize="none" placeholder="Username" required>
+      <input id="login-pass" type="password" autocomplete="current-password" placeholder="Password" required>
+      <button class="btn" type="submit">Log in</button>
+      <div class="err" id="key-err">${esc(error)}</div>
+      <details class="key-alt"><summary>Use the server key instead</summary>
+        <input id="key-input" type="password" autocomplete="off" placeholder="Server key (LAZYNOTES_KEY)">
+        <button class="btn" type="button" id="key-go">Open my notes</button></details></form>`;
+    const useKey = (k) => { key = k; store.set("ln-key", key); route(); load(); };
+    $("login-form").onsubmit = async (e) => {
       e.preventDefault();
-      key = $("key-input").value.trim();
-      if (!key) return;
-      store.set("ln-key", key);
-      route();
-      load();
+      keyError("Logging in…");
+      try {
+        const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: $("login-user").value.trim(), password: $("login-pass").value }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) { keyError(j.reason || `The server answered ${r.status}.`); return; }
+        store.set("ln-user", j.username);
+        useKey(j.token);
+      } catch (_) { keyError("Couldn't reach the server. Check your internet."); }
     };
+    $("key-go").onclick = () => { const k = $("key-input").value.trim(); if (k) useKey(k); };
+  }
+
+  // A shared topic (/s/<id>): anyone with the link can read it; no login.
+  async function sharedScreen(id) {
+    setBar("Shared notes");
+    menuBtn.hidden = true;
+    searchWrap.hidden = true;
+    view.innerHTML = `<div class="empty">Loading…</div>`;
+    try {
+      const r = await fetch(`/api/share/${encodeURIComponent(id)}`, { cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) { view.innerHTML = `<div class="empty">${esc(j.reason || "That shared link doesn't work.")}</div>`; return; }
+      setBar(j.topic || "Shared notes", `${j.course || ""} · shared by ${j.from || "someone"}`);
+      menuBtn.hidden = true;
+      const notes = topicNotes(j.notes || {});
+      mixedSources = false;
+      view.innerHTML = `<div class="notes">${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>
+        <p class="shared-foot">A copy, as it was when it was shared. To keep it, paste this link in the Lazy Notes extension: Settings › Sync › Add shared notes.</p>`;
+      status.textContent = `Shared ${ago(j.createdAt)}`;
+    } catch (_) { view.innerHTML = `<div class="empty">Couldn't reach the server.</div>`; }
   }
   const keyError = (msg) => { const el = $("key-err"); if (el) el.textContent = msg; };
 
@@ -310,6 +340,8 @@
 
   function route() {
     menu.hidden = true;
+    const shared = location.pathname.match(/^\/s\/([\w-]+)/);
+    if (shared) { sharedScreen(shared[1]); return; }
     if (!key) { keyScreen(); return; }
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(dec);
     if (parts[0] === "course" && parts[2] === "topic") topicScreen(parts[1], parts[3]);
@@ -326,8 +358,9 @@
   document.addEventListener("click", (e) => { if (!menu.contains(e.target)) menu.hidden = true; });
   $("refresh").addEventListener("click", () => { menu.hidden = true; load(); });
   $("forget").addEventListener("click", () => {
+    if (key && store.get("ln-user")) fetch("/api/logout", { method: "POST", headers: { Authorization: `Bearer ${key}` } }).catch(() => {});
     key = ""; snap = null;
-    store.del("ln-key"); store.del("ln-snapshot");
+    store.del("ln-key"); store.del("ln-snapshot"); store.del("ln-user");
     location.hash = "#/";
     route();
   });
@@ -335,5 +368,5 @@
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && key) load(); });
 
   route();
-  load();
+  if (!/^\/s\//.test(location.pathname)) load();
 })();

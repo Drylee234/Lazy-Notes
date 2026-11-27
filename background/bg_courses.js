@@ -221,3 +221,28 @@ export async function handleRenameTopic({ courseName, topicName, newName }) {
   await refreshCourseContextMenuItems();
   return { ok: true };
 }
+
+
+// ---------------------------------------------------------------------------
+// Shared notes → a NEW topic (never mixed into one you have). The course is
+// made if you don't have it; the topic gets "(from …)" if the name is taken.
+// ---------------------------------------------------------------------------
+export async function handleImportTopic({ course, topic, from, notes }) {
+  const c = tidyName(course) || "Shared with me";
+  let t = tidyName(topic) || "Shared notes";
+  if (!notes || typeof notes !== "object") return { ok: false, reason: "Those shared notes are empty." };
+  const { lazynotes } = await chrome.storage.local.get("lazynotes");
+  const data = lazynotes && lazynotes.courses ? lazynotes : { courses: {} };
+  data.courses[c] = data.courses[c] || { topics: {} };
+  data.courses[c].topics = data.courses[c].topics || {};
+  const taken = (name) => !!data.courses[c].topics[name];
+  if (taken(t)) {
+    const base = `${t} (from ${tidyName(from) || "someone"})`;
+    t = base;
+    for (let i = 2; taken(t); i++) t = `${base} ${i}`;
+  }
+  const fresh = (dict) => Object.fromEntries(Object.values(dict || {}).map((n) => [crypto.randomUUID(), { ...n }]));
+  data.courses[c].topics[t] = { highlights: fresh(notes.highlights), notes: fresh(notes.notes) };
+  await chrome.storage.local.set({ lazynotes: data });
+  return { ok: true, course: c, topic: t };
+}

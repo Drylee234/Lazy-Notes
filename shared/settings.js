@@ -176,7 +176,29 @@ globalThis.LazySettings = (() => {
       <summary class="set-label set-sync-head">Sync to your server <span class="set-sync-dot"></span></summary>
       <label class="set-field"><span>Server address</span>
         <input type="url" class="set-sync-url" placeholder="https://your-server.onrender.com" spellcheck="false" /></label>
-      <label class="set-field"><span>Sync key</span>
+      <div class="set-account">
+        <div class="set-acc-in" hidden>Logged in as <b class="set-acc-name"></b> · your notes sync to your account by themselves.
+          <button type="button" class="set-btn set-acc-out">Log out</button></div>
+        <div class="set-acc-form">
+          <label class="set-field"><span>Username</span><input type="text" class="set-acc-user" autocomplete="username" spellcheck="false" /></label>
+          <label class="set-field"><span>Password</span><input type="password" class="set-acc-pass" autocomplete="current-password" /></label>
+          <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="ask whoever runs the server" /></label>
+          <div class="set-backup">
+            <button type="button" class="set-btn set-acc-login">Log in</button>
+            <button type="button" class="set-btn set-acc-signup">Create account</button>
+          </div>
+          <div class="set-acc-status"></div>
+        </div>
+      </div>
+      <div class="set-shared" hidden>
+        <div class="set-label set-sub">Shared with you</div>
+        <div class="set-shared-list"></div>
+      </div>
+      <label class="set-field set-shared-link-row"><span>Add shared notes</span>
+        <span class="set-key-row"><input type="url" class="set-shared-link" placeholder="paste a shared link (…/s/…)" spellcheck="false" />
+        <button type="button" class="set-btn set-shared-add">Add</button></span></label>
+      <div class="set-shared-status"></div>
+      <label class="set-field set-key-field"><span>Server key (owner)</span>
         <span class="set-key-row">
           <input type="password" class="set-sync-key" placeholder="same as LAZYNOTES_KEY" spellcheck="false" autocomplete="off" />
           <button type="button" class="set-btn set-key-show" title="Show / hide">👁</button>
@@ -444,6 +466,104 @@ globalThis.LazySettings = (() => {
       chrome.storage.local.set({ lnSyncKey: syncKey.value });
       root.querySelector(".set-sync-hint").hidden = false;
     });
+    // ── Account (server/app.py /api/login, /api/signup) ──
+    // A login gives a token that's used exactly like the server key, so sync
+    // and the AI work the same either way. lnSyncUser = who's logged in.
+    const acc = (c) => root.querySelector(c);
+    const accStatus = acc(".set-acc-status");
+    const serverUrl = () => syncUrl.value.trim().replace(/\/+$/, "");
+    function showAccount() {
+      chrome.storage.local.get(["lnSyncUser"], ({ lnSyncUser }) => {
+        acc(".set-acc-in").hidden = !lnSyncUser;
+        acc(".set-acc-form").hidden = !!lnSyncUser;
+        acc(".set-key-field").hidden = !!lnSyncUser;
+        acc(".set-key-gen").hidden = !!lnSyncUser;
+        acc(".set-acc-name").textContent = lnSyncUser || "";
+        if (lnSyncUser) loadInbox();
+      });
+    }
+    async function api(path, opts = {}) {
+      const url = serverUrl();
+      if (!url) throw new Error("Type your server's address first.");
+      const r = await fetch(url + path, opts);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(`${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}`);
+      return j;
+    }
+    const authed = async () => ({ Authorization: `Bearer ${(await chrome.storage.local.get("lnSyncKey")).lnSyncKey || ""}` });
+    async function enter(path) {
+      const username = acc(".set-acc-user").value.trim(), password = acc(".set-acc-pass").value;
+      if (!username || !password) { accStatus.textContent = "Type a username and a password."; return; }
+      accStatus.textContent = path === "/api/signup" ? "Creating your account… (a sleeping server can take a minute)" : "Logging in… (a sleeping server can take a minute)";
+      try {
+        const j = await api(path, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, invite: acc(".set-acc-invite").value.trim() }) });
+        acc(".set-acc-pass").value = "";
+        await chrome.storage.local.set({ lnSyncUrl: serverUrl(), lnSyncKey: j.token, lnSyncUser: j.username, lnSyncState: {} });
+        accStatus.textContent = "";
+        chrome.runtime.sendMessage({ type: "SYNC_NOW" }, () => { void chrome.runtime.lastError; });
+      } catch (err) {
+        accStatus.textContent = err.message;
+        if (/INVITE_WRONG/.test(err.message)) acc(".set-acc-invite-row").hidden = false;
+      }
+    }
+    acc(".set-acc-login").addEventListener("click", () => enter("/api/login"));
+    acc(".set-acc-signup").addEventListener("click", async () => {
+      // Show the invite box first if this server wants one.
+      if (acc(".set-acc-invite-row").hidden) {
+        const info = await api("/api/signup-info").catch(() => null);
+        if (info?.signups === "invite") { acc(".set-acc-invite-row").hidden = false; if (!acc(".set-acc-invite").value) { accStatus.textContent = "This server needs an invite code."; return; } }
+        if (info?.signups === "closed") { accStatus.textContent = "This server isn't taking new accounts."; return; }
+      }
+      enter("/api/signup");
+    });
+    acc(".set-acc-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enter("/api/login"); } });
+    acc(".set-acc-out").addEventListener("click", async () => {
+      api("/api/logout", { method: "POST", headers: await authed() }).catch(() => {});
+      // Your notes stay on this computer; only the link to the account goes.
+      await chrome.storage.local.set({ lnSyncKey: "", lnSyncUser: "", lnSyncState: {} });
+    });
+
+    // ── Shared with you ──
+    const sharedStatus = acc(".set-shared-status");
+    async function loadInbox() {
+      const list = acc(".set-shared-list");
+      try {
+        const j = await api("/api/inbox", { headers: await authed() });
+        acc(".set-shared").hidden = !j.items.length;
+        list.replaceChildren(...j.items.map((it) => {
+          const row = document.createElement("div");
+          row.className = "set-shared-item";
+          row.textContent = `${it.title || "Notes"} · from ${it.from} `;
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "set-btn"; b.textContent = "Add to my notes";
+          b.addEventListener("click", () => addShared(it.id, b));
+          row.appendChild(b);
+          return row;
+        }));
+      } catch (_) { acc(".set-shared").hidden = true; }
+    }
+    async function addShared(id, btn) {
+      sharedStatus.textContent = "Adding…";
+      try {
+        const j = await api(`/api/share/${encodeURIComponent(id)}`);
+        const r = await new Promise((done) => chrome.runtime.sendMessage({ type: "IMPORT_TOPIC", course: j.course, topic: j.topic, from: j.from, notes: j.notes },
+          (x) => { void chrome.runtime.lastError; done(x); }));
+        if (!r?.ok) throw new Error(r?.reason || "Couldn't add them.");
+        sharedStatus.textContent = `Added as ${r.course} › ${r.topic}.`;
+        if (btn) { btn.disabled = true; btn.textContent = "Added"; }
+      } catch (err) { sharedStatus.textContent = err.message; }
+    }
+    acc(".set-shared-add").addEventListener("click", () => {
+      const v = acc(".set-shared-link").value.trim();
+      const m = v.match(/\/s\/([\w-]+)/) || v.match(/^([\w-]{6,})$/);
+      if (!m) { sharedStatus.textContent = "That doesn't look like a shared link (it has /s/ in it)."; return; }
+      try { const u = new URL(v); if (!serverUrl()) syncUrl.value = u.origin; } catch (_) {}
+      addShared(m[1]);
+    });
+    chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lnSyncUser || c.lnSyncKey)) showAccount(); });
+    showAccount();
+
     root.querySelector(".set-sync-now").addEventListener("click", async () => {
       await chrome.storage.local.set({ lnSyncUrl: syncUrl.value.trim().replace(/\/+$/, ""), lnSyncKey: syncKey.value.trim() });
       syncStatus.textContent = "Syncing… (a sleeping server can take a minute)";

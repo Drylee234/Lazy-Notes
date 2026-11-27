@@ -1,8 +1,13 @@
 """Lazy Notes — sync server + read-only mobile site.
 
 The extension sends its whole notes snapshot here (PUT /api/snapshot); the
-site at / shows it on a phone. Single user: every /api call needs
-`Authorization: Bearer <LAZYNOTES_KEY>`.
+site at / shows it on a phone. Every /api call needs
+`Authorization: Bearer <token>`: either LAZYNOTES_KEY (the server owner, as
+before) or a login token from POST /api/login (an account; each account has
+its own notes). Accounts: SIGNUPS = "invite" (default: new accounts need the
+invite code INVITE_CODE, or LAZYNOTES_KEY when that isn't set) | "open" |
+"closed". Shared topics: POST /api/share → a link anyone can read (/s/<id>),
+optionally sent to another account's inbox (GET /api/inbox).
 
     LAZYNOTES_KEY=your-secret python app.py          # http://0.0.0.0:8787
     python app.py --dev                               # makes up a key and prints it
@@ -12,6 +17,7 @@ LAZYNOTES_DB (default: lazynotes.db next to this file). The latest snapshot
 and the 5 before it are kept.
 """
 
+import hashlib
 import hmac
 import json
 import re
@@ -35,6 +41,8 @@ app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BODY
 
 KEY = os.environ.get("LAZYNOTES_KEY", "")
+SIGNUPS = os.environ.get("SIGNUPS", "invite").strip().lower()      # invite | open | closed
+INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()             # empty = LAZYNOTES_KEY
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 # AI help: the extension asks this server, and this server adds the AI key —
@@ -91,28 +99,42 @@ class Store:
         return conn
 
     def _init(self):
+        serial = "BIGSERIAL PRIMARY KEY" if self.pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
+        js = "JSONB" if self.pg else "TEXT"
         with self._conn() as c:
-            if self.pg:
-                c.execute("CREATE TABLE IF NOT EXISTS snapshots "
-                          "(id BIGSERIAL PRIMARY KEY, saved_at TEXT NOT NULL, body JSONB NOT NULL)")
-            else:
-                c.execute("CREATE TABLE IF NOT EXISTS snapshots "
-                          "(id INTEGER PRIMARY KEY AUTOINCREMENT, saved_at TEXT NOT NULL, body TEXT NOT NULL)")
+            c.execute(f"CREATE TABLE IF NOT EXISTS snapshots (id {serial}, saved_at TEXT NOT NULL, body {js} NOT NULL)")
+            # Accounts: snapshots.user_id NULL = the server owner (LAZYNOTES_KEY).
+            try:
+                c.execute("ALTER TABLE snapshots ADD COLUMN user_id BIGINT")
+            except Exception:
+                pass   # already there
+            c.execute(f"CREATE TABLE IF NOT EXISTS users (id {serial}, username TEXT UNIQUE NOT NULL, "
+                      "pass_hash TEXT NOT NULL, created_at TEXT NOT NULL)")
+            c.execute("CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, created_at TEXT NOT NULL)")
+            c.execute(f"CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, owner_id BIGINT, to_user_id BIGINT, "
+                      f"created_at TEXT NOT NULL, title TEXT, body {js} NOT NULL)")
 
-    def save(self, data):
+    def q(self, sql):
+        return sql.replace("?", "%s") if self.pg else sql
+
+    def _owner(self, user_id):
+        return ("user_id IS NULL", ()) if user_id is None else ("user_id = ?", (user_id,))
+
+    def save(self, data, user_id=None):
         saved_at = now_iso()
         body = json.dumps(data, separators=(",", ":"))
+        where, args = self._owner(user_id)
         with self._conn() as c:
-            ph = "%s" if self.pg else "?"
-            c.execute(f"INSERT INTO snapshots (saved_at, body) VALUES ({ph}, {ph})", (saved_at, body))
-            # Keep only the newest KEEP rows.
-            c.execute(f"DELETE FROM snapshots WHERE id NOT IN "
-                      f"(SELECT id FROM snapshots ORDER BY id DESC LIMIT {KEEP})")
+            c.execute(self.q("INSERT INTO snapshots (saved_at, body, user_id) VALUES (?, ?, ?)"), (saved_at, body, user_id))
+            # Keep only this account's newest KEEP rows.
+            c.execute(self.q(f"DELETE FROM snapshots WHERE {where} AND id NOT IN "
+                             f"(SELECT id FROM snapshots WHERE {where} ORDER BY id DESC LIMIT {KEEP})"), args + args)
         return saved_at
 
-    def latest(self):
+    def latest(self, user_id=None):
+        where, args = self._owner(user_id)
         with self._conn() as c:
-            row = c.execute("SELECT saved_at, body FROM snapshots ORDER BY id DESC LIMIT 1").fetchone()
+            row = c.execute(self.q(f"SELECT saved_at, body FROM snapshots WHERE {where} ORDER BY id DESC LIMIT 1"), args).fetchone()
         if not row:
             return None
         saved_at, body = row
@@ -121,6 +143,58 @@ class Store:
     def count(self):
         with self._conn() as c:
             return c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+
+    # ── accounts ──
+    def add_user(self, username, pass_hash):
+        with self._conn() as c:
+            try:
+                c.execute(self.q("INSERT INTO users (username, pass_hash, created_at) VALUES (?, ?, ?)"), (username, pass_hash, now_iso()))
+            except Exception:
+                return None   # taken
+            return c.execute(self.q("SELECT id FROM users WHERE username = ?"), (username,)).fetchone()[0]
+
+    def user_by_name(self, username):
+        with self._conn() as c:
+            return c.execute(self.q("SELECT id, pass_hash FROM users WHERE username = ?"), (username,)).fetchone()
+
+    def username(self, user_id):
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT username FROM users WHERE id = ?"), (user_id,)).fetchone()
+        return row[0] if row else None
+
+    def add_token(self, token_hash, user_id):
+        with self._conn() as c:
+            c.execute(self.q("INSERT INTO tokens (hash, user_id, created_at) VALUES (?, ?, ?)"), (token_hash, user_id, now_iso()))
+
+    def token_user(self, token_hash):
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT user_id FROM tokens WHERE hash = ?"), (token_hash,)).fetchone()
+        return row[0] if row else None
+
+    def drop_token(self, token_hash):
+        with self._conn() as c:
+            c.execute(self.q("DELETE FROM tokens WHERE hash = ?"), (token_hash,))
+
+    # ── shared topics ──
+    def add_share(self, share_id, owner_id, to_user_id, title, body):
+        with self._conn() as c:
+            c.execute(self.q("INSERT INTO shares (id, owner_id, to_user_id, created_at, title, body) VALUES (?, ?, ?, ?, ?, ?)"),
+                      (share_id, owner_id, to_user_id, now_iso(), title, json.dumps(body, separators=(",", ":"))))
+
+    def share(self, share_id):
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT owner_id, created_at, title, body FROM shares WHERE id = ?"), (share_id,)).fetchone()
+        if not row:
+            return None
+        owner_id, created_at, title, body = row
+        return {"owner_id": owner_id, "createdAt": created_at, "title": title,
+                "body": body if isinstance(body, dict) else json.loads(body)}
+
+    def inbox(self, user_id):
+        with self._conn() as c:
+            rows = c.execute(self.q("SELECT id, owner_id, created_at, title FROM shares WHERE to_user_id = ? "
+                                    "ORDER BY created_at DESC LIMIT 50"), (user_id,)).fetchall()
+        return rows
 
 
 store = None
@@ -144,15 +218,56 @@ def add_cors(resp):
         resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Vary"] = "Origin"
         resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, OPTIONS"
         resp.headers["Access-Control-Max-Age"] = "600"
     return resp
 
 
-def authorized():
+OWNER = "owner"   # who() for LAZYNOTES_KEY: the snapshot with user_id NULL
+
+
+def bearer():
     header = request.headers.get("Authorization", "")
-    given = header[7:] if header.startswith("Bearer ") else ""
-    return bool(KEY) and hmac.compare_digest(given.encode(), KEY.encode())
+    return header[7:].strip() if header.startswith("Bearer ") else ""
+
+
+def token_hash(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def who():
+    """OWNER (the server key), an account's id, or None (not allowed)."""
+    given = bearer()
+    if not given:
+        return None
+    if KEY and hmac.compare_digest(given.encode(), KEY.encode()):
+        return OWNER
+    return store.token_user(token_hash(given))
+
+
+def authorized():
+    return who() is not None
+
+
+def user_id_of(w):
+    return None if w == OWNER else w
+
+
+def hash_password(password, salt=None, rounds=200_000):
+    salt = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), rounds).hex()
+    return f"pbkdf2${rounds}${salt}${digest}"
+
+
+def check_password(password, stored):
+    try:
+        _, rounds, salt, digest = stored.split("$")
+        return hmac.compare_digest(hash_password(password, salt, int(rounds)).split("$")[3], digest)
+    except (ValueError, IndexError):
+        return False
+
+
+USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
 
 
 # --------------------------------------------------------------------------
@@ -178,7 +293,7 @@ def put_snapshot():
             or not isinstance(payload.get("data"), dict) \
             or not isinstance(payload["data"].get("lazynotes"), dict):
         return jsonify(ok=False, reason="not a Lazy Notes snapshot"), 400
-    saved_at = store.save(payload["data"])
+    saved_at = store.save(payload["data"], user_id_of(who()))
     return jsonify(ok=True, savedAt=saved_at)
 
 
@@ -186,7 +301,7 @@ def put_snapshot():
 def get_snapshot():
     if not authorized():
         return jsonify(ok=False, reason="wrong or missing key"), 401
-    latest = store.latest()
+    latest = store.latest(user_id_of(who()))
     if not latest:
         return jsonify(ok=False, reason="nothing synced yet"), 404
     saved_at, data = latest
@@ -198,11 +313,118 @@ def get_report():
     """The usage + error report from the last sync (no notes), for debugging."""
     if not authorized():
         return jsonify(ok=False, reason="wrong or missing key"), 401
-    latest = store.latest()
+    latest = store.latest(user_id_of(who()))
     if not latest:
         return jsonify(ok=False, reason="nothing synced yet"), 404
     saved_at, data = latest
     return jsonify(savedAt=saved_at, report=(data or {}).get("lnReport"))
+
+
+# --------------------------------------------------------------------------
+# Accounts
+# --------------------------------------------------------------------------
+
+@app.get("/api/signup-info")
+def signup_info():
+    return jsonify(ok=True, signups=SIGNUPS)
+
+
+@app.post("/api/signup")
+def signup():
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username") or "").strip().lower()
+    password = str(body.get("password") or "")
+    if SIGNUPS == "closed":
+        return jsonify(ok=False, code="SIGNUPS_CLOSED", reason="This server isn't taking new accounts."), 403
+    if SIGNUPS != "open":
+        code = INVITE_CODE or KEY
+        if not code or not hmac.compare_digest(str(body.get("invite") or "").strip().encode(), code.encode()):
+            return jsonify(ok=False, code="INVITE_WRONG", reason="That invite code isn't right. Ask whoever runs this server."), 403
+    if not USERNAME_RE.match(username):
+        return jsonify(ok=False, code="BAD_USERNAME", reason="Usernames are 3–32 letters, numbers, dots, dashes or underscores."), 400
+    if len(password) < 8:
+        return jsonify(ok=False, code="SHORT_PASSWORD", reason="Use a password of at least 8 characters."), 400
+    user_id = store.add_user(username, hash_password(password))
+    if user_id is None:
+        return jsonify(ok=False, code="USERNAME_TAKEN", reason="That username is taken."), 409
+    token = secrets.token_urlsafe(32)
+    store.add_token(token_hash(token), user_id)
+    return jsonify(ok=True, token=token, username=username)
+
+
+@app.post("/api/login")
+def login():
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username") or "").strip().lower()
+    row = store.user_by_name(username)
+    if not row or not check_password(str(body.get("password") or ""), row[1]):
+        return jsonify(ok=False, code="LOGIN_WRONG", reason="Wrong username or password."), 401
+    token = secrets.token_urlsafe(32)
+    store.add_token(token_hash(token), row[0])
+    return jsonify(ok=True, token=token, username=username)
+
+
+@app.post("/api/logout")
+def logout():
+    if bearer():
+        store.drop_token(token_hash(bearer()))
+    return jsonify(ok=True)
+
+
+@app.get("/api/me")
+def me():
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="not logged in"), 401
+    return jsonify(ok=True, username=None if w == OWNER else store.username(w), owner=w == OWNER)
+
+
+# --------------------------------------------------------------------------
+# Sharing a topic: a read-only link anyone can open, and optionally a copy in
+# another account's inbox. The topic is copied at the moment you share it.
+# --------------------------------------------------------------------------
+
+@app.post("/api/share")
+def share_topic():
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    body = request.get_json(silent=True) or {}
+    topic = body.get("notes")
+    if not isinstance(topic, dict):
+        return jsonify(ok=False, reason="no notes to share"), 400
+    to_id = None
+    to = str(body.get("to") or "").strip().lower()
+    if to:
+        row = store.user_by_name(to)
+        if not row:
+            return jsonify(ok=False, code="NO_SUCH_USER", reason=f"There's no account called {to} on this server."), 404
+        to_id = row[0]
+    share_id = secrets.token_urlsafe(9)
+    data = {"course": str(body.get("course") or ""), "topic": str(body.get("topic") or ""), "notes": topic,
+            "from": "the server owner" if w == OWNER else store.username(w)}
+    store.add_share(share_id, user_id_of(w), to_id, data["topic"], data)
+    return jsonify(ok=True, id=share_id, url=f"{request.host_url.rstrip('/')}/s/{share_id}")
+
+
+@app.get("/api/share/<share_id>")
+def get_share(share_id):
+    sh = store.share(share_id)
+    if not sh:
+        return jsonify(ok=False, reason="That shared link doesn't exist (or was mistyped)."), 404
+    return jsonify(ok=True, createdAt=sh["createdAt"], **sh["body"])
+
+
+@app.get("/api/inbox")
+def inbox():
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    if w == OWNER:
+        return jsonify(ok=True, items=[])
+    items = [{"id": i, "from": store.username(o) if o else "the server owner", "createdAt": at, "title": t}
+             for (i, o, at, t) in store.inbox(w)]
+    return jsonify(ok=True, items=items)
 
 
 # Every AI failure says what went wrong as a short code the extension can show
@@ -402,6 +624,12 @@ def _named(filename, mimetype):
 
 @app.get("/")
 def index():
+    return _named("index.html", "text/html")
+
+
+@app.get("/s/<share_id>")
+def shared_page(share_id):
+    # The phone site reads the id from the address and shows that topic.
     return _named("index.html", "text/html")
 
 

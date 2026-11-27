@@ -499,3 +499,18 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 body.embedded #brand .brand-name { display: none; }
 body.embedded:not(.ln-show-home) #view-tabs { display: none; }   /* the title bar above names the view and switches it (lnEmbedHome: show the row too) */
 body.ln-win #brand .brand-name { display: none; }
+
+/* Share a topic (footer › Share) */
+#share-btn[hidden] { display: none; }
+#footer { position: relative; }
+.share-pop { position: absolute; right: 8px; bottom: calc(100% + 6px); z-index: 30; width: min(320px, calc(100% - 16px)); display: grid; gap: 8px;
+  padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 12.5px; }
+.share-title { font-weight: 600; color: var(--pri); }
+.share-row { display: flex; gap: 6px; align-items: center; }
+.share-row > span { color: var(--sec); min-width: 52px; }
+.share-row input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--pri); font: inherit; }
+.share-row button { padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--pri); font: inherit; cursor: pointer; }
+.share-row .share-go { border-color: var(--accent); color: var(--accent); }
+.share-out { color: var(--sec); display: grid; gap: 4px; }
+.share-out:empty { display: none; }
+.share-link { width: 100%; box-sizing: border-box; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--pri); font: 11.5px ui-monospace, monospace; }
