@@ -1,6 +1,6 @@
 # active-memory handoff: Lazy Notes (Chrome extension)
 
-**Handoff #3** · 2026-11-26 · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options
+**Handoff #4** · 2026-11-27 · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options; #4 (2026-11-26/27): PDF snap-to-word + Home/End, nesting ownership + guide lines, floating panel (resize all edges, fade, hover-open + delays, view switcher with Home), our own panel on web pages (docked/floating) replacing Chrome's, readers full screen, How-to-use page, rename courses/topics, phone site PWA, app name soft-coded, Ctrl+↑ / Ctrl+Shift+., "perhaps" rule
 
 ## 0. Instructions for Claude (read first)
 
@@ -14,154 +14,144 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 6. Your first reply: at most 5 lines covering the goal, the current state, and the next step (section 11). Mention any files from section 13 that were not attached. Ask the questions in section 12 if there are any. End with "Ready to continue with <next step>?" Then wait for the user's go.
 
 ## 1. Mission
-- **Goal:** Improve "Lazy Notes", a Manifest V3 Chrome extension for students: highlight text on web pages, PDFs, .pptx slides and .docx in its own readers; tag it (course › topic › type); study it as notes; sync a read-only copy to a phone site.
-- **Done looks like:** features work in real Chrome, tested in Chromium (Playwright), pushed to `main`.
-- **Why it matters / context:** user studies from lecture PDFs/slides (courses e.g. "Get 205", "BME213 (Physiology)", "GET 201", "GET 211"; topics e.g. "Basics", "Introduction").
+- **Goal:** Improve "Lazy Notes", a Manifest V3 Chrome extension for students: highlight text on web pages, PDFs, .pptx slides and .docx in its own readers; tag it (course › topic › type); study it as notes; sync a read-only copy to a phone site (installable PWA).
+- **Done looks like:** features work in real Chrome, tested in Chromium (Playwright), pushed to `main` (and the session's working branch).
+- **Why it matters / context:** user studies from lecture PDFs/slides (courses e.g. "BME213 (Physiology)", "GET 201", "Get 205", "GET 211"; topics e.g. "Basics", "Introduction", "TRANSPORT OF SUBSTACE THROUGH THE CELL MEMBRANE"; PDF "PIO 201. INTRODUCTION TO PHG AND BLOOD.Lecture two.pdf").
 
 ## 2. About the user (as relevant to this work)
-- Student; GitHub repo owner `Drylee234/Lazy-Notes`. Uses Chrome with the extension loaded unpacked; Windows-style trackpad (two-finger pinch zoom; no mouse wheel/side buttons assumed).
-- Compares UX with the "Web Highlights" extension (finds its panel smoother).
-- Types fast with typos/slang ("sha", "na", "lwk", "idrk", "yk", "ass" = bad, "yhh"/"yhhhh" = yes, "lit" = good). Interpret charitably; ask when truly ambiguous.
-- Cares a lot about UX and speed of taking notes (keyboard-first, fewer mouse trips). Wants IMAGES/mockups to pick between options ("IMAGES SO IK WHICH TO PICK").
-- Has a Render account (workspace "Alfred's workspace") and GitHub connected to Render. Sync to the server works ("yessss").
+- Student; GitHub repo owner `Drylee234/Lazy-Notes`. Chrome on Windows, extension loaded unpacked (reloads it to test); trackpad (pinch zoom). Phone = Android Chrome.
+- Compares with the "Web Highlights" extension: it uses its own self-built panel everywhere (pages + its reader) instead of Chrome's — the user prefers that.
+- Types fast with typos/slang ("sha", "na", "lwk", "idrk", "yk", "ass" = bad, "yhh" = yes, "lit" = good, "atp" = at this point). Interpret charitably; ask when truly ambiguous.
+- Starts almost every request with "perhaps" (see rule 8).
+- Cares about UX, keyboard-first, few mouse trips, no wasted space or duplicate labels, saving tokens. Wants IMAGES/mockups to pick between options.
+- Render account (workspace "Alfred's workspace"), GitHub connected to Render; sync works.
 
 ## 3. Style & communication
 - **Language:** English.
 - **Tone:** direct, plain, friendly; briefly explain what you're doing.
 - **Reply length:** short; lead with the outcome; bullets/tables.
-- **Formatting:** short sections, bullets, tables; commit hashes in backticks; send screenshots/mockups (SendUserFile) and always say which image is which (number/name printed on the image itself works well).
-- **Working style:** act on clear requests; ask only for genuinely ambiguous choices; brainstorm with labelled mockup images when user says "brainstorm"/"show me"/asks to pick. Test in Chromium before pushing. Parallel background workers are welcome for big batches, on separate files; re-test everything together before pushing to main.
-- **Avoid:** wasting tokens; long investigations; overlapping UI (e.g. a floating bar over chips was moved); covering text; deleting things outright (hide behind a setting instead).
+- **Formatting:** short sections, bullets, tables; commit hashes in backticks; screenshots/mockups via SendUserFile, always say which image is which.
+- **Working style:** act on clear requests; ask only for genuinely ambiguous choices (AskUserQuestion with options); test in Chromium before pushing; say plainly what was and wasn't tested (e.g. real toolbar click, real trackpad).
+- **Avoid:** wasting tokens; long investigations; overlapping UI; covering text; deleting things outright (hide behind a setting); repeating the app name where it's already shown; opening new windows unasked.
 
 ## 4. Hard rules (word for word)
-1. "when i say push to main unless i say otherwise later i mean always push to main you test it on your device first anyway" → after testing, push to `main` AND the session's working branch.
+1. "when i say push to main unless i say otherwise later i mean always push to main you test it on your device first anyway" → after testing, push to `main` AND the session's working branch (CLAUDE.md says the same).
 2. "whatever thing ive removed or perhaps ask to be removed in the future simply add a setting to turn it on or off" (so work isn't wasted).
 3. "let clicking the enter button be able to replae the need to manually drag the mouse to click in places where its possible".
 4. "seriously consider Ux" / "be careful" (reorder: never lose or scramble notes).
-5. Do not create pull requests unless asked. Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and the session's `Claude-Session:` line (new session gets its own; branch name also comes from the new environment).
+5. Do not create pull requests unless asked. Commit messages end with the `Co-Authored-By:` and `Claude-Session:` lines the session gives (new session → its own; branch name also comes from the new environment).
 6. Unfinished worker work goes to the working branch only (WIP commit), never to `main` until tested.
 7. "make all and make them togglable" → new ways of doing something are all built, each with an on/off switch (Settings › More options).
 8. "i always say perhaps before all my decisions so if thers a better way using already existing tools tell me and also if any of my decision will revert a benefit i gave myself before alert me" (also in CLAUDE.md).
+9. CLAUDE.md: read `docs/handoff-lazy-notes.md` and `docs/usage-notes.md` before work; add a usage-notes entry whenever the owner shares real notes or reports a slip.
 
 ## 5. Corrections log
 | # | Claude did | The user wanted |
 |---|---|---|
 | 1 | Hover dropdown closed 0.25s/0.7s after leaving | Rest ~0.5s to open (pass-by does nothing), click opens instantly; hover-opened list closes when mouse leaves (0.4s) |
-| 2 | Dropdown list looked see-through / ugly purple blocks | Solid, quiet list (grey hover, tick + accent for current) |
+| 2 | Dropdown list see-through / ugly purple blocks | Solid, quiet list (grey hover, tick + accent for current) |
 | 3 | Study tab had two big course/topic boxes | One quiet "Course › Topic" breadcrumb line |
-| 4 | Edit/editor didn't close on click outside (incl. clicking the web page) | Close (save if changed) on any outside click, incl. the page |
-| 5 | Mockup images sent without saying which was which | Always label which image is which |
-| 6 | Shift+Tab outdents, Tab indents in note-box lists | Tab always → "Save as" picker; Shift+Tab indents; Alt+Shift+Tab or Backspace at point start outdents |
-| 7 | Annotation/More fields stacked vertically, editor too big | Folds side by side ("List point › Annotation › Context ›"); type list floats beside a small button |
-| 8 | Autocorrect "toxic in a bad way", suggested words Chrome still underlines, sHE→SHe | Rank by word frequency + your notes; only common words; mixed caps lowered |
-| 9 | Side panel's async onMessage listener swallowed replies (Join's Undo deleted the note) | Fixed: non-async listener (keep every onMessage listener non-async) |
-| 10 | "pick one" (computer vs Render) was unclear | They were alternatives; Render chosen and deployed |
-| 11 | Mouse-button "save instantly" idea | Rejected: can't edit before saving |
-| 12 | "Saving to …" line in save pop-up | Removed (shown only in red when no topic) |
-| 13 | Panel options described in words only | Wanted images to pick from |
-| 14 | PDF keyboard caret drawn while dragging a selection ("the cursor moves instead of a highlight") | Caret hidden while the mouse is down; shows only after a plain click or Shift+arrows; switch lnDocCaret |
-| 15 | Typing-hint bar floated over the pop-up box's type chips | Hint shown in the box's own footer line (no overlap) |
-| 17 | Tidy joined lines in notes typed in the Study box but saved as Plain; highlight text showed without line breaks; Shift+Enter gave blank lines | Typed-as-type notes never tidied (and restored); .note-text keeps line breaks; one Shift+Enter = one line |
-| 18 | Study note box's Save-as was a plain dropdown (number only selected) | Tab shows numbered chips like the save pop-up; a number saves at once; ←/→ move; Enter saves; Shift+Tab/Esc back |
-| 19 | Hover tools (⋮⋮ ⇤ ⇥) covered the words; notes too far apart; suggestion strip too small | Tools only when the mouse is in a note's left margin (or keyboard focus); 2px between notes; strip 13.5px with accent border |
-| 20 | Study opened a course's first topic when none was picked | Study shows only the picked topic (Home or its picker); else "Pick a topic" |
-| 21 | Pop-out was a separate OS window | Default is a floating in-page box: drag by title bar, resize corner, − / + fold, remembers place; Ctrl+. into its note box |
-| 16 | Fold button in the left margin, under the Study tab's drag handle / indent buttons | Fold button right after the heading's words |
+| 4 | Editor didn't close on outside click | Close (save if changed) on any outside click, incl. the page |
+| 5 | Mockup images unlabeled | Always label which image is which |
+| 6 | Shift+Tab outdents, Tab indents in note-box lists | Tab → "Save as" picker; Shift+Tab indents; Alt+Shift+Tab or Backspace at point start outdents |
+| 7 | Editor fields stacked, too big | Folds side by side; type list floats beside a small button |
+| 8 | Autocorrect "toxic in a bad way" | Rank by frequency + your notes; only common words; mixed caps lowered |
+| 9 | Async onMessage listener swallowed replies | Keep every onMessage listener non-async |
+| 10 | "pick one" unclear | Alternatives; Render chosen |
+| 11 | Mouse-button instant save | Rejected: can't edit before saving |
+| 12 | "Saving to …" line in save pop-up | Removed (red only when no topic) |
+| 13 | Options described in words only | Images to pick from |
+| 14 | PDF caret drawn while dragging | Caret hidden while mouse down; lnDocCaret switch |
+| 15 | Typing-hint bar over chips | Hint in the box's footer |
+| 16 | Fold button in left margin | Right after the heading's words |
+| 17 | Typed-as-type notes tidied; Shift+Enter blank lines | Never tidied; one Shift+Enter = one line |
+| 18 | Study Save-as plain dropdown | Numbered chips like the save pop-up |
+| 19 | Hover tools covered words | Tools only in the note's left margin; 2px between notes |
+| 20 | Study opened first topic when none picked | Only the picked topic, else "Pick a topic" |
+| 21 | Pop-out was an OS window | Floating in-page box by default |
+| 22 | Fold button on its own line in typed notes (big gap) | At the end of the last line |
+| 23 | New list item didn't follow the nested item above | List point saved after an indented note takes its indent |
+| 24 | CSS `resize` corner (covered by iframe) | Handles on all edges/corners |
+| 25 | Asked what "Ctrl+Up" / "hover gestures" meant | Ctrl+↑ from note box → last note (Enter edits); hover = fade when mouse away |
+| 26 | Chrome panel still showing in reader after "fixed" | Reader tells background (READER_READY) → disable + close Chrome panel for that tab |
+| 27 | "Saving to course › topic" shown with no document | Only while a document is open |
+| 28 | Layout ask misread | "+ Open a document…" in the top right of the documents list |
+| 29 | Only disabled Chrome panel in readers | Our own panel on web pages too (docked or floating), like Web Highlights |
+| 30 | Extra "Lazy Notes" title above the panel's own header | Name not repeated |
+| 31 | Small popup window on chrome:// pages | No new window; ✕ flash on toolbar icon |
+| 32 | Hid Home → lost document list | Home in the title-bar view switcher |
+| 33 | Single-click title cycled views | Hover (~0.5s) / click list to pick, closes 0.4s after leaving |
+| 34 | Gap between nested notes | Guide lines + blank leading/trailing lines trimmed on display |
 
 ## 6. Decisions
 | Decision | Why |
 |---|---|
-| Table type (key T, ▦): rows = lines, cells = tabs / | / 2+ spaces; guessed for selections inside <table> or tab-separated lines; markdown + HTML export | user asked |
-| Courses list their documents (Home "Documents in this course", course page cards) from notes' sourceUrl + lnDocs (shared/utils.js courseDocuments) | user asked |
-| Autocorrect: extra letters cost 0.55 (doubled 0.4), held letters (3+) collapsed, learned fixes, missing spaces split when both halves common (rank ≤ 25000) and clearly best | user asked |
-| Types: Header(1) H, Sub topic(2) H2, Definition(3) Def, Formula(4) ƒx, List point(5) •, Important(6) ! [stored "note"], Summary(7) Σ, List head(8) ≡ [toggle lnListHeadType], Plain(0) ¶ [stored "generic"]; My note = 9 in note boxes | user approved trimmed types + compact chips; list head asked back |
-| A Plain line directly above list points renders bold with a colon and counts as their list head | trim types |
-| Save pop-up: compact chips, number keys save, Enter saves lit (guessed) type, Tab from text box to chips; ✎ Note / ❝ Quote buttons bottom-left | faster type selection; hand-off to note box |
-| Pop-up position setting: Above/Below/Left/Right/Split | user's request |
-| Note box = rich "formatted while typing" box (Option 2) storing the same markdown-ish text | user chose Option 2 |
-| Study keyboard: picker ←/→; notes ↑/↓ Home/End, Enter/Space edit, Delete twice deletes, Alt+↑/↓ move, Alt+←/→ indent, plain ←/→ fold/unfold a head; note box; Save as (Tab, numbers, Enter) | user's tab-order idea |
-| Server on Render (free web + free Postgres), read-only phone site | user said "deply" |
-| Readers' Notes panel = 1 + 2 + 3: **edge tab** (default; slides out over the page, page keeps full width) + **pop-up note box** + **⧉ pop-out window**; "📌 Dock" keeps old docked panel (lnPanelMode) | user picked from mockups |
-| Pop-up note box opens with: Ctrl+. (edge-tab mode; with a selection = quote), double-click blank space (A), ✎ Note/❝ Quote in save pop-up (B), right-click → "✎ Quick note here" (C), floating ✎ above the tab (D) — all on, each switchable | "make all and make them togglable" |
-| Ctrl+/ shows/hides the panel; in Docked mode Ctrl+. jumps into the panel's note box instead | keeps old behaviour available |
-| Pop-up note box: Note mode (own words; My note or any type) / Quote mode (highlight with link + your note as annotation); Enter saves, Tab → chips (number saves), Esc closes, Undo toast 6s | keyboard-first |
-| Web pages: ✎ Note / ❝ Quote send the words to Chrome's side panel note box (opens it; panelRequest FILL_COMPOSER) | item "save highlight straight into note box" |
-| Document words: reader publishes words to storage.session lnDocWords; spell.js treats them as correct, prefers them as fixes, offers typing hints (→ accepts) | user request |
-| Pinch / Ctrl+wheel zooms only the document (PDF re-renders after a stretched preview; slides/Word via CSS zoom var --ln-z) | toolbar must stay fixed |
-| Folding: Header holds all to next Header; Sub topic to next Sub topic/Header; List head (or Plain over points) holds the points after it; fold state in localStorage "ln-folded"; moving a folded head unfolds it first | grouping + "never scramble notes" |
-| All notes filter shows matches under their heads (dimmed .note--context); "List heads" filter shows heads with their points | "filters show heads with their points" |
+| Types: Header(1) H, Sub topic(2) H2, Definition(3), Formula(4), List point(5) •, Important(6) ! [stored "note"], Summary(7) Σ, List head(8) ≡, Plain(0) ¶ [stored "generic"]; My note = 9 | earlier chats |
+| Indented note belongs to the nearest less-indented note above (any type); fold hides it; Study draws guide lines per level; hovering the owner lights them (accent) | user asked |
+| PDF: press within 28px of a word starts the highlight (lnDocSnap); Home/End = visual line start/end, Shift extends | bug report |
+| Readers' panel: Floating (default) / Edge tab / Docked (lnPanelMode); floating: drag title, 8 resize handles, fold −, fades to 0.45 when mouse away (lnPanelFade), hover tab/folded bar opens (lnPanelHover, lnPanelHoverMs, lnPanelHoverCloseMs) | user asked |
+| Built-in panel title bar = view name ("Study ▾"); rest ~0.5s or click → list Home / Study / AI; tab row inside hidden (lnEmbedHome = also show it); no name beside the logo in embedded/window panels | user asked |
+| Web pages: our own panel (content/page-panel.js, shadow DOM, iframe sidepanel.html?embedded=1&page=1), Docked (default) or Floating (lnPagePanelMode); toolbar button / Alt+Shift+L / Ctrl+. | like Web Highlights |
+| Chrome's side panel: disabled globally while lnPagePanelOwn is on; enabled on new tab pages (full Home); readers keep it only with lnReaderNativePanel | user's choice |
+| Pages Chrome blocks (chrome://, Web Store): no panel; toolbar icon flashes ✕ for 2.5s | user rejected popup window |
+| Readers open full screen once per tab (lnReaderFullscreen); "All notes" button in reader toolbar | user asked |
+| Pop-up note box: Ctrl+Shift+. always; Ctrl+. when floating panel folded/hidden only with lnQuickWhenFolded (off); also double-click blank, right-click › Quick note here, ✎ Note | user asked |
+| Study: Ctrl+↑ in note box → last note; Ctrl+↓ on a note → note box; auto-scroll to the newest note | user asked |
+| Text dropped into a note box as plain text: lnDropPlain (off = quote) | user asked |
+| Side-panel Home: NOW READING card, then SAVING TO (only with a document open), "+ Open a document…" top right of documents list | user asked |
+| Rename courses/topics (RENAME_COURSE / RENAME_TOPIC; keeps order, updates activeCourse/Topic + lnDocs); ✎ on All notes rows; "✎ course / ✎ topic" on the Study picker | user asked |
+| App name in one place: manifest.json "name" (shared/brand.js); phone site APP_NAME env | user may rename |
+| How to use: shared/howto.js list; ? in the reader panel bar or ? key; howto.html; side-panel footer link | user forgot Ctrl+. |
+| Phone site: PWA (manifest, icons 192/512/maskable, /sw.js); source line only when a topic mixes sources | user asked |
 
 ## 7. Changed / rejected
-- Topics tab → renamed **Home**.
-- "PDF reader" button → "Document reader" → hidden in footer (setting to bring back still pending).
-- "Open the slides reader" link → removed (one start page for PDF/.pptx/.docx).
-- Course/topic rows in save pop-up → hidden (toggle still pending).
-- Generic → shown as **Plain**; Note → shown as **Important** (All notes filter labels fixed too).
-- Formatting option 1 (symbols + bar) → Option 2 (formatted while typing).
-- Editor "More" → separate folds; type picker floats beside.
-- Indent in Study notes: Tab → Alt+←/→ (Tab moves between sections).
-- Readers' Notes panel: always-docked → edge tab by default (docked kept as a setting).
-- ❌ Mouse-button/Alt instant save without pop-up (can't edit first).
-- ❌ Full pixel-faithful .pptx rendering (slides are laid out from positions instead).
-- ❌ Parsing old binary .doc (message: save as .docx or PDF).
-- ❌ Bottom-drawer panel (option 4) — not chosen.
+- Chrome's side panel everywhere → our own panel on pages and readers; Chrome's only on new tab pages.
+- ❌ Our panel in a small popup window on chrome:// pages ("i ddint want a new window") → ✕ flash.
+- Built-in panel without Home → Home back via the title-bar switcher.
+- Single-click title cycling views → hover/click list.
+- Outer "Lazy Notes" title / name beside the logo in embedded panels → removed.
+- CSS `resize: both` corner → edge/corner handles.
+- Still rejected from before: ❌ mouse-button instant save; ❌ pixel-faithful .pptx; ❌ old binary .doc; ❌ bottom-drawer panel. Topics tab → Home; Generic → Plain; Note → Important.
 
 ## 8. Data & facts (exact)
-- Repo `Drylee234/Lazy-Notes`; manifest version 2.0 (`0c7ffaf`; tag v2.0 push was refused by the session proxy — user to tag on GitHub); earlier `7f299b8` ("List head type back (8), fold/unfold …"). Before it: `23cc7cf` (doc words, pinch zoom, web Note/Quote, joined lines, new topic), `1867fd4` (edge tab, pop-up note box, caret fix), `9dcf563` (handoff #2).
-- Render: workspace `tea-d9tu9qm417fc73fa0br0` ("Alfred's workspace"); web service `lazy-notes` id `srv-dc3uo7e1egvs73er4o30`, URL https://lazy-notes-c07b.onrender.com, region frankfurt, free, auto-deploys from `main`, build `pip install -r server/requirements.txt`, start `cd server && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`, env PYTHON_VERSION 3.12.7, LAZYNOTES_KEY = [secret removed: re-enter it].
-- Render Postgres `lazy-notes-db` id `dpg-dc3uki6i0phs738klbog-a`, v16, free, frankfurt, expires 2026-12-26 (free DB: plan for renewal/backup before then). DATABASE_URL set by user; sync works.
-- Server API: GET /api/health (no auth) → {"ok":true,"app":"lazy-notes"}; PUT /api/snapshot (Bearer key) body {"app":"lazy-notes","version":1,"sentAt","data":{"lazynotes","lnDocs"}}; GET /api/snapshot; 30 MB max; keeps latest + 5.
-- Extension sync: pushes ~20s after changes, every 6h; wakes server via /api/health (60s timeout); retries 1, 5, 15, 30, 60 min then hourly.
-- Timings: dropdown hover open 500ms, switch 300ms, hover-opened close 400ms; undo toast 6000ms (save pop-up and pop-up note box); double-click delay 230ms; editor blur-close 700ms; pinch commit 180ms after last wheel event; zoom bubble 900ms; doc words read from slides/Word 1200ms after drawing; PDF words: first 20 pages early, all up to 400 pages.
-- Panel sizes: docked/slide-out width default 360px, min 280px, max half the window; pop-up note box 330px wide; pop-out window = panel width, beside the current Chrome window.
-- Zoom: slides/Word 50%–300%, snaps to 100% within 3%; Ctrl+= ×1.15; pinch factor exp(−deltaY·0.01). PDF Ctrl+= ×1.2.
-- Storage keys (chrome.storage.local): lazynotes (courses → topics → {highlights{id}, notes{id}}; fields incl. order, indent, image), activeCourse, activeTopic, highlighterActive, lastDrag, lnDocs, lnTheme, lnPopupSide, lnAutocorrectLevel (0 Off/1 Mild/2 Strong/3 Toxic), lnSpellIgnore, lnDocAutoSelect, pptxAutoOpen, lnLastBackup, lnSyncUrl, lnSyncKey, lnSyncState, panelRequest (types SHOW_CREATE_COURSE, SHOW_CREATE_TOPIC, FILL_COMPOSER).
-- Old-notes tidy (background/bg_tidy.js): runs once on install/update/startup (lnTidyDone = 2); joins broken PDF lines in old highlights from a page/document only (never typed notes, never notes typed in a note box and saved as a type [no sourceUrl/anchor] — v2 put those back; not figures; lists kept); original kept as highlight field `textBefore`; lnTidyLog {at, count | undone}; Settings › More options › Old notes: Tidy now / Undo tidy (message TIDY_NOTES {undo}).
-- Reports (background/bg_diag.js + shared/diag.js on every page): lnDiag {errors: last 100 {t, where, msg, stack}, usage: {day: {action: n}} 30 days}; sent with each sync as data.lnReport (no note text, no key) unless lnSendReports = false; server GET /api/report (Bearer key) returns it; Settings › Problems › Copy problem report (message DIAG_REPORT).
-- Sync warning: side panel banner after 2 failed tries in a row (or wrong key / too big), plain-words reason + Retry / Fix (opens Settings sync) / ✕ (hidden until the error changes).
-- More options keys (all on unless false): lnPanelMode ("tab" default | "docked"), lnQuickDblClick, lnQuickSelButtons, lnQuickMenu, lnQuickFloat, lnListHeadType, lnDocWordsOn, lnTypingHints, lnDocCaret, lnGroupIndent (notes under a sub topic one step in, --group-px 18px each), lnSendReports; lnBoldItalic (OFF unless true: B / I buttons in the note box; Ctrl+B/I always work; settings checkboxes with data-off are off by default). lnPlainInBoxes (OFF unless true: Plain offered in note boxes; otherwise note boxes save as "Note" [typed note], 0 and 9 both = Note; Plain stays for page words/quotes). lnPanelMode now "float" (default) | "tab" | "docked". lnSpellLearned {typo: fix} (suggestions you picked).
-- chrome.storage.session: lnDocWords {title, words:[[form,count]…] top 8000}, lnPanelWindow (pop-out window id).
-- localStorage (per extension origin): ln-embed-<page> (panel open/width), ln-zoom-<page> (slides/Word zoom), ln-folded (folded head ids, last 3000), ln-pdf-fit.
-- IndexedDB: lazynotes-pdfs, lazynotes-slides, lazynotes-docs (store "files").
-- Messages added: LN_QUICK_NOTE_MENU {tabId} (background → readers, from context menu id "lazy-notes-quick-note"), SEND_TO_NOTE_BOX {mode, text} (web content.js → background). Custom DOM event "ln-typing-hint" (spell.js → field; cancel it to show the hint yourself).
-- Spell: Hunspell dictionary-en + nspell (lib/), word frequency list lib/dict/en-freq.txt (top 60,000, wordfreq 3.1.1, CC BY-SA 4.0 data). Now also loaded in the three readers.
+- Repo `Drylee234/Lazy-Notes`; manifest version 2.0. Recent commits: `f42fd26` (trim blank lines, Ctrl+Shift+., view switcher with Home, Chrome panel on new tab, perhaps rule), `acf0d77` (guide lines), `e9cbae0` (no popup window, floating page panel), `27f0bce`, `810bd45`, `f8245dd` (hover delays), `93eedf5` (own page panel, rename, brand), `7c391e4` (PWA), `76512c8` (PDF Home/End + snap). Other sessions also pushed to main (`91aa61d` Groq key prompt, `ceccdc1` sync chases sleeping server, `b18c66f` note box Shift+Tab).
+- Render: workspace `tea-d9tu9qm417fc73fa0br0`; web service `lazy-notes` id `srv-dc3uo7e1egvs73er4o30`, https://lazy-notes-c07b.onrender.com, frankfurt, free, auto-deploys from `main`; start `cd server && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`; env PYTHON_VERSION 3.12.7, LAZYNOTES_KEY = [secret removed: re-enter it], optional APP_NAME.
+- Render Postgres `lazy-notes-db` id `dpg-dc3uki6i0phs738klbog-a`, v16, free, expires 2026-12-26 (plan renewal/backup).
+- Server routes: GET /api/health → {"ok":true,"app":"lazy-notes"}; PUT/GET /api/snapshot (Bearer key); GET /api/report; `/`, `/manifest.webmanifest`, `/static/app.js` served with APP_NAME swapped in; `/sw.js` (Service-Worker-Allowed: /).
+- Timings: dropdown/view-switch hover open 500ms, hover-opened close 400ms; panel hover open default 300ms (choices 0/150/300/600/1000), close default 700ms (200/700/1500/3000); fade opacity 0.45; PDF snap 28px; ✕ badge 2500ms; undo toast 6000ms; double-click 230ms.
+- Sizes: web-page docked panel default 380px (min 300, max 70% of width; lnPageDockW); floating min 280×160 (readers) / 300×200 (pages); reader panel default 360px.
+- New settings keys (More options): lnDocSnap, lnDropPlain (off), lnPanelFade, lnEmbedHome (off), lnPanelHover, lnPanelHoverMs, lnPanelHoverCloseMs, lnReaderFullscreen, lnPagePanelOwn, lnPagePanelMode ("dock"|"float"), lnReaderNativePanel (off), lnQuickWhenFolded (off). Storage: lnPageFloat {x,y,w,h,folded}, lnPageDockW. sessionStorage: ln-page-panel-open, ln-fs-done.
+- Messages: LN_TOGGLE_PANEL (bg → reader), READER_READY, READER_FULLSCREEN, LN_PAGE_PANEL {action: toggle|open|focus}, RENAME_COURSE, RENAME_TOPIC; window messages ln-view {name, active, views}, ln-set-view, ln-next-view, ln-focus-composer, ln-panel-done, ln-toggle-panel. Command "toggle-panel" = Alt+Shift+L.
+- Older facts (storage keys lazynotes/activeCourse/activeTopic/lnDocs…, IndexedDB lazynotes-pdfs/-slides/-docs, spell lib, sync retries 1/5/15/30/60 min) unchanged since handoff #3.
 
 ## 9. People, terms & names
 - **People:** user (repo owner, student).
-- **Terms & nicknames:** "note typer"/"typer" = Study tab note box (composer); "side panel" = Lazy Notes panel; "pop up"/"highlighter popup" = save pop-up; "pop-up note box"/"quick box" = readers' small note box (quick-note.js); "edge tab" = slim "Notes" tab on the readers' right edge; "reader" = our PDF/slides/Word reader; "all notes home"/"main boss home page" = courses.html; "pop downs" = dropdowns; "the jump" = caret shown while dragging (fixed).
-- **Names in use (folders):** background/ (bg_*.js incl. bg_join.js, bg_sync.js, bg_arrange.js, bg_pptx.js, bg_context_menus.js), content/ (content.js save pop-up, pdf-prompt.js), readers/ (pdfreader.*, pptx*, docx*, docs-recent.js, figure-save.js, embedded-panel.* [edge tab / docked / pop-out], quick-note.* [pop-up note box + zoom bubble CSS], pinch-zoom.js [slides/Word zoom], doc-words.js [document words]), sidepanel/ (sidepanel.*, study-page.js, study.css, hover-select.*, rich-box.js), notes/ (viewer.*, notes-render.js [incl. noteParents / LnFold], notes.css, note-editor.js, exporter.js), shared/ (theme.*, utils.js, spell.js, settings.js/.css [More options], recent-docs.js), lib/, server/ (app.py, static/), render.yaml, docs/. HTML pages stay top-level (saved links depend on pdfreader.html/pptxreader.html/docxreader.html; sidepanel.html?embedded=1 in readers, ?window=1 for the pop-out).
+- **Terms:** "note typer" = Study note box; "floating note typer" / "pop-up note box" = quick-note.js box; "floating side panel / study bar" = readers' floating panel; "edge tab", "dock" = other panel modes; "that little spot" = title-bar spot (now the view switcher); "chrome page/panel" = Chrome's own side panel; "main boss home page" / "all notes" = courses.html.
+- **Files:** content/page-panel.js (web-page panel), shared/view-switch.js (title-bar switcher), shared/brand.js (name), shared/howto.js + howto.html, readers/embedded-panel.js/.css, readers/quick-note.js, notes/notes-render.js (noteParents, LnFold, trimBlankLines), sidepanel/study-page.js, background/background.js (action click, new-tab panel, reader panel), background/bg_sidepanel.js (togglePanelFor, pagePanel, cannotHere, requestSidePanel), background/bg_courses.js (renames), server/app.py + server/static (PWA), docs/usage-notes.md.
 
 ## 10. Work state
 | Item | Status | Version / location | Notes |
 |---|---|---|---|
-| Everything in Lineage #2 | final, on main | up to `9dcf563` | tested in Chromium |
-| Edge tab + slide-out, Dock, ⧉ pop-out window, floating ✎ | final, on main | `1867fd4` | 28 checks passed |
-| Pop-up note box (Ctrl+., double-click blank, Note/Quote, right-click, ✎) | final, on main | `1867fd4` | right-click menu tested via message (headless can't open native menus) |
-| PDF caret hidden while dragging + lnDocCaret switch | final, on main | `1867fd4` | user to confirm "the jump" is gone in real Chrome |
-| Doc words in spell check + typing hints | final, on main | `23cc7cf` | PDF, slides, Word |
-| Pinch zoom only the document | final, on main | `23cc7cf` | tested with synthetic Ctrl+wheel; real trackpad feel unconfirmed |
-| Web-page Note/Quote → side panel note box | final, on main | `23cc7cf` | — |
-| Joined PDF line breaks in save pop-up | final, on main | `23cc7cf` | lists untouched |
-| + New topic in Study topic list | final, on main | `23cc7cf` | — |
-| List head (8), folding, filters with heads | final, on main | `7f299b8` | Study + All notes topic page |
-| Smoother panel (vs Web Highlights) | waiting on user | — | redraw keeps scroll, ~0.1s for 300 notes; need what feels rough |
-| Old notes get joined PDF lines (auto once, Undo in Settings) | final, on main | after `0c7ffaf` | folding, list heads, filters, doc-words already apply to old notes |
-| Remaining "More options" toggles: pop-up course/topic pickers, "Saving to" line, Document reader footer link, formatting bar, built-in Notes panel on/off | NOT done | — | rule 2 |
-| Drag PDF text into built-in panel | untested | — | headless can't drag into iframe |
+| Everything in lineage #4 | final, on main | up to `f42fd26` | tested in headless Chromium |
+| Chrome panel on new tab via the real toolbar click | untested | background.js | headless can't click the action |
+| Page panel on sites with strict CSP | untested | page-panel.js | may be blocked → ✕ |
+| Spacing fix (trimBlankLines) | pushed, cause inferred | notes-render.js | user to confirm with real data |
+| Hover-open for the web-page panel | not done | — | offered |
+| Remaining More options toggles from #3 (pop-up course/topic pickers, Saving-to line, Document reader footer link, formatting bar, built-in panel on/off) | not done | — | rule 2 |
 
-Tests: Playwright scripts lived in the session scratchpad (gone with the session). Pattern: `chromium.launchPersistentContext(dir,{channel:'chromium',headless:true,args:['--disable-extensions-except=<repo>','--load-extension=<repo>']})`, seed chrome.storage via the service worker (`ctx.serviceWorkers()[0].evaluate`), `python3 -m http.server 8765` for test pages; test PDFs made with reportlab, .docx with python-docx, .pptx with python-pptx. Write test files with the Write tool (shell heredocs with `>`/`&` were blocked by a safety check). `chrome.windows.create` needs bounds inside the screen (fallback without left/top is in place).
+Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chromium.launchPersistentContext(dir,{channel:'chromium',headless:true,args:['--disable-extensions-except=<repo>','--load-extension=<repo>']})`; seed `lazynotes:{courses:{C:{topics:{T:{highlights:{},notes:{}}}}}}` + activeCourse/activeTopic via the service worker; remove the `#ln-place` dialog in readers; `python3 -m http.server 8765` for test pages; test PDF via reportlab.
 
 ## 11. Next steps
-1. **Next action:** ask the user what feels rough about the panel vs Web Highlights (opening/closing, scrolling, clicking to edit, looks) and fix that; ask them to confirm in real Chrome that the PDF "jump" is gone and pinch zoom feels right.
-2. Remaining More options toggles (rule 2): pop-up course/topic pickers, "Saving to" line, Document reader footer link, formatting bar, built-in Notes panel on/off.
-3. Ideas not yet requested (only if asked): drag a folded group as one; fold state synced; fold in All notes when filtered.
+1. **Next action:** ask the user to reload the extension and confirm in real Chrome: (a) spacing between nested notes, (b) toolbar button on a new tab opens Chrome's panel with Home, (c) the title-bar view switcher feels right.
+2. Offer hover-open for the web-page floating panel.
+3. Remaining More options toggles (section 10).
 
 ## 12. Open questions ⚠️
-- Item 6 "smoother panel": what exactly feels less smooth than Web Highlights?
-- Does the PDF caret "jump" still happen in real Chrome?
+- Is the note spacing fixed with real notes (cause inferred: blank leading/trailing lines)?
+- Should Chrome's panel also be used on other blocked pages (chrome://extensions etc.), or only on new tab pages (current)?
 
 ## 13. Re-attach checklist
-- Nothing to attach (code is in the repo; the sync key is in the Render service env and the user's extension settings).
+- Nothing to attach (code is in the repo; the sync key is in the Render env and the user's extension settings).
 
 ---
-<sub>Audit: 13/13 sections · 7 rules · 16 corrections · 45 data points · secrets removed: yes · generated by active-memory</sub>
+<sub>Audit: 13/13 sections · 9 rules · 34 corrections · 60 data points · secrets removed: yes · generated by active-memory</sub>
