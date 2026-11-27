@@ -238,6 +238,26 @@
     if (el?.closest?.("table") && /\t|\n/.test(t)) return "table";
     if (t.split("\n").filter((l) => l.includes("\t")).length >= 2) return "table";
     if (/^(note|nb|important|remember|exam|warning|tip)\b[:\s-]/i.test(t)) return "note";
+    // Big or all-capital short lines are headings (before the "A - b" definition rule).
+    if (words <= 12 && !/[.!?,;]$/.test(t) && /^[A-Z0-9]/.test(t) && !t.includes("\n")) {
+      const node = el?.nodeType === 1 ? el : el?.parentElement || document.body;
+      const fs = parseFloat(getComputedStyle(node).fontSize) || 16;
+      // In the PDF reader the words sit in a text layer whose size follows
+      // the zoom: compare with the page's usual text size, not the body's.
+      const layer = node.closest?.(".textLayer");
+      let base = parseFloat(getComputedStyle(document.body).fontSize) || 16;
+      if (layer) {
+        const sizes = [...layer.querySelectorAll("span")].slice(0, 400)
+          .filter((x) => x.textContent.trim().length > 3).map((x) => parseFloat(getComputedStyle(x).fontSize)).filter(Boolean).sort((a, b) => a - b);
+        if (sizes.length >= 3) base = sizes[Math.floor(sizes.length / 2)];
+      }
+      if (words <= 8 || layer) {
+        if (fs >= base * 1.4) return "header";
+        if (fs >= base * 1.12) return "sub topic";
+      }
+      // A short line all in capitals is a title, whatever its size.
+      if (t === t.toUpperCase() && /[A-Z]{3}/.test(t) && words >= 2) return "header";
+    }
     if (/[=≈≠≤≥∑∫√±×÷∝∂]/.test(t) && words <= 25) return "formula";
     if (/^(in summary|to summari[sz]e|in conclusion|overall|in short)\b/i.test(t)) return "summary";
     if (/^[^.:;]{1,50}?\s*(:|\s[-–—]\s)\s*\S/.test(t) && words >= 3) return "definition";
@@ -245,12 +265,6 @@
     if (tag === "li" || /^\s*([-•*▪◦]|\d+[.)]|[a-z][.)])\s/.test(t)) return "list point";
     if (/^h[12]$/.test(tag) || tag === "div" && el.closest(".s-title")) return "header";
     if (/^h[3-6]$/.test(tag)) return "sub topic";
-    if (words <= 8 && !/[.!?]$/.test(t) && /^[A-Z0-9]/.test(t)) {
-      const fs = parseFloat(getComputedStyle(el?.nodeType === 1 ? el : el?.parentElement || document.body).fontSize) || 16;
-      const base = parseFloat(getComputedStyle(document.body).fontSize) || 16;
-      if (fs >= base * 1.4) return "header";
-      if (fs >= base * 1.15) return "sub topic";
-    }
     if (words > 60) return "summary";
     return null;
   }

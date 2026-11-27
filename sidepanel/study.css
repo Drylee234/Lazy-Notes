@@ -323,32 +323,7 @@ body:has(#study-view.visible) #study-dock { display: block; }
 @keyframes float-in { from { transform: translateY(-4px); } }
 
 
-/* ── The rich note box (rich-box.js): looks like the saved note ── */
-.rich-box { position: relative; outline: none; line-height: 1.5; overflow-wrap: anywhere; cursor: text; color: var(--pri); }
-.rich-box.is-empty::before { content: attr(data-placeholder); color: var(--dim); pointer-events: none; position: absolute; }
-.rich-box > * { margin: 0; }
-.rich-box p { margin: 0; }
-.rich-box h3, .rich-box h4, .rich-box h5 { margin: 2px 0; font-weight: 700; line-height: 1.3; }
-.rich-box h3 { font-size: 1.2em; }
-.rich-box h4 { font-size: 1.07em; }
-.rich-box h5 { font-size: 1em; color: var(--sec); }
-.rich-box ul, .rich-box ol { margin: 0; padding-left: 20px; }
-.rich-box ul ul, .rich-box ol ol, .rich-box ul ol, .rich-box ol ul { padding-left: 18px; }
-.rich-box li::marker { color: var(--accent); }
-.rich-box blockquote { margin: 2px 0; padding-left: 10px; border-left: 3px solid var(--border-strong); color: var(--sec); }
-.rich-box mark { background: var(--marker); color: inherit; border-radius: 2px; }
-.rich-box b, .rich-box strong { font-weight: 700; }
-.rich-box.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
-
-.format-bar { display: flex; align-items: center; gap: 1px; padding: 2px 0; }
-.fb-btn {
-  min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-radius: 5px;
-  background: transparent; color: var(--sec); font: inherit; font-size: 12px; cursor: pointer;
-}
-.fb-btn:hover { background: var(--hover); color: var(--pri); }
-.fb-btn.on { background: var(--accent-soft); color: var(--accent); }
-.fb-mark { padding: 0 3px; border-radius: 3px; background: rgba(253, 224, 71, 0.55); color: var(--pri); font-weight: 600; }
-.fb-sep { width: 1px; height: 14px; margin: 0 4px; background: var(--border); }
+/* The rich note box + formatting bar: sidepanel/rich-box.css */
 .note--typed.editing .format-bar { margin-bottom: 4px; }
 
 /* In the "Saving to" card the pickers sit on the card's own line */
@@ -404,6 +379,18 @@ body:has(#study-view.visible) #study-dock { display: block; }
 }
 #note-list .note-indent:hover { background: var(--hover); color: var(--pri); }
 @media (hover: none) { #note-list .note-tools { opacity: 1; pointer-events: auto; transform: none; } }
+/* Big (default): easier to find and hit. Stacked down the note's left margin
+   (still off the words): ⋮⋮ drag, ⇤ outdent, ⇥ indent. Settings › "Arrange
+   buttons" › Small brings back the old little row (lnToolsSize). */
+:root:not(.ln-tools-small) #note-list .note-tools {
+  flex-direction: column; gap: 2px; left: -4px; top: 0; padding: 2px;
+  border-radius: 8px; box-shadow: 0 0 0 1px var(--border-strong), 0 3px 10px rgba(0,0,0,.14);
+}
+:root:not(.ln-tools-small) #note-list .note-handle { width: 26px; height: 18px; font-size: 13px; }
+:root:not(.ln-tools-small) #note-list .note-indent {
+  width: 26px; height: 26px; border-radius: 6px; font-size: 17px; font-weight: 700; color: var(--sec);
+}
+:root:not(.ln-tools-small) #note-list .note-indent:hover { background: var(--accent-soft); color: var(--accent); }
 
 /* While dragging: the note dims, a line shows where it will land. */
 body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-select: none !important; }
@@ -471,3 +458,6 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
   background-position: calc(var(--gbase) + 22px + var(--group-px, 0px)) 0, calc(var(--gbase) + 40px + var(--group-px, 0px)) 0, calc(var(--gbase) + 58px + var(--group-px, 0px)) 0;
   background-size: 1.5px 100%, 1.5px 100%, 1.5px 100%;
 }
+/* The note under the mouse wins: a focused note's card steps aside. */
+#note-list:has(.tools-near) .note:not(.tools-near) > .note-tools { opacity: 0; pointer-events: none; }
+#note-list .note.tools-near > .note-tools { z-index: 4; }

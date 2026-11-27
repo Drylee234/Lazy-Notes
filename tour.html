@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lazy Notes — Tour</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
+<link rel="stylesheet" href="shared/theme.css" />
+<link rel="stylesheet" href="tour/tour.css" />
+<script src="shared/theme.js"></script>
+<script src="shared/brand.js"></script>
+</head>
+<body>
+<main id="tour" aria-live="polite">
+  <header class="tour-top">
+    <img src="icons/logo.svg" alt="" width="22" height="22" />
+    <span class="tour-name">Lazy Notes · How to use</span>
+    <span class="tour-count" id="count"></span>
+    <button type="button" class="tour-x" id="close" title="Close (Esc)" aria-label="Close">✕</button>
+  </header>
+  <section class="tour-slide" id="slide"></section>
+  <footer class="tour-bottom">
+    <label class="tour-again"><input type="checkbox" id="again" /> Show this tour each time the extension is reloaded or updated</label>
+    <div class="tour-dots" id="dots"></div>
+    <div class="tour-nav">
+      <button type="button" class="tour-btn" id="prev">← Back</button>
+      <button type="button" class="tour-btn primary" id="next">Next →</button>
+    </div>
+  </footer>
+</main>
+<script src="shared/howto.js"></script>
+<script src="tour/slides.js"></script>
+<script src="tour/positions.js"></script>
+<script src="tour/tour.js"></script>
+</body>
+</html>

@@ -385,3 +385,34 @@ body[data-page="courses"] #app { max-width: 900px; }
 .course-doc-x:hover { background: var(--hover); color: var(--danger); }
 
 .rename-btn:hover { color: var(--accent); }
+
+/* ── Arranging + editing typed notes here, like the Study tab ── */
+.note-sheet { position: relative; }
+.note-sheet .note[data-nest] { padding-left: calc(12px + var(--indent, 18px) + var(--nest-px, 0px) + var(--group-px, 0px)); }
+.note-sheet .note--list-point[data-nest]::before { left: calc(12px + 22px + var(--nest-px, 0px) + var(--group-px, 0px)); }
+.note-sheet .note { --guide: color-mix(in srgb, var(--dim) 42%, transparent); }
+.note-sheet .note[data-nest] { background-repeat: no-repeat; background-size: 1.5px 100%; }
+.note-sheet .note[data-nest="1"] { background-image: linear-gradient(var(--guide), var(--guide)); background-position: calc(12px + 22px + var(--group-px, 0px)) 0; }
+.note-sheet .note[data-nest="2"] { background-image: linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide)); background-position: calc(12px + 22px + var(--group-px, 0px)) 0, calc(12px + 40px + var(--group-px, 0px)) 0; background-size: 1.5px 100%, 1.5px 100%; }
+.note-sheet .note[data-nest="3"] { background-image: linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide)), linear-gradient(var(--guide), var(--guide)); background-position: calc(12px + 22px + var(--group-px, 0px)) 0, calc(12px + 40px + var(--group-px, 0px)) 0, calc(12px + 58px + var(--group-px, 0px)) 0; background-size: 1.5px 100%, 1.5px 100%, 1.5px 100%; }
+.note-sheet .note-tools {
+  position: absolute; left: -6px; top: 0; z-index: 3; display: flex; flex-direction: column; gap: 2px; padding: 2px;
+  border-radius: 8px; background: var(--bg); box-shadow: 0 0 0 1px var(--border-strong), 0 3px 10px rgba(0,0,0,.14);
+  opacity: 0; pointer-events: none; transform: translateX(-4px); transition: opacity .12s, transform .12s;
+}
+.note-sheet .note.tools-near > .note-tools,
+.note-sheet .note:focus-visible > .note-tools,
+.note-sheet .note-tools:focus-within { opacity: 1; pointer-events: auto; transform: none; }
+.note-sheet .note-indent {
+  width: 28px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent;
+  color: var(--sec); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.note-sheet .note-indent:hover { background: var(--accent-soft); color: var(--accent); }
+@media (hover: none) { .note-sheet .note-tools { opacity: 1; pointer-events: auto; transform: none; } }
+.note-sheet .note--typed.editing { background: var(--hover); cursor: default; }
+.note-sheet .typed-editor { min-height: 1.5em; }
+.note-sheet .typed-editor-hint { margin-top: 4px; font-size: 11px; color: var(--dim); }
+.note-sheet .note--typed.editing .format-bar { margin-bottom: 4px; }
+/* The note under the mouse wins: a focused note's card steps aside. */
+.note-sheet:has(.tools-near) .note:not(.tools-near) > .note-tools { opacity: 0; pointer-events: none; }
+.note-sheet .note.tools-near > .note-tools { z-index: 4; }

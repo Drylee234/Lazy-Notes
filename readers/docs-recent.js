@@ -103,6 +103,7 @@ globalThis.LazyDocs = (() => {
 
   function askWhere(name, lazynotes) {
     const courses = lazynotes?.courses || {};
+    const NEW = "\u0000new";
     const names = Object.keys(courses);
     const wrap = document.createElement("div");
     wrap.id = "ln-place";
@@ -135,8 +136,10 @@ globalThis.LazyDocs = (() => {
     };
     const fillT = (v) => {
       const topics = Object.keys(courses[cs.value]?.topics || {});
-      ts.replaceChildren(new Option(cs.value ? (topics.length ? "Pick a topic…" : "No topics yet") : "", ""), ...topics.map((n) => new Option(n, n)));
-      ts.value = topics.includes(v) ? v : "";
+      ts.replaceChildren(new Option(cs.value ? (topics.length ? "Pick a topic…" : "No topics yet") : "", ""), ...topics.map((n) => new Option(n, n)),
+        ...(cs.value ? [new Option("+ New topic…", NEW)] : []));
+      // A course with one topic: that's the one (Enter saves straight away).
+      ts.value = topics.includes(v) ? v : (v === null && topics.length === 1 ? topics[0] : "");
       ts.disabled = !cs.value;
       ok.disabled = !(cs.value && ts.value);
       ok.style.opacity = ok.disabled ? ".5" : "1";
@@ -151,14 +154,35 @@ globalThis.LazyDocs = (() => {
       (g.topic ? ok : ts).focus();
     };
     fillC(""); fillT("");
-    cs.addEventListener("change", () => { hint.style.display = "none"; fillT(null); (cs.value ? ts : cs).focus(); });
-    ts.addEventListener("change", () => { ok.disabled = !ts.value; ok.style.opacity = ok.disabled ? ".5" : "1"; if (ts.value) ok.focus(); });
+    cs.addEventListener("change", () => { hint.style.display = "none"; fillT(null); (ts.value ? ok : cs.value ? ts : cs).focus(); });
+    ts.addEventListener("change", async () => {
+      if (ts.value === NEW) {
+        // A new lecture usually wants a new topic: make it right here.
+        const name = (prompt(`New topic in ${cs.value}:`) || "").trim();
+        if (name) {
+          await chrome.runtime.sendMessage({ type: "CREATE_TOPIC", courseName: cs.value, name }).catch(() => {});
+          for (let i = 0; i < 20; i++) {
+            const { lazynotes: fresh } = await chrome.storage.local.get("lazynotes");
+            const made = Object.keys(fresh?.courses?.[cs.value]?.topics || {}).find((t) => t.toLowerCase().replace(/\s+/g, " ") === name.toLowerCase().replace(/\s+/g, " "));
+            if (made) { courses[cs.value] = fresh.courses[cs.value]; fillT(made); break; }
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        }
+        if (ts.value === NEW) fillT("");
+      }
+      ok.disabled = !ts.value; ok.style.opacity = ok.disabled ? ".5" : "1"; if (ts.value) ok.focus();
+    });
 
     const close = () => { wrap.remove(); document.removeEventListener("keydown", onKey, true); };
     async function finish(save) {
       close();
       const course = save ? cs.value : null, topic = save ? ts.value : null;
-      if (save) await chrome.storage.local.set({ activeCourse: course, activeTopic: topic });
+      if (save) {
+        await chrome.storage.local.set({ activeCourse: course, activeTopic: topic });
+        // You just said where notes go: selecting text should now save.
+        const { highlighterActive } = await chrome.storage.local.get("highlighterActive");
+        if (!highlighterActive) chrome.runtime.sendMessage({ type: "TOGGLE_HIGHLIGHTER_REQUEST" }).catch(() => {});
+      }
       await update((docs) => { if (docs[key]) Object.assign(docs[key], { course, topic, asked: true }); });
     }
     function onKey(e) {

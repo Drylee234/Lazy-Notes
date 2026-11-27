@@ -7,6 +7,7 @@
   const SECTIONS = [
     { title: "Writing a note while you read (PDF · slides · Word)", rows: [
       [`${C} + .`, "Floating note typer: jump into the Notes box (with words selected: quote them)"],
+      [`${C} + Shift + .`, "Pop-up note box right where you're reading (always works)"],
       [`${C} + /`, "Show / hide the Notes panel"],
       ["Double-click blank space", "Pop-up note box right there"],
       ["Right-click › ✎ Quick note here", "Same pop-up note box"],
@@ -37,6 +38,12 @@
       ["Alt + ← →", "Outdent / indent (nest under the note above)"],
       ["← →  (on a heading)", "Fold / unfold what's under it"],
       ["Tab · Shift+Enter", "In the note box: Tab = Save as (then a number or Enter) · Shift+Enter = new line"],
+      ["Hover a note's left edge", "⋮⋮ drag to move · ⇤ ⇥ outdent / indent"],
+    ]},
+    { title: "All notes (the big page)", rows: [
+      ["Click a note", "Edit it, typed notes too (Enter saves · Shift+Enter new line · Esc cancels)"],
+      ["Hover a note's left edge", "↑ ↓ move it · ⇤ ⇥ indent"],
+      ["Alt + ↑ ↓ ← →", "Same, on the note that has the keyboard (Tab to it)"],
     ]},
   ];
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));

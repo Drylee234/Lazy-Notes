@@ -92,7 +92,15 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   });
 });
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  // The How-to-use tour, each time the extension is installed, reloaded or
+  // updated (Settings: "Show the How-to-use tour…", lnTourOnReload).
+  if (reason === "install" || reason === "update") {
+    chrome.storage.local.get("lnTourOnReload", (r) => {
+      if (r?.lnTourOnReload === false) return;
+      chrome.tabs.create({ url: chrome.runtime.getURL("tour.html") }).catch?.(() => {});
+    });
+  }
   refreshCourseContextMenuItems();
   ensureContentScripts();  // tabs opened before install/reload
   restoreBadge();

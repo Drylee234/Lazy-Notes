@@ -85,9 +85,19 @@
   btn.before(allBtn);
   // The status pill ("Saving to …") used to open Chrome's side panel; it now
   // shows ours (unless Chrome's panel is kept in readers on purpose).
+  // "Highlighter off" with a topic picked: the click switches it on (that's
+  // what you meant); with no topic, it shows the panel to pick one.
   chrome.storage.local.get("lnReaderNativePanel", (r) => {
-    if (r?.lnReaderNativePanel === true) return;
-    document.getElementById("hl-status")?.addEventListener("click", (e) => { e.stopImmediatePropagation(); if (!shown()) togglePanel(); }, true);
+    const native = r?.lnReaderNativePanel === true;
+    document.getElementById("hl-status")?.addEventListener("click", async (e) => {
+      const { highlighterActive, activeCourse, activeTopic } = await chrome.storage.local.get(["highlighterActive", "activeCourse", "activeTopic"]);
+      if (!highlighterActive && activeCourse && activeTopic) {
+        chrome.runtime.sendMessage({ type: "TOGGLE_HIGHLIGHTER_REQUEST" }).catch(() => {});
+        return;
+      }
+      if (!native && !shown()) togglePanel();
+    }, true);
+    if (!native) document.getElementById("hl-status")?.addEventListener("click", (e) => e.stopImmediatePropagation(), true);
   });
 
   const isMac = /Mac/.test(navigator.platform);

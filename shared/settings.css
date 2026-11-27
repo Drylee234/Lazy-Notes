@@ -88,3 +88,36 @@
 .ln-settings .set-ai-server { margin: 2px 0 6px; font-size: 11px; color: var(--sec); overflow-wrap: anywhere; }
 .ln-settings .set-ai-server[hidden] { display: none; }
 .ln-settings .set-field[hidden] { display: none; }
+
+/* ── Layout: everyday first, then Fine-tuning and Old ways (folded) ── */
+.ln-settings .set-find {
+  width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 6px 9px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--pri); font: inherit; font-size: 12.5px;
+}
+.ln-settings .set-find:focus { outline: none; border-color: var(--accent); }
+.ln-settings .set-none { font-size: 12px; color: var(--dim); margin: 4px 0 8px; }
+.ln-settings .set-none[hidden] { display: none; }
+.ln-settings .set-item { position: relative; }
+.ln-settings .set-everyday > .set-item + .set-item:has(> .set-check, > .set-reset + .set-check) { margin-top: 8px; }
+.ln-settings .set-more .set-item + .set-item { margin-top: 8px; }
+.ln-settings .set-group-note { margin: 4px 0 4px; font-size: 11.5px; color: var(--dim); }
+.ln-settings .set-count { font-size: 10.5px; text-transform: none; letter-spacing: 0; color: var(--accent); font-weight: 600; }
+.ln-settings .set-old .set-sync-head { color: var(--dim); }
+.ln-settings .set-link { display: inline-block; margin: 3px 0 0 22px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 11.5px; cursor: pointer; }
+.ln-settings .set-link:hover { text-decoration: underline; }
+
+/* Changed from how it came: a dot in the margin, which puts it back (↺). */
+.ln-settings .set-item.is-changed { box-shadow: -8px 0 0 -6px var(--accent); }
+.ln-settings .set-reset {
+  position: absolute; right: -4px; top: -3px; z-index: 1; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--accent); font: 600 13px/20px system-ui; cursor: pointer; opacity: .55;
+}
+.ln-settings .set-item:hover > .set-reset, .ln-settings .set-reset:focus-visible { opacity: 1; background: var(--accent-soft); }
+.ln-settings .set-item.is-changed > .set-check { padding-right: 16px; }
+
+/* While finding a setting: only matching lines (and their folds) show. */
+.ln-settings.searching > :not(.set-find, .set-none, .set-group, .set-item),
+.ln-settings.searching .set-group > :not(summary, .set-item),
+.ln-settings.searching .set-item:not(.set-hit) { display: none !important; }
+.ln-settings.searching details.set-group:not(:has(.set-hit)) { display: none; }
+.ln-settings.searching .set-item.set-hit + .set-item.set-hit { margin-top: 8px; }

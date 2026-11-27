@@ -10,104 +10,120 @@
 //   lnQuickMenu, lnQuickFloat (ways to open the readers' pop-up note box);
 //   lnDocCaret (keyboard cursor in PDFs). false = off.
 //   lnDocSnap (a press just beside a word still starts the highlight). false = off.
+//   Layout: everyday choices first; "Fine-tuning" = helpers that are on;
+//   "Old ways" = switches that bring back something changed or removed (all
+//   off by default). Changed lines get a dot + ↺; "Find a setting" filters.
+//   lnNoteGap "tight"|"roomy", lnToolsSize "big"|"small", lnTourOnReload.
 // Needs shared/settings.css.
 
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload"];
 
   const MARKUP = `
-    <div class="set-label">Look</div>
+    <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
+    <div class="set-none" hidden>No setting matches.</div>
+    <div class="set-group set-everyday">
+    <div class="set-item"><div class="set-label">Look</div>
     <div class="seg" data-key="lnTheme" data-default="auto" role="radiogroup" aria-label="Look">
       <button type="button" data-value="auto" role="radio">Auto</button>
       <button type="button" data-value="light" role="radio">Light</button>
       <button type="button" data-value="dark" role="radio">Dark</button>
-    </div>
-    <div class="set-label">Save pop-up appears</div>
+    </div></div>
+    <div class="set-item"><div class="set-label">Save pop-up appears</div>
     <div class="seg seg--wrap" data-key="lnPopupSide" data-default="above" role="radiogroup" aria-label="Save pop-up position">
       <button type="button" data-value="above" role="radio">Above</button>
       <button type="button" data-value="below" role="radio">Below</button>
       <button type="button" data-value="left" role="radio">Left</button>
       <button type="button" data-value="right" role="radio">Right</button>
       <button type="button" data-value="split" role="radio" title="Text on one side of the mouse, type and Save on the other">Split</button>
-    </div>
-    <label class="set-range">
+    </div></div>
+    <div class="set-item"><label class="set-range">
       <span class="set-range-head"><span>Autocorrect</span><b class="set-level-name">Mild</b></span>
       <input type="range" class="set-level" min="0" max="3" step="1" value="1" aria-label="Autocorrect strength" />
       <span class="set-range-ticks"><span>Off</span><span>Mild</span><span>Strong</span><span>Toxic</span></span>
-    </label>
-    <label class="set-check"><input type="checkbox" data-key="lnDocAutoSelect" /> Opening a document switches to the course &amp; topic it saved to last</label>
-    <label class="set-check"><input type="checkbox" data-key="pptxAutoOpen" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label>
-    <details class="set-sync set-more">
-      <summary class="set-label set-sync-head">More options</summary>
-      <div class="set-label set-sub">New documents</div>
-      <label class="set-check"><input type="checkbox" data-key="lnAskPlace" /> Ask which course &amp; topic a new document's notes go to (suggests one)</label>
-      <div class="set-label set-sub">Notes panel in the readers</div>
-      <div class="seg" data-key="lnPanelMode" data-default="float" role="radiogroup" aria-label="Notes panel in the readers">
-        <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>
-        <button type="button" data-value="tab" role="radio" title="Hidden behind a tab on the right edge; slides out over the page">Edge tab</button>
-        <button type="button" data-value="docked" role="radio" title="Always beside the document">Docked</button>
-      </div>
-      <div class="set-label set-sub">Pop-up note box opens with</div>
-      <label class="set-check"><input type="checkbox" data-key="lnQuickWhenFolded" data-off /> Ctrl+. while the floating panel is folded or hidden (else Ctrl+. goes into the panel). Ctrl+Shift+. always opens it</label>
-      <label class="set-check"><input type="checkbox" data-key="lnQuickDblClick" /> Double-click blank space</label>
-      <label class="set-check"><input type="checkbox" data-key="lnQuickSelButtons" /> ✎ Note / ❝ Quote buttons in the save pop-up</label>
-      <label class="set-check"><input type="checkbox" data-key="lnQuickMenu" /> Right-click → Quick note here</label>
-      <label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab</label>
-      <div class="set-label set-sub">Notes</div>
-      <label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label>
-      <label class="set-check"><input type="checkbox" data-key="lnBoldItalic" data-off /> B / I buttons in the note box (Ctrl+B / Ctrl+I always work)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note; Plain stays for page words)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote, no question)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnPanelFade" /> Floating Notes box fades while the mouse is away from it</label>
-      <label class="set-check"><input type="checkbox" data-key="lnEmbedHome" data-off /> Also show the Home / Study / AI tab row inside the in-page / reader panel (the title bar switches views anyway)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnPanelHover" /> Hovering the Notes tab (or the folded bar) opens the panel; moving away closes it</label>
-      <div class="set-label set-sub">Hover: rest this long before it opens</div>
+    </label></div>
+    <div class="set-item"><div class="set-label">Notes panel in the readers</div>
+    <div class="seg" data-key="lnPanelMode" data-default="float" role="radiogroup" aria-label="Notes panel in the readers">
+      <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>
+      <button type="button" data-value="tab" role="radio" title="Hidden behind a tab on the right edge; slides out over the page">Edge tab</button>
+      <button type="button" data-value="docked" role="radio" title="Always beside the document">Docked</button>
+    </div></div>
+    <div class="set-item"><div class="set-label">Panel on web pages</div>
+    <div class="seg" data-key="lnPagePanelMode" data-default="dock" role="radiogroup" aria-label="Panel on web pages">
+      <button type="button" data-value="dock" role="radio" title="On the right edge; the page makes room">Docked</button>
+      <button type="button" data-value="float" role="radio" title="A box over the page: drag, resize, fold; fades when the mouse is away">Floating</button>
+    </div></div>
+    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAskPlace" /> Ask which course &amp; topic a new document's notes go to (suggests one)</label></div>
+    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocAutoSelect" /> Opening a document switches to the course &amp; topic it saved to last</label></div>
+    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="pptxAutoOpen" /> Open PowerPoint (.pptx) downloads in Lazy Notes</label></div>
+    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnTourOnReload" /> Show the How-to-use tour each time the extension is reloaded or updated</label>
+      <button type="button" class="set-link set-tour-open">Open the tour now</button></div>
+    </div>
+    <details class="set-sync set-more set-group">
+      <summary class="set-label set-sync-head">Fine-tuning <span class="set-count"></span></summary>
+      <div class="set-group-note">Helpers that are on. Switch one off if it gets in your way.</div>
+      <div class="set-label set-sub">Floating panel</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPanelFade" /> Floating Notes box fades while the mouse is away from it</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPanelHover" /> Hovering the Notes tab (or the folded bar) opens the panel; moving away closes it</label></div>
+      <div class="set-item"><div class="set-label set-sub">Hover: rest this long before it opens</div>
       <div class="seg" data-key="lnPanelHoverMs" data-default="300" role="radiogroup" aria-label="Hover time before the panel opens">
         <button type="button" data-value="0" role="radio">Instant</button>
         <button type="button" data-value="150" role="radio">0.15s</button>
         <button type="button" data-value="300" role="radio">0.3s</button>
         <button type="button" data-value="600" role="radio">0.6s</button>
         <button type="button" data-value="1000" role="radio">1s</button>
-      </div>
-      <div class="set-label set-sub">…and after you move away, wait this long before it closes</div>
+      </div></div>
+      <div class="set-item"><div class="set-label set-sub">…and after you move away, wait this long before it closes</div>
       <div class="seg" data-key="lnPanelHoverCloseMs" data-default="700" role="radiogroup" aria-label="Wait before the panel closes">
         <button type="button" data-value="200" role="radio">0.2s</button>
         <button type="button" data-value="700" role="radio">0.7s</button>
         <button type="button" data-value="1500" role="radio">1.5s</button>
         <button type="button" data-value="3000" role="radio">3s</button>
-      </div>
-      <label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" /> Lazy Notes' own panel on web pages (off: Chrome's side panel). Alt+Shift+L or the toolbar button opens it</label>
-      <div class="set-label set-sub">Panel on web pages</div>
-      <div class="seg" data-key="lnPagePanelMode" data-default="dock" role="radiogroup" aria-label="Panel on web pages">
-        <button type="button" data-value="dock" role="radio" title="On the right edge; the page makes room">Docked</button>
-        <button type="button" data-value="float" role="radio" title="A box over the page: drag, resize, fold; fades when the mouse is away">Floating</button>
-      </div>
-      <label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Also use Chrome's side panel inside readers (off = only the built-in Notes panel; the toolbar button toggles it)</label>
+      </div></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label></div>
+      <div class="set-label set-sub">Pop-up note box opens with</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickDblClick" /> Double-click blank space</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickSelButtons" /> ✎ Note / ❝ Quote buttons in the save pop-up</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickMenu" /> Right-click → Quick note here</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickFloat" /> Floating ✎ button above the Notes tab (Edge tab panel)</label></div>
       <div class="set-label set-sub">Saving</div>
-      <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>
-      <label class="set-check"><input type="checkbox" data-key="lnDropPageNums" /> Leave out lone page numbers picked up from PDFs</label>
-      <label class="set-check"><input type="checkbox" data-key="lnDupWarn" /> Warn when the words are already saved in the topic</label>
-      <label class="set-check"><input type="checkbox" data-key="lnHeadSplit" /> Offer to split “Heading: words…” into a heading + Definition</label>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDropPageNums" /> Leave out lone page numbers picked up from PDFs</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDupWarn" /> Warn when the words are already saved in the topic</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnHeadSplit" /> Offer to split “Heading: words…” into a heading + Definition</label></div>
       <div class="set-label set-sub">Typing</div>
-      <label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label>
-      <label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnPunctFix" /> Fix stray punctuation as you type (“word ,next” → “word, next”, “(1791)discovered”, “produc[tion”)</label>
-      <div class="set-label set-sub">Old notes</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPunctFix" /> Fix stray punctuation as you type (“word ,next” → “word, next”, “(1791)discovered”, “produc[tion”)</label></div>
+      <div class="set-label set-sub">Notes &amp; PDFs</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocSnap" /> Start highlighting even if you press a little beside the words (PDFs)</label></div>
+      <div class="set-item"><div class="set-label set-sub">Old notes</div>
       <div class="set-tidy">
         <span class="set-tidy-status">Old PDF highlights get their broken lines joined, like new ones.</span>
         <span class="set-backup">
           <button type="button" class="set-btn set-tidy-run" title="Join broken lines in old highlights (lists stay lists)">Tidy now</button>
           <button type="button" class="set-btn set-tidy-undo" title="Put every tidied highlight back as it was">Undo tidy</button>
         </span>
-      </div>
-      <div class="set-label set-sub">Documents</div>
-      <label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnDocSnap" /> Start highlighting even if you press a little beside the words (PDFs)</label>
+      </div></div>
     </details>
-    <details class="set-sync set-ai">
+    <details class="set-sync set-more set-old set-group">
+      <summary class="set-label set-sync-head">Old ways, kept in case you want them back <span class="set-count"></span></summary>
+      <div class="set-group-note">Things you changed or removed. All off: tick one to bring the old way back.</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnNoteGap" data-on="roomy" data-off-value="tight" /> Roomy gap between notes (old: 8px). Off = notes sit as close as typed lines</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnToolsSize" data-on="small" data-off-value="big" /> Small ⋮⋮ ⇤ ⇥ buttons in a row (old size)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickWhenFolded" data-off /> Ctrl+. opens the pop-up note box while the floating panel is folded or hidden (Ctrl+Shift+. always does)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnBoldItalic" data-off /> B / I buttons in the note box (Ctrl+B / Ctrl+I always work)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnEmbedHome" data-off /> Home / Study / AI tab row inside the in-page / reader panel (the title bar switches views anyway)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" data-invert /> Chrome's own side panel on web pages, instead of Lazy Notes' panel</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Chrome's side panel inside readers too</label></div>
+    </details>
+    <details class="set-sync set-ai set-item">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
       <div class="set-ai-intro">Lazy Notes can ask an AI to tidy a highlight, explain it, or write a definition. It needs a <b>Groq API key</b> &mdash; free, no card, about 1,000 questions a day. Other services are in the list too. Nothing is sent anywhere until you paste a key and switch it on.</div>
       <label class="set-field"><span>Service</span>
@@ -132,13 +148,13 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b> (off until a test passes)</label>
       <div class="set-ai-note">Your key is kept in this Chrome only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
     </details>
-    <div class="set-label set-backup-label">Problems</div>
+    <div class="set-item set-item--block"><div class="set-label set-backup-label">Problems</div>
     <label class="set-check"><input type="checkbox" data-key="lnSendReports" /> Send usage &amp; error reports with sync (never your notes or key)</label>
     <div class="set-backup set-report-row">
       <button type="button" class="set-btn set-report-copy" title="Copy a report of recent errors and what was used, to paste to whoever helps you">Copy problem report</button>
       <span class="set-report-status"></span>
-    </div>
-    <div class="set-label set-backup-label">Backup</div>
+    </div></div>
+    <div class="set-item set-item--block"><div class="set-label set-backup-label">Backup</div>
     <div class="set-backup">
       <button type="button" class="set-btn set-export">Download backup</button>
       <button type="button" class="set-btn set-import">Restore…</button>
@@ -152,8 +168,8 @@ globalThis.LazySettings = (() => {
         <button type="button" class="set-btn set-cancel">Cancel</button>
       </div>
     </div>
-    <div class="set-backup-status"></div>
-    <details class="set-sync">
+    <div class="set-backup-status"></div></div>
+    <details class="set-sync set-item">
       <summary class="set-label set-sync-head">Sync to your server <span class="set-sync-dot"></span></summary>
       <label class="set-field"><span>Server address</span>
         <input type="url" class="set-sync-url" placeholder="https://your-server.onrender.com" spellcheck="false" /></label>
@@ -186,17 +202,88 @@ globalThis.LazySettings = (() => {
       b.setAttribute("aria-checked", String(b.dataset.value === (v || seg.dataset.default))));
     const showLevel = () => { levelName.textContent = LEVELS[level.value]; };
 
+    // A checkbox's stored value. data-off: off unless switched on; data-on:
+    // a text setting ("roomy" when ticked, data-off-value when not);
+    // data-invert: ticked = the setting is false; the rest: on unless off.
+    const checkedFrom = (c, v) => c.dataset.on ? v === c.dataset.on
+      : "invert" in c.dataset ? v === false
+      : "off" in c.dataset ? v === true : v !== false;
+    const valueOf = (c) => c.dataset.on ? (c.checked ? c.dataset.on : c.dataset.offValue)
+      : "invert" in c.dataset ? !c.checked : c.checked;
+    const checkedByDefault = (c) => !c.dataset.on && !("invert" in c.dataset) && !("off" in c.dataset);
+
+    // Which settings differ from how they came: a dot + ↺ (back to the
+    // default) on the line, and "n changed" on a folded group's heading.
+    function markChanged() {
+      root.querySelectorAll(".set-item").forEach((item) => {
+        let changed = false;
+        item.querySelectorAll("input[type=checkbox][data-key]").forEach((c) => { if (c.checked !== checkedByDefault(c)) changed = true; });
+        item.querySelectorAll(".seg").forEach((seg) => {
+          const on = seg.querySelector('[aria-checked="true"]');
+          if (on && on.dataset.value !== seg.dataset.default) changed = true;
+        });
+        if (item.contains(level) && level.value !== "1") changed = true;
+        if (item.matches(".set-ai, .set-sync, .set-item--block")) changed = false;   // not simple switches
+        item.classList.toggle("is-changed", changed);
+        let reset = item.querySelector(":scope > .set-reset");
+        if (changed && !reset) {
+          reset = document.createElement("button");
+          reset.type = "button";
+          reset.className = "set-reset";
+          reset.textContent = "↺";
+          reset.title = "Changed from how it came. Click to put it back";
+          reset.addEventListener("click", (e) => { e.preventDefault(); resetItem(item); });
+          item.prepend(reset);
+        } else if (!changed && reset) reset.remove();
+      });
+      root.querySelectorAll("details.set-group").forEach((d) => {
+        const n = d.querySelectorAll(".set-item.is-changed").length;
+        d.querySelector(".set-count").textContent = n ? `${n} changed` : "";
+      });
+    }
+    function resetItem(item) {
+      const keys = new Set();
+      item.querySelectorAll("[data-key]").forEach((x) => keys.add(x.dataset.key));
+      if (item.contains(level)) { keys.add("lnAutocorrectLevel"); keys.add("lnAutocorrect"); }
+      chrome.storage.local.remove([...keys]);
+    }
+
     function load() {
       chrome.storage.local.get(
         ["lnTheme", "lnPopupSide", "lnAutocorrect", "lnAutocorrectLevel", "lnDocAutoSelect", "pptxAutoOpen", ...MORE_KEYS],
         (r) => {
           segs.forEach((seg) => markSeg(seg, r[seg.dataset.key]));
-          // data-off: off unless switched on; the rest are on unless switched off.
-          checks.forEach((c) => { c.checked = "off" in c.dataset ? r[c.dataset.key] === true : r[c.dataset.key] !== false; });
+          checks.forEach((c) => { c.checked = checkedFrom(c, r[c.dataset.key]); });
           level.value = String(typeof r.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r.lnAutocorrect === false ? 0 : 1);
           showLevel();
+          markChanged();
         });
     }
+
+    // Find a setting: shows only the lines whose words match (folds open).
+    const find = root.querySelector(".set-find");
+    const noneMsg = root.querySelector(".set-none");
+    find.addEventListener("input", () => {
+      const q = find.value.trim().toLowerCase();
+      root.classList.toggle("searching", !!q);
+      let any = false;
+      root.querySelectorAll(".set-item").forEach((item) => {
+        const hit = !q || item.textContent.toLowerCase().includes(q) ||
+          [...item.querySelectorAll("[title]")].some((x) => x.title.toLowerCase().includes(q));
+        item.classList.toggle("set-hit", !!q && hit);
+        if (q && hit) any = true;
+      });
+      root.querySelectorAll("details.set-group").forEach((d) => {
+        if (q) { if (!("wasOpen" in d.dataset)) d.dataset.wasOpen = d.open ? "1" : ""; d.open = true; }
+        else if ("wasOpen" in d.dataset) { d.open = !!d.dataset.wasOpen; delete d.dataset.wasOpen; }
+      });
+      noneMsg.hidden = !q || any;
+    });
+    find.addEventListener("keydown", (e) => { if (e.key === "Escape" && find.value) { e.stopPropagation(); find.value = ""; find.dispatchEvent(new Event("input")); } });
+
+    root.querySelector(".set-tour-open")?.addEventListener("click", () => {
+      chrome.tabs?.create ? chrome.tabs.create({ url: chrome.runtime.getURL("tour.html") }) : window.open(chrome.runtime.getURL("tour.html"));
+    });
 
     segs.forEach((seg) => seg.addEventListener("click", (e) => {
       const v = e.target.closest("button")?.dataset.value;
@@ -204,7 +291,7 @@ globalThis.LazySettings = (() => {
       markSeg(seg, v);
       chrome.storage.local.set({ [seg.dataset.key]: v });
     }));
-    checks.forEach((c) => c.addEventListener("change", () => chrome.storage.local.set({ [c.dataset.key]: c.checked })));
+    checks.forEach((c) => c.addEventListener("change", () => chrome.storage.local.set({ [c.dataset.key]: valueOf(c) })));
     level.addEventListener("input", () => { showLevel(); chrome.storage.local.set({ lnAutocorrectLevel: Number(level.value) }); });
 
     // ── Backup: everything (notes, courses, recent documents, settings) in

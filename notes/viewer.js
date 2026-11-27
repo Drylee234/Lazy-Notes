@@ -586,6 +586,9 @@ async function renderDisplay() {
   const listEl           = document.getElementById("highlight-list");
 
   let editingNoteId = null;  // id of the note currently open in the edit form, or null
+  let shown = [];            // the notes on screen, in order
+  let canArrange = false;    // move / indent only while showing everything "As taken"
+  let refocusId = null;      // note to give the keyboard back to after a redraw
   let focusId = params.get("focus");  // note to scroll to when arriving from search
 
   wireExportButtons(async () => {
@@ -639,6 +642,9 @@ async function renderDisplay() {
         : sortHighlights([...highlights, ...typed], sortSel.value);
     }
 
+    shown = notes;
+    canArrange = !categoryFilter.value && sortSel.value === "chronological";
+    listEl.classList.toggle("can-arrange", canArrange);
     if (notes.length === 0) {
       listEl.innerHTML = categoryFilter.value
         ? '<div class="empty-state">No notes of this kind.</div>'
@@ -649,7 +655,13 @@ async function renderDisplay() {
     notes.forEach((note) => {
       if (note.kind === "typed") {
         const el = renderTypedNote(note);
-        el.title = "Typed in the side panel — edit it there";
+        el.title = "Click to edit";
+        const editT = () => { if (editingNoteId === null) editTyped(el, note); };
+        el.addEventListener("click", (e) => { if (!e.target.closest("button, a, .note-tools")) editT(); });
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && e.target === el) { e.preventDefault(); editT(); }
+        });
+        arrangeable(el, note);
         // × then "Delete?" (4s to confirm), like the Study tab.
         const del = document.createElement("button");
         del.type = "button";
@@ -676,6 +688,7 @@ async function renderDisplay() {
       }
 
       const el = renderNote(note);
+      arrangeable(el, note);
       if (contextIds.has(String(note.id))) el.classList.add("note--context");
       const edit = () => { if (editingNoteId === null) expandToEdit(el, note); };
       el.addEventListener("click", edit);
@@ -688,6 +701,10 @@ async function renderDisplay() {
     // Fold / unfold under heads (page order only; not while filtering).
     if (!categoryFilter.value && sortSel.value === "chronological") LnFold.apply(listEl, notes);
 
+    if (refocusId) {
+      listEl.querySelector(`.note[data-id="${CSS.escape(refocusId)}"]`)?.focus({ preventScroll: false });
+      refocusId = null;
+    }
     if (focusId) {
       const target = listEl.querySelector(`[data-id="${CSS.escape(focusId)}"]`);
       if (target) {
@@ -724,6 +741,19 @@ async function renderDisplay() {
         });
         return !!reply?.ok;
       },
+      // Type "My note": becomes one of your typed notes (annotation kept as
+      // a line under it), in the same place; the highlight goes.
+      onConvert: async (fields) => {
+        const text = fields.annotation ? `${fields.text}\n${fields.annotation}` : fields.text;
+        const id = crypto.randomUUID();
+        const r = await ask({ type: "SAVE_TYPED_NOTE", id, courseName, topicName, text });
+        if (r?.ok) {
+          await ask({ type: "SET_ARRANGEMENT", courseName, topicName,
+            items: [{ kind: "typed", id, order: noteOrder(note), indent: note.indent || 0 }] });
+          await ask({ type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName });
+        }
+        close();
+      },
       onDelete: async () => {
         const ok = await sendDelete({ type: "DELETE_HIGHLIGHT", id: note.id, courseName, topicName });
         if (ok) close();
@@ -734,6 +764,136 @@ async function renderDisplay() {
     card.replaceWith(form);
     form.focusText();
   }
+
+  // ── Total control, like the Study tab ─────────────────────────────────
+  // Typed notes edit in place (the same formatted box as Study: Enter saves,
+  // Shift+Enter new line, Esc cancels, a click elsewhere saves). Every note
+  // can be moved and indented: hover its left margin for ↑ ↓ ⇤ ⇥, or focus
+  // it and press Alt+↑ ↓ ← →. Only while showing everything "As taken".
+  function ask(message) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(message, (r) => resolve(chrome.runtime.lastError ? { ok: false, reason: chrome.runtime.lastError.message } : r));
+      } catch (err) { resolve({ ok: false, reason: String(err) }); }
+    });
+  }
+
+  function editTyped(el, note) {
+    if (!globalThis.createRichBox) return;
+    editingNoteId = note.id;
+    const input = createRichBox();
+    input.classList.add("typed-editor");
+    input.value = note.text;
+    input.setAttribute("aria-label", "Edit note");
+    const bar = createFormatBar(input);
+    const hint = document.createElement("div");
+    hint.className = "typed-editor-hint";
+    hint.textContent = "Enter saves · Shift+Enter new line · Esc cancels";
+    el.querySelector(".note-text").replaceWith(input);
+    input.before(bar);
+    input.after(hint);
+    el.querySelectorAll(".typed-del, .note-tools, .fold-btn, .fold-count").forEach((x) => x.remove());
+    el.classList.add("editing");
+    el.removeAttribute("title");
+    input.focus();
+    input.caretToEnd?.();
+    let done = false;
+    const finish = async (save) => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("pointerdown", outside, true);
+      const text = input.value.trim();
+      if (save && text && text !== note.text) {
+        const r = await ask({ type: "SAVE_TYPED_NOTE", id: note.id, courseName, topicName, text });
+        if (!r?.ok) alert(`Couldn't save your note: ${r?.reason || "unknown error"}`);
+      }
+      editingNoteId = null;
+      refocusId = note.id;
+      draw();
+    };
+    const outside = (e) => { if (!el.contains(e.target) && !e.target.closest?.(".ln-spell-bar")) finish(true); };
+    setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+      else if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); finish(true); }
+    });
+  }
+
+  const kindOf = (n) => (n.kind === "typed" ? "typed" : "highlight");
+  function arrangeable(el, note) {
+    const nest = Math.max(0, Math.min(3, note.indent || 0));
+    if (nest && canArrange) {
+      el.dataset.nest = String(nest);
+      el.style.setProperty("--nest-px", `${nest * 18}px`);
+    }
+    if (!canArrange) return;
+    const tools = document.createElement("span");
+    tools.className = "note-tools";
+    const btn = (label, title, run) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "note-indent";
+      b.tabIndex = -1;
+      b.textContent = label;
+      b.title = title;
+      b.setAttribute("aria-label", title);
+      b.addEventListener("click", (e) => { e.stopPropagation(); run(); });
+      return b;
+    };
+    tools.append(
+      btn("↑", "Move up (Alt+↑)", () => moveBy(note, -1)),
+      btn("↓", "Move down (Alt+↓)", () => moveBy(note, 1)),
+      btn("⇤", "Outdent (Alt+←)", () => indentBy(note, -1)),
+      btn("⇥", "Indent: nest under the note above (Alt+→)", () => indentBy(note, 1)));
+    el.prepend(tools);
+    el.addEventListener("keydown", (e) => {
+      if (!e.altKey || e.target !== el) return;
+      const act = { ArrowUp: () => moveBy(note, -1), ArrowDown: () => moveBy(note, 1),
+        ArrowLeft: () => indentBy(note, -1), ArrowRight: () => indentBy(note, 1) }[e.key];
+      if (act) { e.preventDefault(); act(); }
+    });
+  }
+
+  function arrange(items, id) {
+    refocusId = id;
+    ask({ type: "SET_ARRANGEMENT", courseName, topicName, items }).then((r) => {
+      if (!r?.ok) alert(`Couldn't arrange: ${r?.reason || "unknown error"}`);
+    });
+  }
+  function indentBy(note, delta) {
+    const to = Math.max(0, Math.min(3, (note.indent || 0) + delta));
+    if (to !== (note.indent || 0)) arrange([{ kind: kindOf(note), id: note.id, indent: to }], note.id);
+  }
+  // Same as the Study tab: the note's order goes between its new
+  // neighbours, or the topic is renumbered when they're too close.
+  function moveBy(note, step) {
+    const was = shown.indexOf(note);
+    const rest = shown.filter((n) => n !== note);
+    const to = Math.max(0, Math.min(rest.length, was + step));
+    if (was < 0 || to === was) return;
+    const prev = rest[to - 1], next = rest[to];
+    const o = (n) => noteOrder(n);
+    let order = prev && next ? (o(prev) + o(next)) / 2 : prev ? o(prev) + 1000 : o(next) - 1000;
+    let items = [{ kind: kindOf(note), id: note.id, order }];
+    if (prev && next && (o(next) - o(prev) < 0.01 || order === o(prev) || order === o(next))) {
+      const list = [...rest.slice(0, to), note, ...rest.slice(to)];
+      const base = o(list[0]);
+      items = list.map((n, i) => ({ kind: kindOf(n), id: n.id, order: base + i * 1000 }));
+    }
+    arrange(items, note.id);
+  }
+
+  // The ↑ ↓ ⇤ ⇥ card shows while the mouse is in a note's left margin.
+  let toolsNear = null;
+  listEl.addEventListener("mousemove", (e) => {
+    const el = e.target.closest?.(".note[data-id]");
+    const near = el && (e.clientX - el.getBoundingClientRect().left < 44 || e.target.closest(".note-tools")) ? el : null;
+    if (near === toolsNear) return;
+    toolsNear?.classList.remove("tools-near");
+    near?.classList.add("tools-near");
+    toolsNear = near;
+  });
+  listEl.addEventListener("mouseleave", () => { toolsNear?.classList.remove("tools-near"); toolsNear = null; });
 
   categoryFilter.addEventListener("change", draw);
   sortSel.addEventListener("change", draw);

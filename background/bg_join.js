@@ -21,6 +21,8 @@ function lastHighlight(topic) {
 export async function handleGetLast({ courseName, topicName }) {
   const data = await getLazyNotes();
   const last = lastHighlight(data.courses[courseName]?.topics?.[topicName]);
+  // Words never carry on a heading or a picture: no Join offered after one.
+  if (last && ["header", "sub topic", "figure", "table"].includes(last.h.category)) return { ok: false };
   return last ? { ok: true, id: last.id, text: last.h.text } : { ok: false };
 }
 

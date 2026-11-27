@@ -109,8 +109,23 @@ globalThis.LazyNotesHost = {
     const i = spans.indexOf(el.closest("span"));
     if (i < 0) return null;
 
+    // Up to 3 pieces either side, but only within the same paragraph: stop
+    // at a heading or list line (another text size, or a line starting with a
+    // bullet) or a gap bigger than a line.
+    const size = (s) => parseFloat(getComputedStyle(s).fontSize) || 0;
+    const box = (s) => s.getBoundingClientRect();
+    const mine = size(spans[i]);
+    const sameBlock = (a, b) => {
+      if (Math.abs(size(b) - mine) > mine * 0.08) return false;
+      if (/^\s*([-•*▪◦]|\d+[.)])\s/.test(b.textContent)) return false;
+      const ra = box(a), rb = box(b);
+      return Math.abs(rb.top - ra.top) <= Math.max(ra.height, rb.height) * 2.1;
+    };
+    let lo = i, hi = i;
+    while (lo > 0 && i - lo < 3 && sameBlock(spans[lo], spans[lo - 1])) lo--;
+    while (hi < spans.length - 1 && hi - i < 3 && sameBlock(spans[hi], spans[hi + 1])) hi++;
     return spans
-      .slice(Math.max(0, i - 3), i + 4)
+      .slice(lo, hi + 1)
       .map((s) => s.textContent)
       .join(" ")
       .replace(/\s+/g, " ")

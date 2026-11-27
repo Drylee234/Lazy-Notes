@@ -529,13 +529,17 @@ const StudyPage = (() => {
   noteList.addEventListener("mousemove", (e) => {
     const el = e.target.closest?.(".note[data-id]");
     const near = el && !document.body.classList.contains("is-reordering") &&
-      (e.clientX - el.getBoundingClientRect().left < 34 || e.target.closest(".note-tools")) ? el : null;
+      (e.clientX - el.getBoundingClientRect().left < (document.documentElement.classList.contains("ln-tools-small") ? 34 : 42) || e.target.closest(".note-tools")) ? el : null;
     if (near === toolsNear) return;
     toolsNear?.classList.remove("tools-near");
     near?.classList.add("tools-near");
     toolsNear = near;
   });
   noteList.addEventListener("mouseleave", () => { toolsNear?.classList.remove("tools-near"); toolsNear = null; });
+  // Settings › "Arrange buttons": Big (default) or Small (lnToolsSize).
+  const setToolsSize = (v) => document.documentElement.classList.toggle("ln-tools-small", v === "small");
+  chrome.storage.local.get("lnToolsSize", (r) => setToolsSize(r?.lnToolsSize));
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnToolsSize) setToolsSize(c.lnToolsSize.newValue); });
 
   // Hovering a note lights up the guides of everything nested under it.
   let guided = [];

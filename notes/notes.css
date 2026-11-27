@@ -23,6 +23,15 @@
 :root.ln-no-group-indent .note { --group-px: 0px !important; }
 .note:first-child { margin-top: 0; }
 
+/* Tight (default): notes saved one by one sit as close as the lines you type
+   inside one note, so a page of highlights reads like one piece of writing.
+   Headings, list heads, formulas and summaries keep their room. Settings ›
+   "Space between notes" › Roomy brings back the old 8px gap (lnNoteGap). */
+:root:not(.ln-roomy) .note { padding-top: 1px; padding-bottom: 1px; margin-bottom: 0; }
+:root:not(.ln-roomy) .note:not(.note--header):not(.note--sub-topic):not(.note--list-head):not(.note--formula):not(.note--summary):not(.note--note) { margin-top: 0; }
+:root:not(.ln-roomy) :is(.note--header, .note--sub-topic) { margin-bottom: 3px; }
+:root:not(.ln-roomy) .note--list-point::before { top: calc(1px + 0.78em - 2.5px); }
+
 .note--header { --indent: 0px; margin-top: 20px; }
 .note--header .note-text { font-size: 1.3em; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
 

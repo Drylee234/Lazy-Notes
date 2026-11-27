@@ -226,7 +226,10 @@ function fillDefinition(el, note) {
     return b;
   };
 
-  if (!context || context.toLowerCase() === term.toLowerCase()) {
+  // Already a whole sentence (or a long passage): the words around it add
+  // nothing but noise, so it shows on its own.
+  const wholeSentence = /[.!?]["')\]]?$/.test(term) && /^["'(\[]?[A-Z0-9]/.test(term) && term.split(/\s+/).length >= 5;
+  if (!context || context.toLowerCase() === term.toLowerCase() || wholeSentence || term.split(/\s+/).length > 25) {
     el.appendChild(bold(term));
     return;
   }
@@ -428,4 +431,8 @@ if (globalThis.chrome?.storage?.local) {
   const setGroupIndent = (on) => document.documentElement.classList.toggle("ln-no-group-indent", on === false);
   chrome.storage.local.get("lnGroupIndent", (r) => setGroupIndent(r?.lnGroupIndent));
   chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnGroupIndent) setGroupIndent(c.lnGroupIndent.newValue); });
+  // Settings › "Space between notes": Tight (default) or Roomy (lnNoteGap).
+  const setGap = (v) => document.documentElement.classList.toggle("ln-roomy", v === "roomy");
+  chrome.storage.local.get("lnNoteGap", (r) => setGap(r?.lnNoteGap));
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.lnNoteGap) setGap(c.lnNoteGap.newValue); });
 }

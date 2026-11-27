@@ -1,0 +1,86 @@
+// Lazy Notes — the How-to-use tour: what each slide says. One place to edit.
+// Each slide: id, title, lead (one line), shot (tour/<id>.png, made by
+// tools/make-tour-shots.js) and spots: numbered markers on the picture.
+// spot.sel / spot.frame tell the shot maker where the marker goes (frame
+// "panel" = inside the Notes panel); spot.text is what the number means.
+// Positions land in tour/positions.js. No picture = a text-only slide.
+globalThis.LN_TOUR_SLIDES = [
+  { id: "welcome", title: "Welcome to Lazy Notes",
+    lead: "Read a PDF, select the words that matter, and they become tidy study notes.",
+    bullets: [
+      "<b>→ / ←</b> (or the buttons) move through this tour. <b>Esc</b> closes it.",
+      "It shows up each time the extension is reloaded or updated. Turn that off at the bottom, or in Settings.",
+      "Every shortcut is also on the <b>How to use</b> page (the <b>?</b> in the Notes panel, or press <b>?</b> in a reader).",
+    ] },
+  { id: "reader", title: "The document reader", shot: "reader",
+    lead: "PDFs, slides (.pptx) and Word (.docx) open here. The toolbar:",
+    spots: [
+      { sel: "#open-btn", text: "<b>Open</b> another document (or drop a file on the page)." },
+      { sel: "#page-input", text: "Page number: type one and press Enter. <b>← →</b> turn pages." },
+      { sel: "#zoom-mode", text: "Zoom: − / Fit / +, or <b>Ctrl + / Ctrl −</b>, or pinch on the trackpad. ↻ rotates." },
+      { sel: ".ln-allnotes-btn", text: "<b>All notes</b>: every course and topic in a new tab. You can edit everything there." },
+      { sel: ".ln-embed-btn", text: "<b>Notes</b> shows / hides the Notes panel (<b>Ctrl + /</b>)." },
+      { sel: "#snip-btn", text: "<b>Snip</b> (or <b>S</b>): drag a box over a diagram or table to save it as a picture." },
+      { sel: "#hl-status", text: "Where notes are saving. Says <b>Highlighter off</b>? Click it to switch it on." },
+    ] },
+  { id: "popup", title: "Save a highlight", shot: "popup",
+    lead: "Turn the highlighter on, select words, and the save pop-up appears next to them.",
+    spots: [
+      { sel: ".lazy-notes-text-edit", text: "The words you picked. Fix them here before saving if you like." },
+      { sel: ".lazy-notes-chips", text: "The type. Press its number: <b>1</b> Header · <b>2</b> Sub topic · <b>3</b> Definition · <b>4</b> Formula · <b>5</b> List point · <b>6</b> Important · <b>7</b> Summary · <b>8</b> List head · <b>T</b> Table · <b>0</b> Plain. A number saves at once." },
+      { sel: ".lazy-notes-btn-primary", text: "<b>Enter</b> saves with the lit type (Lazy Notes guesses it: big words = Header…)." },
+      { sel: ".lazy-notes-handoff", text: "<b>✎ Note</b> / <b>❝ Quote</b>: write your own note about it instead." },
+    ],
+    bullets: ["<b>⤴ Join</b> (or <b>J</b>) shows up when the words carry on your last highlight, e.g. a sentence broken over a page.",
+      "<b>Tab</b> jumps from the words to the type chips. <b>Esc</b> or <b>Dismiss</b> closes without saving."] },
+  { id: "panel", title: "The Notes panel", shot: "panel",
+    lead: "Your notes for the topic, right beside the document. It floats: drag its title bar, pull any edge to resize.",
+    spots: [
+      { sel: ".ln-bar-title", text: "Which view: <b>Study</b> (your notes), <b>Home</b> (documents), <b>AI</b>. Rest the mouse on it or click to switch." },
+      { sel: ".ln-bar-help", text: "<b>?</b> every shortcut." },
+      { sel: ".ln-bar-fold", text: "<b>−</b> folds it to this bar. The box also fades while the mouse is away." },
+      { sel: ".ln-bar-mode", text: "Other ways to hold it: an <b>Edge tab</b> on the right, or <b>Docked</b> beside the page." },
+      { sel: ".ln-bar-close", text: "<b>✕</b> hides it (<b>Ctrl + /</b> brings it back)." },
+      { frame: "panel", sel: "#study-picker", text: "Course › Topic you're saving to. Click to change, or make a new one." },
+      { frame: "panel", sel: "#toggle-btn", text: "Highlighter on / off (<b>Alt + Shift + H</b> anywhere)." },
+      { frame: "panel", sel: "#settings-btn", text: "⚙ Settings." },
+    ] },
+  { id: "study", title: "Study: your notes", shot: "study",
+    lead: "Notes sit in the order you took them, laid out like lecture notes. Click one to edit it.",
+    spots: [
+      { frame: "panel", sel: ".note.tools-near .note-handle", text: "Hover a note's <b>left edge</b>: <b>⋮⋮</b> drag to move it…" },
+      { frame: "panel", sel: ".note.tools-near .note-indent:last-child", text: "…<b>⇤ ⇥</b> outdent / indent. An indented note belongs to the one above (thin guide line)." },
+      { frame: "panel", sel: '.note[data-id="h5"] .fold-btn', text: "<b>▾</b> folds everything under a heading." },
+      { frame: "panel", sel: "#composer-input", text: "Type your own note. <b>Enter</b> saves · <b>Shift+Enter</b> new line · <b>Tab</b> then a number saves it as that type · <b>Ctrl + ↑</b> edits your last note." },
+      { frame: "panel", sel: "#open-viewer-link", text: "<b>All notes</b> · <b>Export topic</b> (Markdown / HTML) · <b>How to use</b>." },
+    ],
+    bullets: ["Keyboard: click a note, then <b>↑ ↓</b> move between notes, <b>Enter</b> edits, <b>Alt + ↑ ↓</b> moves it, <b>Alt + ← →</b> indents, <b>Delete</b> twice deletes."] },
+  { id: "quick", title: "Quick note anywhere in the document", shot: "quick",
+    lead: "A small note box right where you're reading.",
+    spots: [{ sel: ".lnq-box", text: "<b>Ctrl + Shift + .</b> opens it (also: double-click blank space, or right-click › Quick note here). <b>Enter</b> saves into your notes." }],
+    bullets: ["<b>Ctrl + .</b> jumps into the Notes panel's note box and back to the page. With words selected, it quotes them."] },
+  { id: "web", title: "On web pages", shot: "web",
+    lead: "The same highlighter works on any website, with the panel docked on the right.",
+    spots: [
+      { sel: "#lazy-notes-page-panel", text: "The panel. Open / close: the toolbar button or <b>Alt + Shift + L</b>. Docked or Floating in Settings." },
+    ] },
+  { id: "allnotes", title: "All notes: total control", shot: "allnotes",
+    lead: "Every topic as a clean page. Edit anything here: highlights and your typed notes.",
+    spots: [
+      { sel: ".note.tools-near .note-tools", text: "Hover a note's left edge: <b>↑ ↓</b> move it, <b>⇤ ⇥</b> indent (or click it and press <b>Alt + arrows</b>)." },
+      { sel: ".note--typed.editing", text: "Click a typed note to edit it right here. <b>Enter</b> saves, <b>Esc</b> cancels." },
+      { sel: "#category-filter", text: "Show only one type (all Definitions…) or change the order." },
+      { sel: ".export-btn", text: "Export the topic as Markdown or HTML." },
+    ] },
+  { id: "settings", title: "Settings", shot: "settings",
+    lead: "⚙ in the panel, or Settings in All notes. Both are the same.",
+    spots: [
+      { sel: ".set-find", text: "<b>Find a setting</b>: type a word (\"pdf\", \"hover\"…)." },
+      { sel: ".set-everyday .set-item", text: "Everyday choices first." },
+      { sel: ".set-more:not(.set-old) > summary", text: "<b>Fine-tuning</b>: helpers that are on. Switch one off if it gets in your way." },
+      { sel: ".set-old > summary", text: "<b>Old ways</b>: things you changed or removed, kept so you can bring them back." },
+      { sel: ".set-reset", text: "A line you've changed has a mark and <b>↺</b> to put it back." },
+    ] },
+  { id: "keys", title: "Every shortcut", lead: "The full list (also on the How to use page).", shortcuts: true },
+  { id: "try", title: "Try it", lead: "Open the sample lecture and take a few notes.", tryIt: true },
+];
