@@ -1106,19 +1106,48 @@ document.addEventListener("mousedown", (e) => {
   snapDrag = layer;
   layer.classList.add("selecting");
 }, true);
+// The page under the pointer, or (in the gap between pages) the nearest one,
+// so a drag can carry on onto the next page.
+function layerNear(x, y) {
+  let best = null, bd = Infinity;
+  for (const l of document.querySelectorAll(".textLayer")) {
+    const r = l.getBoundingClientRect();
+    const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+    if (d < bd) { bd = d; best = l; }
+    if (!d) break;
+  }
+  return best;
+}
+let snapPoint = null, snapScroll = 0;
+function snapExtend(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const layer = el?.closest?.(".textLayer") || layerNear(x, y) || snapDrag;
+  let pos = null;
+  if (el && el.closest?.(".textLayer") && el !== layer && el.firstChild?.nodeType === 3) {
+    const r = document.caretRangeFromPoint?.(x, y);
+    if (r && el.contains(r.startContainer)) pos = { node: r.startContainer, offset: r.startOffset };
+  }
+  if (!pos) pos = nearestTextPos(x, y, layer, 400);
+  if (pos) getSelection().extend(pos.node, pos.offset);
+}
+// Near the top / bottom of the window, the page scrolls on by itself (a
+// snapped drag runs without the browser's own drag, so it does this itself).
+function snapAutoScroll() {
+  cancelAnimationFrame(snapScroll);
+  if (!snapDrag || !snapPoint) return;
+  const edge = 40, y = snapPoint.y;
+  const dy = y > innerHeight - edge ? Math.min(24, (y - (innerHeight - edge)) / 2 + 4) : y < toolbarHeight() + edge ? -Math.min(24, (toolbarHeight() + edge - y) / 2 + 4) : 0;
+  if (dy) { scrollBy(0, dy); snapExtend(snapPoint.x, snapPoint.y); }
+  snapScroll = requestAnimationFrame(snapAutoScroll);
+}
 document.addEventListener("mousemove", (e) => {
   if (!snapDrag) return;
   if (!(e.buttons & 1)) { snapDrag = null; return; }
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  let pos = null;
-  if (el && el.closest?.(".textLayer") === snapDrag && el !== snapDrag && el.firstChild?.nodeType === 3) {
-    const r = document.caretRangeFromPoint?.(e.clientX, e.clientY);
-    if (r && el.contains(r.startContainer)) pos = { node: r.startContainer, offset: r.startOffset };
-  }
-  if (!pos) pos = nearestTextPos(e.clientX, e.clientY, snapDrag, 80);
-  if (pos) getSelection().extend(pos.node, pos.offset);
+  snapPoint = { x: e.clientX, y: e.clientY };
+  snapExtend(e.clientX, e.clientY);
+  if (!snapScroll) snapScroll = requestAnimationFrame(snapAutoScroll);
 }, true);
-document.addEventListener("mouseup", () => { snapDrag = null; }, true);
+document.addEventListener("mouseup", () => { snapDrag = null; snapPoint = null; cancelAnimationFrame(snapScroll); snapScroll = 0; }, true);
 
 const CARET_MOVES = {
   ArrowLeft:  ["backward", "character"], ArrowRight: ["forward", "character"],
