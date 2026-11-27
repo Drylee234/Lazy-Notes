@@ -22,6 +22,9 @@ The owner starts almost every request with "perhaps". Treat it as "this is my id
 ## Show, don't just tell (UX)
 For anything UX: when the owner's request is unclear, clarify with images (mockups/screenshots, labelled "Image 1 / Image 2"). Even when it's clear, prefer showing before/after screenshots so they can see what changed.
 
+## Reports = notes, not builds
+When the owner sends screenshots/observations, **only note them** (roadmap: usage observation 📘 or future idea 💡, with Why). Don't build anything unless they explicitly ask.
+
 ## Never misplace the owner's notes
 "please i dont want any thing of mine gettin misplaced": any change to layout, nesting, order or rendering must never move, reorder, merge, drop or re-indent saved notes without the owner doing it. Test with real-shaped data before pushing.
 

@@ -44,6 +44,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. **Just a usage observation, not an official method**: don't teach it or build on it unless the owner decides later. Possibly a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
 - 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
 
+- 💡 **Two kinds of bullet for the same list** (owner screenshot, 2026-11-27): under "Passive Transport:", "Simple Diffusion:" (a typed "- " point: accent-coloured dot, folded with "13 more") and "Facilitated diffusion" (a highlighted List point: grey dot, slightly different position) look like different lists.
+  **Why:** one list should look like one list whether a point was typed or highlighted; mixed bullets break the "one note" feel.
+  Likely cause: typed-note lists (`.tn-list li` / `.rich-box li::marker`, accent) and highlight list points (`.note--list-point::before`, grey `--sec`) are styled separately.
+
 ## 3. UI (how it looks)
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
