@@ -11,6 +11,13 @@ seen → cause → what changed (commit) or what's still open.
 
 ---
 
+## 2026-11-27 (day) · AI connection
+- Both routes failed with no clear reason → server and extension now name every failure with a code (`server/README.md`). Then **[AI_EMPTY]**: Groq's default model gpt-oss-120b "thinks" first and the test allowed only 16 tokens → room given (≥ 400 + reasoning_effort low). Owner confirmed **AI works** through the Render server.
+- Chrome error "windows.create … width: expected integer" on the panel pop-out → sizes rounded.
+- Many usage reports this day are in `docs/roadmap.md` (not built, by the owner's rule).
+
+---
+
 ## 2026-11-27 (morning) · Ideas to save (owner: "not yet, just mentioning")
 
 - **Spacing, what was really meant:** notes at the *same* indent should sit closer together than the gap where the indent changes (entering / leaving a nest). The night's change made every gap 2px; next step = small gap within a level, bigger gap at an indent change. Not built.

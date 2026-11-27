@@ -1,8 +1,10 @@
 # active-memory handoff: Lazy Notes (Chrome extension)
 
-**Handoff #4** · 2026-11-27 · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options; #4 (2026-11-26/27): PDF snap-to-word + Home/End, nesting ownership + guide lines, floating panel (resize all edges, fade, hover-open + delays, view switcher with Home), our own panel on web pages (docked/floating) replacing Chrome's, readers full screen, How-to-use page, rename courses/topics, phone site PWA, app name soft-coded, Ctrl+↑ / Ctrl+Shift+., "perhaps" rule; #5 (2026-11-27 night, no new handoff number): tight note spacing, big ⋮⋮ ⇤ ⇥, All notes editing + arranging, settings regrouped (Fine-tuning / Old ways / ↺ / find), How-to-use tour on reload, PDF place-dialog + highlighter + type-guess + Join + definition-context fixes
+**Handoff #5** · 2026-11-27 (owner away until Tuesday; may continue on a different account) · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options; #4 (2026-11-26/27): PDF snap-to-word + Home/End, nesting ownership + guide lines, floating panel (resize all edges, fade, hover-open + delays, view switcher with Home), our own panel on web pages (docked/floating) replacing Chrome's, readers full screen, How-to-use page, rename courses/topics, phone site PWA, app name soft-coded, Ctrl+↑ / Ctrl+Shift+., "perhaps" rule; #5 (2026-11-27 night, no new handoff number): tight note spacing, big ⋮⋮ ⇤ ⇥, All notes editing + arranging, settings regrouped (Fine-tuning / Old ways / ↺ / find), How-to-use tour on reload, PDF place-dialog + highlighter + type-guess + Join + definition-context fixes; #5b (2026-11-27 day): owner tested in real Chrome and sent ~25 usage reports → all logged in docs/roadmap.md (not built); AI layer: error codes on server + extension, /api/ai/status, AI_KEY trimmed, real User-Agent, room for thinking models → **AI now works through the Render server** (owner confirmed); pop-out window whole-number sizes
 
 ## 0. Instructions for Claude (read first)
+
+**Read in this order:** `CLAUDE.md` → this file → `docs/roadmap.md` (every idea/bug with its Why, by group) → `docs/usage-notes.md` (real usage + slips). Together they are the full context; nothing lives only in a chat.
 
 You are continuing work from a previous chat. That chat is gone; this file is the complete context and the source of truth.
 
@@ -44,6 +46,11 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 7. "make all and make them togglable" → new ways of doing something are all built, each with an on/off switch (Settings › More options).
 8. "i always say perhaps before all my decisions so if thers a better way using already existing tools tell me and also if any of my decision will revert a benefit i gave myself before alert me" (also in CLAUDE.md).
 9. CLAUDE.md: read `docs/handoff-lazy-notes.md` and `docs/usage-notes.md` before work; add a usage-notes entry whenever the owner shares real notes or reports a slip.
+10. **Reports = notes, not builds**: when the owner sends screenshots/observations, only log them in `docs/roadmap.md` (💡 idea / 📘 usage observation / 🐞 bug, each with **Why**). Build only when explicitly asked. "not everything i say has to be built immediately"; "not all my reports have to be worked on, some simply need me to change how i use it".
+11. **Images for UX**: unclear UX request → clarify with labelled images (Image 1 / Image 2); prefer before/after screenshots.
+12. **Never misplace the owner's notes**: no change may move, reorder, merge, drop or re-indent saved notes without the owner doing it.
+13. Workarounds the owner finds (e.g. Ctrl+B to bold item names) are observations, not official methods, unless the owner says so.
+14. Short replies ("we're low on tokens so short responses abeg").
 
 ## 5. Corrections log
 | # | Claude did | The user wanted |
@@ -125,6 +132,8 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Server routes: GET /api/health → {"ok":true,"app":"lazy-notes"}; PUT/GET /api/snapshot (Bearer key); GET /api/report; `/`, `/manifest.webmanifest`, `/static/app.js` served with APP_NAME swapped in; `/sw.js` (Service-Worker-Allowed: /).
 - Timings: dropdown/view-switch hover open 500ms, hover-opened close 400ms; panel hover open default 300ms (choices 0/150/300/600/1000), close default 700ms (200/700/1500/3000); fade opacity 0.45; PDF snap 28px; ✕ badge 2500ms; undo toast 6000ms; double-click 230ms.
 - Sizes: web-page docked panel default 380px (min 300, max 70% of width; lnPageDockW); floating min 280×160 (readers) / 300×200 (pages); reader panel default 360px.
+- Usage reports (lnSendReports) go to the owner's Render server with sync (read via GET /api/report), never to Claude.
+- AI error codes: server `SYNC_KEY_WRONG, NO_AI_KEY, BAD_PROVIDER, EMPTY_PROMPT, AI_KEY_REFUSED, AI_FORBIDDEN, AI_BLOCKED, AI_MODEL_NOT_FOUND, AI_RATE_LIMIT, AI_BAD_REQUEST, AI_SERVICE_ERROR, AI_TIMEOUT, AI_UNREACHABLE, AI_BAD_REPLY, AI_EMPTY, AI_TOO_SHORT`; extension-only `SERVER_WAKING, SERVER_OLD, SERVER_ERROR, UNREACHABLE, TIMEOUT, OFFLINE, KEY_REFUSED, FORBIDDEN, MODEL_NOT_FOUND, RATE_LIMIT, SERVICE_ERROR`.
 - Newest keys: lnNoteGap ("tight"|"roomy"), lnToolsSize ("big"|"small"), lnTourOnReload (default on). Settings checkboxes support data-on/data-off-value (text settings) and data-invert.
 - New settings keys (More options): lnDocSnap, lnDropPlain (off), lnPanelFade, lnEmbedHome (off), lnPanelHover, lnPanelHoverMs, lnPanelHoverCloseMs, lnReaderFullscreen, lnPagePanelOwn, lnPagePanelMode ("dock"|"float"), lnReaderNativePanel (off), lnQuickWhenFolded (off). Storage: lnPageFloat {x,y,w,h,folded}, lnPageDockW. sessionStorage: ln-page-panel-open, ln-fs-done.
 - Messages: LN_TOGGLE_PANEL (bg → reader), READER_READY, READER_FULLSCREEN, LN_PAGE_PANEL {action: toggle|open|focus}, RENAME_COURSE, RENAME_TOPIC; window messages ln-view {name, active, views}, ln-set-view, ln-next-view, ln-focus-composer, ln-panel-done, ln-toggle-panel. Command "toggle-panel" = Alt+Shift+L.
@@ -143,26 +152,28 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | Page panel on sites with strict CSP | untested | page-panel.js | may be blocked → ✕ |
 | Spacing fix (trimBlankLines) | pushed, cause inferred | notes-render.js | user to confirm with real data |
 | Hover-open for the web-page panel | not done | — | offered |
-| Everything in #5 (this night) | tested in headless Chromium, on main | see usage-notes 2026-11-27 (night) | real-Chrome check by user pending |
+| Everything in #5 (this night) | on main; owner using it in real Chrome | see usage-notes 2026-11-27 (night) | reports logged in roadmap |
+| AI through the Render server | **works** (owner confirmed 2026-11-27) | server/app.py /api/ai, /api/ai/status; bg_ai.js; ai-providers.js | default model openai/gpt-oss-120b (thinking model: max_tokens ≥ 400 + reasoning_effort low) |
 | Fit-to-width leaving room for the floating panel; quick note box offering the panel's topic | ideas, not built | — | from Claude's PDF run |
 | Remaining More options toggles from #3 (pop-up course/topic pickers, Saving-to line, Document reader footer link, formatting bar, built-in panel on/off) | not done | — | rule 2 |
 
 Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chromium.launchPersistentContext(dir,{channel:'chromium',headless:true,args:['--disable-extensions-except=<repo>','--load-extension=<repo>']})`; seed `lazynotes:{courses:{C:{topics:{T:{highlights:{},notes:{}}}}}}` + activeCourse/activeTopic via the service worker; remove the `#ln-place` dialog in readers; `python3 -m http.server 8765` for test pages; test PDF via reportlab.
 
 ## 11. Next steps
-1. **Next action:** ask the user to reload the extension and confirm in real Chrome: (a) spacing between nested notes, (b) toolbar button on a new tab opens Chrome's panel with Home, (c) the title-bar view switcher feels right.
-2. Offer hover-open for the web-page floating panel.
-3. Remaining More options toggles (section 10).
+1. **Next action (Tuesday):** greet with "Scholar", ask what the owner wants to pick from `docs/roadmap.md`. Their direction last session: the **AI layer** (connection now works) and making notes **feel like one note**.
+2. Open bugs to check first (roadmap): list points that wouldn't delete until refresh; clicking away after a highlight counts as a new highlight; PDF caret ↓ / ←→ at word edges; blank lines squashed in typed notes; new highlights not keeping the indent.
+3. If AI breaks on a new account: Settings › AI help › Test connection shows `[CODE]`; table in `server/README.md`; `GET /api/ai/status` with the sync key shows the server's AI set-up.
+4. Older: hover-open for the web-page floating panel; remaining More options toggles (section 10).
 
-## 11b. Saved ideas (2026-11-27 morning, not started)
-- Same-indent notes closer than an indent change · horizontal panel instead of edge tab · login (backup + auto sync) then sharing between accounts. Details: docs/usage-notes.md.
+## 11b. Saved ideas
+All of them, grouped (Notes feel like one note · UX · Unclear things · UI · Reader · All notes · V3 online · Onboarding) with their Why: **`docs/roadmap.md`**. Highlights: same-indent spacing, list-then-explain, editing last note in the note box, smaller edit card, formatting in highlights, numbered nested lists, indent a whole list at once, horizontal panel / drag-to-indent, autocorrect pick-list, settings redesign, choose home (All notes), open doc from a course, login + auto sync + sharing, habit-aware usage reports, AI on phone, textbooks, online status bar, offline AI.
 
 ## 12. Open questions ⚠️
-- Is the note spacing fixed with real notes (cause inferred: blank leading/trailing lines)?
+- Spacing: owner clarified they want same-indent notes closer than indent changes (not built; tight 2px everywhere for now).
 - Should Chrome's panel also be used on other blocked pages (chrome://extensions etc.), or only on new tab pages (current)?
 
 ## 13. Re-attach checklist
-- Nothing to attach (code is in the repo; the sync key is in the Render env and the user's extension settings).
+- Nothing to attach: code, docs and ideas are all in the repo. Secrets are NOT in the repo: sync key (LAZYNOTES_KEY) and AI_KEY live on Render › lazy-notes › Environment and in the owner's extension settings. On a new account, connect GitHub (repo Drylee234/Lazy-Notes) and, for Render tools, the Render workspace.
 
 ---
-<sub>Audit: 13/13 sections · 9 rules · 34 corrections · 60 data points · secrets removed: yes · generated by active-memory</sub>
+<sub>Audit: 13/13 sections · 14 rules · 34 corrections · 60 data points · secrets removed: yes · generated by active-memory</sub>
