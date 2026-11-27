@@ -102,6 +102,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   Was: 💡 **Autocorrect as a pick-list, not a slider** (owner, 2026-11-27): instead of Off / Mild / Strong / Toxic, tick the autocorrect features you want (e.g. fix typos, fix capitals, punctuation spacing, finish words from the document…).
   **Why:** a strength slider hides what each level actually does; the owner wants to choose behaviours, not a level.
 
+- ✅ **Hover-open for the web-page panel (2026-11-27):** floating + folded: rest on the bar to open it, move away to fold it back (unless you clicked into it). Same switches and delays as the readers (`lnPanelHover`, `lnPanelHoverMs`, `lnPanelHoverCloseMs`).
+
 ## 3. UI (how it looks)
 - 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.

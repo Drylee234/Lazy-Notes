@@ -43,6 +43,19 @@
     }
   });
 
+  // Hover settings shared with the readers' panel (Settings › More options).
+  const hover = { on: true, openMs: 300, closeMs: 700 };
+  const num = (v, d) => (Number.isFinite(Number(v)) && v != null ? Number(v) : d);
+  chrome.storage.local.get(["lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs"], (r) => {
+    hover.on = r?.lnPanelHover !== false; hover.openMs = num(r?.lnPanelHoverMs, 300); hover.closeMs = num(r?.lnPanelHoverCloseMs, 700);
+  });
+  chrome.storage.onChanged.addListener((c, a) => {
+    if (a !== "local") return;
+    if ("lnPanelHover" in c) hover.on = c.lnPanelHover.newValue !== false;
+    if ("lnPanelHoverMs" in c) hover.openMs = num(c.lnPanelHoverMs.newValue, 300);
+    if ("lnPanelHoverCloseMs" in c) hover.closeMs = num(c.lnPanelHoverCloseMs.newValue, 700);
+  });
+
   const isOpen = () => !!host;
   const saveFloat = () => chrome.storage.local.set({ lnPageFloat: fl });
 
@@ -131,6 +144,28 @@
 
     if (floating) {
       placeFloat();
+      // Hover to open (lnPanelHover, like the readers): resting on the folded
+      // bar unfolds it; moving away folds it back, unless you clicked into it.
+      let hoverAuto = false, hoverT = 0, inside = false;
+      const unfold = (v) => { fl.folded = !v; wrap.classList.toggle("folded", fl.folded); placeFloat(); };
+      wrap.addEventListener("pointerenter", () => {
+        inside = true;
+        clearTimeout(hoverT);
+        if (!hover.on || !fl.folded) return;
+        hoverT = setTimeout(() => { if (fl.folded && inside) { hoverAuto = true; unfold(true); } }, hover.openMs);
+      });
+      wrap.addEventListener("pointerleave", () => {
+        inside = false;
+        clearTimeout(hoverT);
+        if (!hoverAuto) return;
+        hoverT = setTimeout(() => {
+          if (!hoverAuto || inside || wrap.classList.contains("busy") || document.activeElement === host) return;
+          hoverAuto = false;
+          unfold(false);
+        }, hover.closeMs);
+      });
+      wrap.addEventListener("pointerdown", () => { hoverAuto = false; }, true);   // a click = you're using it
+      frame.addEventListener("focus", () => { hoverAuto = false; });
       const bar = root.querySelector(".bar");
       bar.addEventListener("pointerdown", (e) => {
         if (e.button !== 0 || e.target.closest("button")) return;
