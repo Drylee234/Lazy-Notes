@@ -78,6 +78,18 @@
     valueEl.id = `${id}-value`;
     button.appendChild(valueEl);
 
+    // A name too long to fit is cut with "…"; resting on it scrolls the whole
+    // name across, then back (it never wraps to another line, which used to
+    // move it out from under the mouse and open/close it in a loop).
+    button.addEventListener("pointerenter", () => {
+      const extra = valueEl.scrollWidth - valueEl.clientWidth;
+      if (extra <= 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      valueEl.style.setProperty("--hs-shift", `-${extra + 6}px`);
+      valueEl.style.setProperty("--hs-time", `${Math.max(1.2, (extra + 6) / 45)}s`);
+      valueEl.classList.add("hs-scroll");
+    });
+    button.addEventListener("pointerleave", () => valueEl.classList.remove("hs-scroll"));
+
     const list = document.createElement("ul");
     list.className = "hs-list";
     list.id = `${id}-listbox`;
@@ -137,6 +149,7 @@
       const placeholder = options.find((o) => o.value === "");
 
       valueEl.textContent = shown?.textContent ?? placeholder?.textContent ?? "";
+      button.title = valueEl.textContent;
       button.classList.toggle("hs-button--placeholder", !shown);
 
       const activeValue = open ? items[activeIndex]?.option.value : undefined;
@@ -193,7 +206,13 @@
       items.forEach((it, k) => it.li.classList.toggle("is-active", k === i));
       if (i >= 0) {
         list.setAttribute("aria-activedescendant", items[i].li.id);
-        if (scroll) items[i].li.scrollIntoView({ block: "nearest" });
+        // Scroll the list only: scrollIntoView also scrolled the line the
+        // picker sits on sideways, sliding the button out from under the mouse.
+        if (scroll) {
+          const li = items[i].li;
+          if (li.offsetTop < list.scrollTop) list.scrollTop = li.offsetTop;
+          else if (li.offsetTop + li.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = li.offsetTop + li.offsetHeight - list.clientHeight;
+        }
       } else {
         list.removeAttribute("aria-activedescendant");
       }
@@ -212,6 +231,10 @@
         usedList = !byHover;   // opened by click or keyboard: a real menu from the start
         render();  // fresh from the select, in case its value changed quietly
         list.hidden = false;
+        // No room on the right: open towards the left, inside the panel.
+        list.style.left = "";
+        const over = list.getBoundingClientRect().right - (document.documentElement.clientWidth - 8);
+        if (over > 0) list.style.left = `${-over}px`;
         wrap.classList.add("hs--open");
         button.setAttribute("aria-expanded", "true");
         setActive(selectedIndex());

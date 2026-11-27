@@ -195,3 +195,12 @@ seen → cause → what changed (commit) or what's still open.
 - Hiding Home cost the owner the document list/Open → Home is back in the built-in panel via the title-bar view switcher (rest ~0.5s or click → Home / Study / AI; hover-opened list closes 0.4s after leaving, like the dropdowns). `lnEmbedHome` now means "also show the tab row".
 - New tab pages use Chrome's own side panel (full Home); every other page uses ours.
 - Owner's standing preference saved in CLAUDE.md: "perhaps" = tell me if something existing already does it; warn me if it reverts an earlier benefit.
+
+## 2026-11-27 (evening) · Reports after the AI / login / sharing round
+
+- **Repeating "Uncaught TypeError: crypto.randomUUID is not a function"** (owner screenshot, extensions page). Whose: ours. On plain **http://** sites Chrome doesn't give content scripts `crypto.randomUUID`, so `content.js` threw on load and the highlighter was dead on those sites. Fixed with a fallback (`newId()`), tested on an http page.
+- **Topic dropdown opening and closing in a loop** when hovering a long topic name. Whose: ours. Opening the list scrolled the Course › Topic line sideways (the list stuck out past the panel and `scrollIntoView` pulled it into view), sliding the topic out from under the mouse, which closed it, which slid it back. Fixed: the list opens leftwards when there's no room, only the list scrolls, the topic's width no longer depends on its name, and a long name scrolls across while you rest on it (owner's idea). Reproduced and checked in Chromium.
+- **Account creation from a phone**: owner wants accounts made only in the extension (it's PC-only). Server now refuses sign-ups not coming from the extension.
+- **Documents "reading to different courses"**: owner suspects documents used by two courses. Logged as a design question (roadmap), not built.
+- **Same-indent spacing**: owner re-checked: false alarm.
+- Owner asked "when did I say that?" about *underline spelling in Study*, *Fit to width leaves room for the panel* and *Join to last figure*: these were Claude's own ideas from earlier sessions, not the owner's. Marked as such in the roadmap.

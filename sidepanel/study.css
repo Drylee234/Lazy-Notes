@@ -281,6 +281,13 @@ body:has(#study-view.visible) #study-dock { display: block; }
   margin: 2px -8px 0;
 }
 :is(#study-picker, #rn-picker) .hs { position: relative; min-width: 0; max-width: 100%; }
+/* Course and topic always share the first line: the course takes at most
+   45%, the topic the rest (its size never depends on the name, so a long
+   name can't push it onto the next line, out from under the mouse: that
+   opened and closed its list in a loop). Only "✎ course / ✎ topic" moves
+   down when there's no room. */
+:is(#study-picker, #rn-picker) .hs:first-child { flex: 0 1 auto; max-width: 45%; }
+:is(#study-picker, #rn-picker) .hs:nth-child(2) { flex: 1 1 0; min-width: 100px; }
 :is(#study-picker, #rn-picker) .hs + .hs { margin-top: 0; }
 :is(#study-picker, #rn-picker) .hs + .hs:not([hidden])::before {
   content: "›";

@@ -133,3 +133,7 @@
   margin: 5px 4px;
   background: var(--border);
 }
+
+/* A long name scrolls across while the mouse rests on it (hover-select.js). */
+.hs-value.hs-scroll { text-overflow: clip; animation: hs-marquee var(--hs-time, 2s) ease-in-out 0.35s infinite alternate; }
+@keyframes hs-marquee { from { text-indent: 0; } to { text-indent: var(--hs-shift, 0); } }
