@@ -61,6 +61,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Indenting a head moves only the head** (answer to owner, 2026-11-27): ⇥ / Alt+→ changes just that one note; its list points stay where they were (each note keeps its own indent; `indentBy` in study-page.js). Idea: indenting a head (or any owner) takes everything under it along, with Undo.
   **Why:** a list is one thing; moving the head alone breaks it apart.
 
+- 📘 **Owner indents with Alt+← / Alt+→** (2026-11-27), partly because the mouse buttons (⋮⋮ ⇤ ⇥ on the left edge) felt troublesome.
+- 💡 **Rethink the edge arrange buttons**: (a) a horizontal bar instead of the vertical stack, or (b) drop the ⇤ ⇥ buttons and just drag: drag left/right to indent, up/down to move (keyboard Alt+arrows stays).
+  **Why:** the mouse path is awkward even after making the buttons bigger; the owner already avoids it. ⚠️ Removing buttons = keep them behind a setting (togglable rule). Show image options first.
+
 ## 3. UI (how it looks)
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
