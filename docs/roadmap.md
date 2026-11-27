@@ -42,6 +42,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** you're still writing inside that nest; jumping out breaks it and you have to indent by hand.
   Possible fixes: every new note takes the last note's indent (Alt+← to leave), or a setting for that. Or it's a habit change: press Alt+→ / ⇥ after saving.
 
+- 💡 **Another way to switch Home / Study** (owner, 2026-11-27): the Home · Study · AI tabs sit at the top, so after scrolling down a long topic you have to scroll back up to switch ("i … will find it hard to be scrolling up").
+  **Why:** switching views shouldn't depend on where you've scrolled to.
+  To investigate (show images first): tabs that stay pinned while the list scrolls, a switch in the bottom bar next to the note box, a key (e.g. Alt+1/2/3), or the title-bar view switcher the reader panel already has.
+
 ## 2b. Unclear to the owner (explain, or redesign)
 - 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. **Just a usage observation, not an official method**: don't teach it or build on it unless the owner decides later. Possibly a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
 - ✅ **Done (2026-11-27):** the bar now reads “~~word~~ Did you mean [fix] · Keep my spelling” (no key added: Tab is already Save as).
@@ -147,3 +151,4 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
+- ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.

@@ -1,0 +1,187 @@
+<title>Lazy Notes Test Bench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: a thin bar on top; the page you read on the left, the Lazy Notes
+     panel on the right at its real width (stacked on a phone). */
+  :root {
+    --bg: #eef0f5; --bar: #ffffff; --fg: #1f2330; --muted: #5d6475; --rule: #d9dce6;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .10); --frame: #ffffff;
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0e0f13; --bar: #17181d; --fg: #e8e9ef; --muted: #a2a7b6; --rule: #2c2f3a;
+    --accent: #a5b4fc; --accent-soft: rgba(165, 180, 252, .14); --frame: #18181b; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0e0f13; --bar: #17181d; --fg: #e8e9ef; --muted: #a2a7b6; --rule: #2c2f3a;
+    --accent: #a5b4fc; --accent-soft: rgba(165, 180, 252, .14); --frame: #18181b; color-scheme: dark; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font); display: flex; flex-direction: column; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: var(--bar); border-bottom: 1px solid var(--rule);
+         padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .name { font-weight: 700; letter-spacing: -.01em; margin-right: 4px; }
+  .tag { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px; }
+  .bar button { font: inherit; font-size: 13px; color: var(--fg); background: transparent; border: 1px solid var(--rule); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  .bar button:hover { border-color: var(--accent); }
+  .bar button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .spacer { flex: 1; }
+  .msg { font-size: 12.5px; color: var(--muted); min-height: 1em; }
+  .stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 10px;
+           padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--frame); }
+  .pane-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 5px 10px; border-bottom: 1px solid var(--rule); background: var(--bar); }
+  .pane-head .where { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pane-head button { font: inherit; font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 0; }
+  iframe { flex: 1; width: 100%; min-height: 0; border: 0; background: var(--frame); }
+  details.try { position: relative; }
+  details.try summary { list-style: none; cursor: pointer; font-size: 13px; border: 1px solid var(--rule); border-radius: 7px; padding: 4px 10px; }
+  details.try summary::-webkit-details-marker { display: none; }
+  details.try[open] summary { border-color: var(--accent); }
+  .try-box { position: absolute; z-index: 5; right: 0; top: calc(100% + 6px); width: min(420px, calc(100vw - 32px)); background: var(--bar); border: 1px solid var(--rule);
+             border-radius: 10px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; }
+  .try-box h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .try-box ol { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 5px; }
+  kbd { font: 12px/1 ui-monospace, Consolas, monospace; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 1px 4px; }
+  .note { color: var(--muted); font-size: 12px; margin: 0; }
+  @media (max-width: 760px) {
+    .stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: 55vh 80vh; }
+    html, body { height: auto; }
+  }
+</style>
+
+<div class="bar">
+  <span class="name">Lazy Notes</span><span class="tag">Test bench</span>
+  <button type="button" id="open-all">All notes</button>
+  <button type="button" id="open-article">Lecture page</button>
+  <span class="spacer"></span>
+  <span class="msg" id="msg" role="status"></span>
+  <details class="try">
+    <summary>What to try</summary>
+    <div class="try-box">
+      <h3>Today's changes</h3>
+      <ol>
+        <li>Study tab: click a note, then <kbd>Alt</kbd>+<kbd>→</kbd> on <b>Protein channels are gated…</b>: its 3 points move with it. <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>→</kbd> moves just one note.</li>
+        <li><kbd>Shift</kbd>+<kbd>↓</kbd> (or <kbd>Shift</kbd>+click) picks several notes; <kbd>Alt</kbd>+<kbd>←</kbd> <kbd>→</kbd> moves them together. <kbd>Esc</kbd> unpicks.</li>
+        <li>Select words on the lecture page and save them: a new note keeps the indent of the note above it.</li>
+        <li>Delete a few notes quickly with <b>×</b> (click twice): they stay deleted.</li>
+        <li>Type a note with an empty line in it (<kbd>Shift</kbd>+<kbd>Enter</kbd> twice): the gap shows.</li>
+        <li>✨ AI tab: pick Document / Page / My notes, ask a question, or press Summarise / Quiz me. Answers are pretend ones.</li>
+      </ol>
+      <p class="note">This runs the extension's real code in your browser. Your test notes are kept in this browser only. PDF / slides / Word readers aren't in the bench. <button type="button" id="reset">Reset sample notes</button></p>
+    </div>
+  </details>
+</div>
+
+<div class="stage">
+  <section class="pane" aria-label="Page">
+    <div class="pane-head"><span class="where" id="where">lecture.example/bme213/membrane-transport</span><button type="button" id="back" hidden>← Back to the lecture page</button></div>
+    <iframe id="left" title="Page you're reading"></iframe>
+  </section>
+  <section class="pane" aria-label="Lazy Notes panel">
+    <div class="pane-head"><span class="where">Lazy Notes side panel</span></div>
+    <iframe id="panel" title="Lazy Notes side panel"></iframe>
+  </section>
+</div>
+<iframe id="bg" title="Lazy Notes background" hidden></iframe>
+
+<script src="bench/shim.js" data-hub-only></script>
+<script>
+(() => {
+  const hub = window.__lnHub;
+  const $ = (id) => document.getElementById(id);
+  const msg = $("msg");
+  let msgTimer = null;
+  hub.notify = (text) => { msg.textContent = text; clearTimeout(msgTimer); msgTimer = setTimeout(() => { msg.textContent = ""; }, 5000); };
+
+  // Extension pages (All notes, How to use…) open on the left, like a new tab.
+  hub.openLeft = (url) => {
+    url = String(url || "");
+    if (!url.startsWith(hub.base)) {
+      if (url.startsWith(hub.ARTICLE_URL)) { showArticle(); return; }
+      hub.notify("The bench only opens its own pages.");
+      return;
+    }
+    const page = url.slice(hub.base.length);
+    if (/^(pdfreader|pptxreader|docxreader)\.html/.test(page)) { hub.notify("The PDF / slides / Word readers aren't in the test bench."); return; }
+    $("left").src = page;
+    $("where").textContent = page.replace(/\?.*$/, "");
+    $("back").hidden = false;
+  };
+  function showArticle() {
+    $("left").src = "article.html";
+    $("where").textContent = "lecture.example/bme213/membrane-transport";
+    $("back").hidden = true;
+  }
+
+  // Sample notes shaped like the owner's real ones.
+  const COURSE = "BME213 (Physiology)", TOPIC = "TRANSPORT OF SUBSTACE THROUGH THE CELL MEMBRANE";
+  function sample() {
+    const t0 = Date.now() - 3600 * 1000;
+    const at = (i) => new Date(t0 + i * 60000).toISOString();
+    const src = hub.ARTICLE_URL, title = "Membrane transport — BME213 lecture notes";
+    const h = (text, category, i, more = {}) => ({ text, category, timestamp: at(i), edited: null, annotation: null, context: null, sourceUrl: src, sourceTitle: title, anchor: null, ...more });
+    const highlights = {
+      s1: h("Passive Transport", "sub topic", 0),
+      d1: h("Passive transport is the movement of substances across the cell membrane without the use of energy from the cell.", "definition", 1),
+      lh: h("Protein channels are gated, which means they open and close through various methods:", "list head", 3),
+      p1: h("Voltage-gated channels", "list point", 4),
+      p2: h("Ligand-gated channels", "list point", 5),
+      p3: h("Mechanically gated channels", "list point", 6),
+      e1: h("Voltage-gated channels open based on the membrane potential.", "generic", 7),
+      s2: h("Osmosis", "sub topic", 9),
+      d2: h("Osmosis is the diffusion of water across a selectively permeable membrane.", "definition", 10)
+    };
+    const notes = {
+      n1: { text: "- Simple Diffusion: small non-polar molecules (O2, CO2) go straight through\n- Facilitated diffusion: needs carrier or channel proteins", timestamp: at(2), edited: null },
+      n2: { text: "Also play roles in generation of electrical signals", indent: 1, timestamp: at(8), edited: null }
+    };
+    return {
+      lazynotes: { courses: {
+        [COURSE]: { topics: { [TOPIC]: { highlights, notes }, "Basics": { highlights: {}, notes: {} } } },
+        "GET 201": { topics: { "Introduction": { highlights: {}, notes: {} } } }
+      } },
+      activeCourse: COURSE, activeTopic: TOPIC, highlighterActive: true,
+      lnTourOnReload: false, lnAskPlace: false,
+      lnDocs: { "bench-doc": { key: "bench-doc", kind: "pdf", name: "PIO 201. INTRODUCTION TO PHG AND BLOOD.Lecture two.pdf", pages: 2, page: 1, openedAt: Date.now(), course: COURSE, topic: TOPIC } },
+      // The AI goes to the bench's pretend service (see shim.js).
+      lnAiOn: true, lnAiProvider: "custom", lnAiBase: "https://bench-ai.invalid/v1",
+      lnAiKeys: { custom: "bench" }, lnAiModel: { custom: "bench-demo" }
+    };
+  }
+  function seedSession() {
+    // A "document open in the reader", so the AI's Document / Page choices work.
+    hub.storageSet("session", { lnDocPages: {
+      title: "PIO 201. INTRODUCTION TO PHG AND BLOOD.Lecture two.pdf", kind: "pdf", totalPages: 2, trimmed: false, at: Date.now(),
+      pages: [
+        "Blood is a connective tissue made of plasma and formed elements.\nPlasma is about 55% of blood volume and is mostly water.\nFormed elements are red blood cells, white blood cells and platelets.",
+        "Haemoglobin carries oxygen from the lungs to the tissues.\nThe normal haematocrit is about 40–45% in adult males.\nPlatelets help blood to clot after an injury."
+      ] } });
+  }
+
+  function start({ fresh = false } = {}) {
+    if (fresh || !hub.areas.local.lazynotes) {
+      hub.storageClear("local");
+      hub.storageSet("local", sample());
+    }
+    seedSession();
+    $("bg").src = "bg.html";
+    hub.whenBgReady().then(() => {
+      $("panel").src = "sidepanel.html";
+      showArticle();
+    });
+  }
+
+  $("open-all").addEventListener("click", () => hub.openLeft(hub.base + "courses.html"));
+  $("open-article").addEventListener("click", showArticle);
+  $("back").addEventListener("click", showArticle);
+  $("reset").addEventListener("click", () => {
+    hub.storageClear("local");
+    hub.storageSet("local", sample());
+    seedSession();
+    $("panel").src = "sidepanel.html";
+    showArticle();
+    hub.notify("Sample notes are back.");
+  });
+  start();
+})();
+</script>
