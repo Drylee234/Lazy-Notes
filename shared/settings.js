@@ -15,7 +15,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -79,6 +79,11 @@ globalThis.LazySettings = (() => {
       </div>
       <label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label>
       <label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" /> Lazy Notes' own panel on web pages (off: Chrome's side panel). Alt+Shift+L or the toolbar button opens it</label>
+      <div class="set-label set-sub">Panel on web pages</div>
+      <div class="seg" data-key="lnPagePanelMode" data-default="dock" role="radiogroup" aria-label="Panel on web pages">
+        <button type="button" data-value="dock" role="radio" title="On the right edge; the page makes room">Docked</button>
+        <button type="button" data-value="float" role="radio" title="A box over the page: drag, resize, fold; fades when the mouse is away">Floating</button>
+      </div>
       <label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Also use Chrome's side panel inside readers (off = only the built-in Notes panel; the toolbar button toggles it)</label>
       <div class="set-label set-sub">Saving</div>
       <label class="set-check"><input type="checkbox" data-key="lnListHeadType" /> List head type (8) when saving</label>

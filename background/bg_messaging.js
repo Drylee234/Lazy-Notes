@@ -12,7 +12,7 @@ import {
   handleRenameTopic,
   handleDeleteHighlight
 } from './bg_courses.js';
-import { requestSidePanel, togglePanelFor, openPanelWindow } from './bg_sidepanel.js';
+import { requestSidePanel, togglePanelFor } from './bg_sidepanel.js';
 import { tidyOldNotes, undoTidy } from './bg_tidy.js';
 import { countUsage } from './bg_diag.js';
 import { openPdfInReader } from './bg_pdf.js';
@@ -127,9 +127,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     case "TOGGLE_HIGHLIGHTER_REQUEST":
       handleToggleTrigger();
-      return;
-    case "OPEN_PANEL_WINDOW":   // our panel in a small window (pages that can't hold it)
-      openPanelWindow(sender.tab);
       return;
     case "OPEN_PDF_IN_READER":
       openPdfInReader(sender, message);

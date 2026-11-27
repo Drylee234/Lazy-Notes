@@ -1211,6 +1211,9 @@ updatePdfBanner();
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") settings.open = false; });
 })();
 
+// In a window of its own (?window=1) the window's title already says the name.
+if (new URLSearchParams(location.search).has("window")) document.body.classList.add("ln-win");
+
 // Built into a reader (readers/embedded-panel.js loads sidepanel.html?embedded=1
 // in an iframe): open on Study, and hand the keyboard back and forth.
 //   parent → "ln-focus-composer": go to Study and put the cursor in the note box
@@ -1230,8 +1233,25 @@ updatePdfBanner();
   const inPage = new URLSearchParams(location.search).has("page");
   const toParent = (m) => parent.postMessage(m, inPage ? "*" : location.origin);
   const done = () => toParent({ type: "ln-panel-done" });
+  // The host's title bar shows which view you're in (Study / AI / Home) and
+  // switches on click, so the tab row inside is hidden (CSS).
+  const NAMES = { home: "Home", study: "Study", ai: "AI" };
+  const tabsNow = () => [...document.querySelectorAll(".view-tab")].filter((t) => !t.hidden && (t.dataset.view !== "home" || document.body.classList.contains("ln-show-home")));
+  const announce = () => {
+    const act = document.querySelector(".view-tab.active");
+    toParent({ type: "ln-view", name: NAMES[act?.dataset.view] || "Study", count: tabsNow().length });
+  };
+  new MutationObserver(announce).observe(document.getElementById("view-tabs"), { subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+  new MutationObserver(announce).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  setTimeout(announce, 100); setTimeout(announce, 700);
   addEventListener("message", (e) => {
     if (e.source !== parent || (!inPage && e.origin !== location.origin)) return;
+    if (e.data?.type === "ln-next-view") {
+      const ts = tabsNow();
+      const i = ts.findIndex((t) => t.classList.contains("active"));
+      ts[(i + 1) % ts.length]?.click();
+      return;
+    }
     if (e.data?.type !== "ln-focus-composer") return;
     toStudy();
     setTimeout(() => {

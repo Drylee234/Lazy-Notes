@@ -259,6 +259,15 @@
   addEventListener("keydown", (e) => {
     if (e.key === "?" && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !e.target.isContentEditable && !e.ctrlKey && !e.metaKey) showHowto();
   });
+  {
+    const t = bar.querySelector(".ln-bar-title");
+    let down = null;
+    t.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+    t.addEventListener("pointerup", (e) => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4 || t.dataset.multi !== "1") return;
+      frame.contentWindow.postMessage({ type: "ln-next-view" }, location.origin);
+    });
+  }
   bar.querySelector(".ln-bar-pop").addEventListener("click", popOut);
 
   // Ctrl/⌘+/ shows or hides the panel (also from inside it).
@@ -266,7 +275,14 @@
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === "/") { e.preventDefault(); togglePanel(); }
   }, true);
   addEventListener("message", (e) => {
-    if (e.origin === location.origin && e.source === frame.contentWindow && e.data?.type === "ln-toggle-panel") togglePanel();
+    if (e.origin !== location.origin || e.source !== frame.contentWindow) return;
+    if (e.data?.type === "ln-toggle-panel") togglePanel();
+    if (e.data?.type === "ln-view") {   // the title names the view (Study / AI / Home)
+      const t = bar.querySelector(".ln-bar-title");
+      t.textContent = e.data.name || "";
+      t.dataset.multi = e.data.count > 1 ? "1" : "";
+      t.title = e.data.count > 1 ? "Click to switch (Study / AI)" : "Drag to move";
+    }
   });
 
   // Tab mode: clicking back in the document slides the panel away.

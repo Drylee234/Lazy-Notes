@@ -140,3 +140,9 @@ seen → cause → what changed (commit) or what's still open.
 - Hover timing is adjustable: Settings › More options › "rest this long before it opens" (Instant / 0.15 / 0.3 / 0.6 / 1s, `lnPanelHoverMs`) and "wait before it closes" (0.2 / 0.7 / 1.5 / 3s, `lnPanelHoverCloseMs`).
 - Owner saw Chrome's own side panel on chrome://extensions (our panel can't be injected into chrome:// pages). Now: Chrome's panel is disabled globally while `lnPagePanelOwn` is on (default), so it can't be opened/listed; on pages that can't hold ours (chrome://, Web Store, new tab) the toolbar button / Alt+Shift+L open our panel in a small window beside the browser (reused if open). Turn `lnPagePanelOwn` off to get Chrome's panel back everywhere.
 - In-page / reader panel: Study and AI tabs only (Home hidden; "Show the Home tab" in More options, `lnEmbedHome`), and no "Lazy Notes" text beside the logo (the title bar / toolbar already say it).
+
+## 2026-11-27 · No new window; title bar names the view; floating panel on web pages
+
+- Owner didn't want the small window on chrome:// pages (and its repeated name) → removed. Pages Chrome won't let us touch now just flash a "✕" on the toolbar icon. In any `?window=1` window the name beside the logo is hidden.
+- Reader/page panel title bar shows the current view (Study / AI / Home) and clicking it switches; the tab row inside is hidden in embedded panels (`ln-view` / `ln-next-view` messages).
+- Web pages can use a floating panel like the readers (drag, 8-edge resize, fold, fades): Settings › More options › "Panel on web pages" Docked | Floating (`lnPagePanelMode`, default docked).
