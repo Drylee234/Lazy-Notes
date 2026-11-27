@@ -10,7 +10,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 2. Follow sections 3 (Style), 4 (Hard rules) and 5 (Corrections) in every reply, for the rest of this chat. They override your defaults.
 3. Use the values in section 8 exactly. Never round, re-estimate, or "correct" them.
 4. Do not suggest anything listed in section 7 (Changed / rejected) again unless the user brings it up.
-5. Code word: None active. If the user types /amcodeword, start every reply with the phrase they choose (default "Yes Boss!").
+5. Code word: **Scholar** (active since 2026-11-27): start every reply with it. If the user types /amcodeword, start every reply with the phrase they choose (default "Yes Boss!").
 6. Your first reply: at most 5 lines covering the goal, the current state, and the next step (section 11). Mention any files from section 13 that were not attached. Ask the questions in section 12 if there are any. End with "Ready to continue with <next step>?" Then wait for the user's go.
 
 ## 1. Mission

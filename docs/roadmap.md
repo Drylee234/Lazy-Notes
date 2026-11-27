@@ -11,6 +11,12 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 Make the whole topic read as one written note: fewer visible seams between separate highlights (marker, gaps, hover boxes), with headings and nesting carrying the structure.
 - 💡 Same-indent notes closer together than the gap where an indent starts or ends.
   **Why:** the spacing itself should show what belongs together; equal gaps everywhere hide the structure.
+- 💡 **"List first, then explain each item"** (owner screenshot, 2026-11-27): a head ("Protein channels are gated… through various methods:") → list points (Voltage / Liquid / Mechanically gated channels) → then a paragraph explaining each one ("Voltage-gated channels open based on…", "Liquid gated ion channels, also known as ionotropic receptors…").
+  **Why:** this is how real lecture notes are written; today the explanations are just lines in a typed note, not tied to their list item, and the structure doesn't show.
+  To investigate: link each explanation to its list point (e.g. the explanation shows under a mini-heading of that item, or the list item becomes a jump link), and a "List → explain" layout.
+- 💡 **Can't separate with blank lines** (same screenshot): extra empty lines in a typed note are squashed, so the owner can't space blocks apart.
+  **Why:** a blank line is the natural way to separate thoughts. Check `trimBlankLines` / typed-note rendering; keep one blank line between blocks as a visible gap.
+- 💡 **Investigate what makes notes feel "real"**: structure (head → items → explanations), spacing that follows meaning, fewer per-highlight seams, no edit-box jump. Show options as labelled images before building.
 - ✅ Tight spacing: separate notes 2px apart, like typed lines.
 - ✅ Nesting: ownership by indent, guide lines, folding.
 - 💡 Editing your most recent typed note happens back in the note box (where you type), not in place in the list.
