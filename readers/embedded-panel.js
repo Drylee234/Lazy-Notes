@@ -294,7 +294,7 @@
 
   // ── Pop out into a window of its own ──
   async function popOut() {
-    const W = Math.max(MIN_W, state.width || DEFAULT_W);
+    const W = Math.round(Math.max(MIN_W, state.width || DEFAULT_W));   // Chrome wants whole numbers
     try {
       const { lnPanelWindow } = await chrome.storage.session.get("lnPanelWindow");
       if (lnPanelWindow) {
@@ -308,11 +308,11 @@
       let win = null;
       if (cur?.width) {
         win = await chrome.windows.create({
-          url, type: "popup", width: W, height: cur.height,
-          left: cur.left + Math.max(0, cur.width - W), top: cur.top
+          url, type: "popup", width: W, height: Math.round(cur.height),
+          left: Math.round(cur.left + Math.max(0, cur.width - W)), top: Math.round(cur.top)
         }).catch(() => null);
       }
-      if (!win) win = await chrome.windows.create({ url, type: "popup", width: W, height: Math.min(screen.availHeight, 900) });
+      if (!win) win = await chrome.windows.create({ url, type: "popup", width: W, height: Math.round(Math.min(screen.availHeight, 900)) });
       await chrome.storage.session.set({ lnPanelWindow: win.id });
       hideAfterPop();
     } catch (err) {

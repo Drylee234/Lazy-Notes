@@ -14,6 +14,7 @@ and the 5 before it are kept.
 
 import hmac
 import json
+import re
 import os
 import secrets
 import socket
@@ -303,8 +304,11 @@ def ask_ai():
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {AI_KEY}"}
         messages = ([{"role": "system", "content": system}] if system else []) + \
                    [{"role": "user", "content": prompt}]
-        payload = {"model": model, "max_tokens": max_tokens, "temperature": 0.2,
-                   "messages": messages}
+        thinking = re.search(r"gpt-oss|qwen3|deepseek-r1|reason", model, re.I)
+        payload = {"model": model, "max_tokens": max(max_tokens, 400) if thinking else max_tokens,
+                   "temperature": 0.2, "messages": messages}
+        if "gpt-oss" in model.lower():
+            payload["reasoning_effort"] = "low"   # think briefly, or a short answer comes back empty
 
     # A real User-Agent: Cloudflare in front of some services (Groq) blocks
     # Python's default "Python-urllib/x" with a 403 "error code: 1010".
@@ -364,7 +368,12 @@ def ask_ai():
 
     text = text.strip()
     if not text:
-        return ai_fail("AI_EMPTY", "The AI service answered with nothing.", 502)
+        finish = ""
+        if shape == "openai":
+            finish = (data.get("choices") or [{}])[0].get("finish_reason") or ""
+        if finish == "length":
+            return ai_fail("AI_TOO_SHORT", f"Model '{model}' used all its room thinking and wrote no answer. Allow more tokens or pick a non-thinking model (AI_MODEL).", 502)
+        return ai_fail("AI_EMPTY", f"The AI service answered with nothing (model '{model}'{', stop: ' + finish if finish else ''}).", 502)
     # No prompt, no key, no note text is stored or logged here.
     return jsonify(ok=True, text=text, model=model, provider=AI_PROVIDER)
 

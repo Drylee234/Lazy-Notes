@@ -230,7 +230,7 @@ export async function handleAiTest(message) {
   const out = await ask(cfg, {
     system: "",
     prompt: "Reply with exactly: ready",
-    maxTokens: 16
+    maxTokens: 64
   });
   return out.ok
     ? { ok: true, ms: out.ms, model: cfg.model, provider: cfg.provider, reply: out.text.slice(0, 40) }

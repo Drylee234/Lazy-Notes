@@ -90,5 +90,6 @@ Every `/api/ai` failure returns `{ ok:false, code, reason }` and the extension s
 | AI_MODEL_NOT_FOUND | Fix `AI_MODEL` |
 | AI_RATE_LIMIT | Free allowance used up |
 | AI_BAD_REQUEST / AI_SERVICE_ERROR | 400 / 5xx from the service |
+| AI_TOO_SHORT | A "thinking" model (gpt-oss…) used all its tokens thinking; the server now gives it room + reasoning_effort low |
 | AI_TIMEOUT / AI_UNREACHABLE | No answer / network from Render |
 | Extension only: SERVER_WAKING, SERVER_OLD, UNREACHABLE, TIMEOUT, OFFLINE, KEY_REFUSED, RATE_LIMIT… | Shown when the server can't answer, or on the direct route |

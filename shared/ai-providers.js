@@ -164,7 +164,10 @@ globalThis.LazyAIProviders = (() => {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: {
         model: name,
-        max_tokens: maxTokens,
+        // "Thinking" models (gpt-oss…) spend tokens reasoning first: think
+        // briefly and leave room, or the answer comes back empty.
+        max_tokens: /gpt-oss|qwen3|deepseek-r1|reason/i.test(name) ? Math.max(maxTokens, 400) : maxTokens,
+        ...(/gpt-oss/i.test(name) ? { reasoning_effort: "low" } : {}),
         temperature: 0.2,
         messages: [
           ...(system ? [{ role: "system", content: system }] : []),
