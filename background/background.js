@@ -110,3 +110,13 @@ chrome.runtime.onStartup.addListener(() => {
   refreshCourseContextMenuItems();
   restoreBadge();
 });
+
+
+// Someone given Lazy Notes shouldn't have to find a server: the owner's one
+// is filled in (once; changing it in Settings › Account & sync › Advanced
+// sticks). They only log in or create an account.
+const HOME_SERVER = "https://lazy-notes-c07b.onrender.com";
+chrome.storage.local.get(["lnSyncUrl", "lnServerDefaulted"], (r) => {
+  if (r?.lnServerDefaulted) return;
+  chrome.storage.local.set({ lnServerDefaulted: true, ...(r?.lnSyncUrl ? {} : { lnSyncUrl: HOME_SERVER }) });
+});

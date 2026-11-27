@@ -1335,10 +1335,12 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
   const box = document.getElementById("sync-warn");
   if (!box) return;
   const text = box.querySelector(".sync-warn-text");
+  // Someone using an account didn't set the server up: no server jargon for them.
+  let account = false;
   const why = (err) => {
-    if (/wrong sync key/i.test(err)) return "the sync key in Settings doesn't match LAZYNOTES_KEY on your server.";
+    if (/wrong sync key/i.test(err)) return account ? "you've been logged out. Log in again in Settings › Account & sync." : "the sync key in Settings doesn't match LAZYNOTES_KEY on your server.";
     if (/too big/i.test(err)) return "your notes are over the server's 30 MB limit (big figures?).";
-    if (/server error \(5/i.test(err)) return "the server had a problem (is its database connected? check DATABASE_URL on Render).";
+    if (/server error \(5/i.test(err)) return account ? "the server had a problem. Your notes are safe on this computer; it will try again." : "the server had a problem (is its database connected? check DATABASE_URL on Render).";
     if (/server error/i.test(err)) return `the server refused it (${err.replace(/ —.*$/, "")}).`;
     if (/not reachable/i.test(err)) return navigator.onLine === false
       ? "you're offline. It'll sync when you're back."
@@ -1347,7 +1349,8 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
   };
   let hiddenFor = null;
   async function show() {
-    const { lnSyncState: st = {}, lnSyncUrl, lnSyncKey } = await chrome.storage.local.get(["lnSyncState", "lnSyncUrl", "lnSyncKey"]);
+    const { lnSyncState: st = {}, lnSyncUrl, lnSyncKey, lnSyncUser } = await chrome.storage.local.get(["lnSyncState", "lnSyncUrl", "lnSyncKey", "lnSyncUser"]);
+    account = !!lnSyncUser;
     const err = st.lastError || "";
     const bad = lnSyncUrl && lnSyncKey && err && !/isn't set up/.test(err) && (st.stopped || (st.failures || 0) >= 2);
     if (!bad || hiddenFor === err.replace(/ —.*$/, "")) { box.hidden = true; return; }
@@ -1362,7 +1365,7 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
   box.querySelector(".sync-warn-fix").addEventListener("click", () => {
     const settings = document.getElementById("settings");
     settings.open = true;
-    const sync = settings.querySelector(".set-sync:not(.set-more)");
+    const sync = settings.querySelector(".set-sync:has(.set-account)");
     if (sync) { sync.open = true; sync.scrollIntoView({ block: "nearest" }); }
   });
   box.querySelector(".sync-warn-x").addEventListener("click", async () => {
@@ -1402,9 +1405,9 @@ init();
       tip = "No internet. Your notes are saved on this computer and sync when you're back online. The AI's offline helpers still work.";
     } else if (!lnSyncUrl || !lnSyncKey) {
       tone = "local"; text = "Not syncing";
-      tip = "Your notes are only on this computer. Settings › Sync: log in to back them up and read them on your phone.";
+      tip = "Your notes are only on this computer. Click to log in (Settings › Account & sync) and back them up, read them on your phone, and use the AI.";
     } else if (st.stopped || /key|too big/i.test(st.lastError || "")) {
-      tone = "bad"; text = "Sync problem"; tip = `${st.lastError || "Sync stopped."} Click for Settings › Sync.`;
+      tone = "bad"; text = "Sync problem"; tip = `${st.lastError || "Sync stopped."} Click for Settings › Account & sync.`;
     } else if (st.waking) {
       tone = "wait"; text = "Waking server"; tip = "Your server was asleep (free plan). It takes about a minute to wake.";
     } else if (st.pending) {
@@ -1424,7 +1427,7 @@ init();
     const settings = document.getElementById("settings");
     if (!settings) return;
     settings.open = true;
-    const sync = settings.querySelector(".set-sync:not(.set-more)");
+    const sync = settings.querySelector(".set-sync:has(.set-account)");
     if (sync) { sync.open = true; sync.scrollIntoView({ block: "nearest" }); }
   }, 0));
   chrome.storage.onChanged.addListener((c, a) => {

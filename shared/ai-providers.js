@@ -209,10 +209,10 @@ globalThis.LazyAIProviders = (() => {
     if (get(id).shape === "relay") {
       // Our server says exactly what went wrong: { code, reason } (server/app.py).
       if (data?.code) return `${data.reason || "Your server's AI failed."} [${data.code}${data.upstream_status ? ` · AI said ${data.upstream_status}` : ""}]`;
-      if (status === 401 || status === 403) return "Your server refused the sync key — check Settings › Sync. [SYNC_KEY_WRONG]";
-      if (status === 404) return "Your server has no AI route yet: it's running old code. Redeploy it on Render. [SERVER_OLD]";
-      if (status === 502 || status === 503) return `Your server is asleep or restarting (Render free plan). Wait ~1 minute and test again. [SERVER_WAKING · ${status}]`;
-      if (status >= 500) return `Your server crashed on this request (${status}). Check its Logs on Render. [SERVER_ERROR]`;
+      if (status === 401 || status === 403) return "You're not logged in (or were logged out): log in again in Settings › Account & sync. [SYNC_KEY_WRONG]";
+      if (status === 404) return "The Lazy Notes server needs an update before the AI works. [SERVER_OLD]";
+      if (status === 502 || status === 503) return `The Lazy Notes server is waking up (it sleeps when nobody uses it). Try again in a minute. [SERVER_WAKING · ${status}]`;
+      if (status >= 500) return `The Lazy Notes server had a problem with that. Try again in a minute. [SERVER_ERROR]`;
     }
     if (status === 401) return `The key was refused — check you pasted all of it, with no spaces. [KEY_REFUSED · 401]${raw ? ` (${raw})` : ""}`;
     if (status === 403) return `This key isn't allowed to do that (403): wrong key for this service, or blocked. [FORBIDDEN · 403]${raw ? ` (${raw})` : ""}`;

@@ -139,7 +139,11 @@ globalThis.LazySettings = (() => {
     </details>
     <details class="set-sync set-ai set-item">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
-      <div class="set-ai-intro">Lazy Notes can ask an AI to tidy a highlight, explain it, or write a definition. It needs a <b>Groq API key</b> &mdash; free, no card, about 1,000 questions a day. Other services are in the list too. Nothing is sent anywhere until you paste a key and switch it on.</div>
+      <div class="set-ai-intro">The AI works through your Lazy Notes account: once you're logged in (Account &amp; sync), it's on, with nothing to set up. Without an account, or offline, simple offline helpers answer from your own notes and document.</div>
+      <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b></label>
+      <label class="set-check"><input type="checkbox" data-key="lnAiOffline" /> Offline helpers when the AI can't be reached or isn't set up (marked “Offline”)</label>
+      <details class="set-adv">
+      <summary>Advanced: use your own AI key or another AI service</summary>
       <label class="set-field"><span>Service</span>
         <select class="set-ai-provider"></select></label>
       <div class="set-ai-about"></div>
@@ -158,10 +162,9 @@ globalThis.LazySettings = (() => {
       <div class="set-backup">
         <button type="button" class="set-btn set-ai-test">Test connection</button>
       </div>
-      <div class="set-ai-status"></div>
-      <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b> (off until a test passes)</label>
-      <label class="set-check"><input type="checkbox" data-key="lnAiOffline" /> Offline helpers when the AI can't be reached or isn't set up: Summarise, Quiz me, Define and Ask work from your own text (no AI, marked “Offline”)</label>
       <div class="set-ai-note">Your key is kept in this Chrome only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
+      </details>
+      <div class="set-ai-status"></div>
     </details>
     <div class="set-item set-item--block"><div class="set-label set-backup-label">Problems</div>
     <label class="set-check"><input type="checkbox" data-key="lnSendReports" /> Send usage &amp; error reports with sync (never your notes or key)</label>
@@ -187,16 +190,15 @@ globalThis.LazySettings = (() => {
     </div>
     <div class="set-backup-status"></div></div>
     <details class="set-sync set-item">
-      <summary class="set-label set-sync-head">Sync to your server <span class="set-sync-dot"></span></summary>
-      <label class="set-field"><span>Server address</span>
-        <input type="url" class="set-sync-url" placeholder="https://your-server.onrender.com" spellcheck="false" /></label>
+      <summary class="set-label set-sync-head">Account &amp; sync <span class="set-sync-dot"></span></summary>
+      <div class="set-acc-why">Log in to back up your notes, read them on your phone, and use the AI. No account? Create one here; it takes a few seconds.</div>
       <div class="set-account">
         <div class="set-acc-in" hidden>Logged in as <b class="set-acc-name"></b> · your notes sync to your account by themselves.
           <button type="button" class="set-btn set-acc-out">Log out</button></div>
         <div class="set-acc-form">
           <label class="set-field"><span>Username</span><input type="text" class="set-acc-user" autocomplete="username" spellcheck="false" /></label>
           <label class="set-field"><span>Password</span><input type="password" class="set-acc-pass" autocomplete="current-password" /></label>
-          <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="ask whoever runs the server" /></label>
+          <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="from the person who gave you Lazy Notes" /></label>
           <div class="set-backup">
             <button type="button" class="set-btn set-acc-login">Log in</button>
             <button type="button" class="set-btn set-acc-signup">Create account</button>
@@ -212,6 +214,12 @@ globalThis.LazySettings = (() => {
         <span class="set-key-row"><input type="url" class="set-shared-link" placeholder="paste a shared link (…/s/…)" spellcheck="false" />
         <button type="button" class="set-btn set-shared-add">Add</button></span></label>
       <div class="set-shared-status"></div>
+      <div class="set-sync-status"></div>
+      <div class="set-sync-phone" hidden>On your phone, open <span class="set-sync-link"></span> and log in.</div>
+      <details class="set-adv">
+      <summary>Advanced: a different server, or the server's own key</summary>
+      <label class="set-field"><span>Server address</span>
+        <input type="url" class="set-sync-url" placeholder="https://your-server.onrender.com" spellcheck="false" /></label>
       <label class="set-field set-key-field"><span>Server key (owner)</span>
         <span class="set-key-row">
           <input type="password" class="set-sync-key" placeholder="same as LAZYNOTES_KEY" spellcheck="false" autocomplete="off" />
@@ -222,8 +230,7 @@ globalThis.LazySettings = (() => {
         <button type="button" class="set-btn set-sync-now">Sync now</button>
       </div>
       <div class="set-sync-hint" hidden>Put this same key on your server as <b>LAZYNOTES_KEY</b>.</div>
-      <div class="set-sync-status"></div>
-      <div class="set-sync-phone" hidden>Open on phone: <span class="set-sync-link"></span></div>
+      </details>
     </details>`;
 
   function build(container) {
@@ -453,7 +460,7 @@ globalThis.LazySettings = (() => {
         phone.hidden = !url;
         root.querySelector(".set-sync-link").textContent = url;
         let text = "", tone = "";
-        if (!url || !lnSyncKey) { text = "Not set up."; tone = ""; }
+        if (!url || !lnSyncKey) { text = "Not logged in yet: your notes are only on this computer."; tone = ""; }
         else if (st.waking) { text = "Waking your server… free ones take about a minute."; tone = "wait"; }
         else if (st.lastError && /key|too big/i.test(st.lastError)) { text = st.lastError; tone = "bad"; }
         else if (st.lastError && st.pending) { text = `Waiting for the server… ${st.lastError.replace(/^.*— /, "")}`; tone = "wait"; }
@@ -485,7 +492,7 @@ globalThis.LazySettings = (() => {
     // and the AI work the same either way. lnSyncUser = who's logged in.
     const acc = (c) => root.querySelector(c);
     const accStatus = acc(".set-acc-status");
-    const serverUrl = () => syncUrl.value.trim().replace(/\/+$/, "");
+    const serverUrl = () => (syncUrl.value.trim() || syncUrl.dataset.saved || "").replace(/\/+$/, "");
     function showAccount() {
       chrome.storage.local.get(["lnSyncUser"], ({ lnSyncUser }) => {
         acc(".set-acc-in").hidden = !lnSyncUser;
@@ -515,6 +522,14 @@ globalThis.LazySettings = (() => {
         acc(".set-acc-pass").value = "";
         await chrome.storage.local.set({ lnSyncUrl: serverUrl(), lnSyncKey: j.token, lnSyncUser: j.username, lnSyncState: {} });
         accStatus.textContent = "";
+        // The AI comes with the account: if the server has it and you haven't
+        // set up your own key, it's switched on through the server.
+        try {
+          const st = await api("/api/ai/status", { headers: { Authorization: `Bearer ${j.token}` } });
+          const { lnAiOn, lnAiProvider, lnAiKeys = {} } = await chrome.storage.local.get(["lnAiOn", "lnAiProvider", "lnAiKeys"]);
+          const ownKey = lnAiOn && lnAiProvider && lnAiProvider !== "server" && lnAiKeys[lnAiProvider];
+          if (st.ok && !ownKey) await chrome.storage.local.set({ lnAiProvider: "server", lnAiOn: true });
+        } catch (_) { /* no AI on that server: the offline helpers stay */ }
         chrome.runtime.sendMessage({ type: "SYNC_NOW" }, () => { void chrome.runtime.lastError; });
       } catch (err) {
         accStatus.textContent = err.message;
@@ -708,10 +723,12 @@ globalThis.LazySettings = (() => {
           }
           const st = r.lnAiState || {};
           if (Date.now() - aiToldAt < 6000) return;   // don't talk over the Test result
-          if (p.needsServer && !r.lnSyncKey) aiSay("Set your server up under Sync first.", "");
-          else if (!p.needsServer && !keyBox.value) aiSay("No key yet.", "");
+          // Plain words for someone who never set anything up.
+          if (p.needsServer && !r.lnSyncKey) aiSay("Log in (Account & sync) to use the AI. Until then the offline helpers answer.", "");
+          else if (!p.needsServer && !keyBox.value) aiSay("No key yet: the offline helpers answer meanwhile.", "");
           else if (st.lastError) aiSay(st.lastError, "bad");
           else if (st.lastOkAt) aiSay(`Working — last answered ${ago(st.lastOkAt)}${r.lnAiOn ? "" : " (still switched off)"}.`, r.lnAiOn ? "ok" : "wait");
+          else if (p.needsServer && r.lnAiOn) aiSay("Ready: the AI comes with your account.", "ok");
           else aiSay("Not tested yet — press Test connection.", "wait");
         });
       }

@@ -165,10 +165,10 @@ async function setState(patch) {
 async function ask(cfg, { system, prompt, maxTokens }) {
   const viaServer = AI.get(cfg.provider).needsServer;
   if (!cfg.base) return { ok: false, reason: viaServer
-    ? "Your server's address isn't set — fill in Settings › Sync first."
+    ? "Log in first (Settings › Account & sync): the AI comes with your account."
     : "No service address — type one in Settings › AI." };
   if (!cfg.key) return { ok: false, reason: viaServer
-    ? "Your sync key isn't set — fill in Settings › Sync first."
+    ? "Log in first (Settings › Account & sync): the AI comes with your account."
     : "No key yet — paste one in Settings › AI." };
   if (!cfg.model) return { ok: false, reason: "No model chosen yet — pick one in Settings › AI." };
 
@@ -208,10 +208,10 @@ async function ask(cfg, { system, prompt, maxTokens }) {
     let host = "";
     try { host = new URL(req.url).host; } catch (_) {}
     const reason = err?.name === "AbortError"
-      ? `${host || "The service"} took too long (over a minute) and was given up on.${viaServer ? " A sleeping Render server can take ~1 minute: test again." : ""} [TIMEOUT]`
+      ? `${host || "The service"} took too long (over a minute) and was given up on.${viaServer ? " The server may have been asleep (it wakes in about a minute): try again." : ""} [TIMEOUT]`
       : !navigator.onLine
         ? "This computer is offline. [OFFLINE]"
-        : `Couldn't reach ${host || "the service"}: ${viaServer ? "check the server address in Settings › Sync (https://…onrender.com)" : "check your connection, or a firewall / VPN / ad blocker"}. (${err?.message || err}) [UNREACHABLE]`;
+        : `Couldn't reach ${host || "the service"}: ${viaServer ? "check your internet; if it keeps happening, the server may be down" : "check your connection, or a firewall / VPN / ad blocker"}. (${err?.message || err}) [UNREACHABLE]`;
     await setState({ lastError: reason });
     return { ok: false, reason };
   } finally {
