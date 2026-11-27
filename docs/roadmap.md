@@ -48,6 +48,13 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** one list should look like one list whether a point was typed or highlighted; mixed bullets break the "one note" feel.
   Likely cause: typed-note lists (`.tn-list li` / `.rich-box li::marker`, accent) and highlight list points (`.note--list-point::before`, grey `--sec`) are styled separately.
 
+- 💡 **Save list points without their head** (owner, 2026-11-27): when a selection is split into list points, the first line is always taken as the List head. Sometimes the owner wants only the points (the head already saved, or not wanted).
+  **Why:** forced head = an extra note to delete, or a wrong head.
+  Ideas: a choice in the pop-up ("with head / points only"), or remember the last choice.
+- 💡 **Is there only one way to do things?** Investigate where note-taking has a single path (e.g. lists, explanations, headings) and whether common tasks need a second way (keyboard vs mouse, highlight vs typed).
+  **Why:** the owner keeps finding workarounds (Ctrl+B, indenting for spacing): a sign some tasks have only one, awkward path.
+- 📘 **Indenting fixes the spacing** (owner, 2026-11-27): indented notes read closer together and grouped, confirming the earlier spacing idea (same indent = closer than an indent change). Observation, nothing to build now.
+
 ## 3. UI (how it looks)
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
