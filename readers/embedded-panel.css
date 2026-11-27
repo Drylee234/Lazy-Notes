@@ -140,3 +140,18 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 .ln-edge.ln-edge-bottom .ln-edge-tab { writing-mode: horizontal-tb; padding: 5px 22px; border-radius: 8px 8px 0 0; box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.18); }
 .ln-edge.ln-edge-bottom .ln-edge-tab:hover, .ln-edge.ln-edge-bottom .ln-edge-tab:focus-visible { padding-right: 22px; padding-top: 8px; }
 .ln-edge.ln-edge-bottom .ln-edge-pen { margin: 0 0 4px; }
+
+/* Edge tab mode, icon row (lnEdgeStyle "icons"): the buttons sit up top, at
+   the corner where the panel opens; the panel slides out just under them. */
+.ln-edge.ln-edge-iconbar { top: calc(var(--toolbar-h, 49px) + 6px); transform: none; right: calc(var(--ln-sb-w, 0px) + 8px); flex-direction: row; z-index: 125; }
+.ln-edge.ln-edge-iconbar .ln-edge-tab, .ln-edge.ln-edge-iconbar > .ln-edge-pen { display: none; }
+.ln-edge-icons { display: none; }
+.ln-edge.ln-edge-iconbar .ln-edge-icons { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+.ln-edge-icon { width: 30px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent;
+  color: var(--sec); cursor: pointer; font-size: 14px; }
+.ln-edge-icon:hover { background: var(--hover); color: var(--pri); }
+.ln-edge-icon.on { background: var(--accent-soft); color: var(--accent); }
+.ln-edge-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ln-edge-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; }
+#ln-embed.ln-under-icons { top: calc(var(--toolbar-h, 49px) + 44px); border-top: 1px solid var(--border); border-top-left-radius: 10px; }

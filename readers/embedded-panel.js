@@ -69,9 +69,24 @@
   edge.className = "ln-edge";
   edge.innerHTML = `
     <button type="button" class="ln-edge-pen" title="Quick note (Ctrl+.)" aria-label="Quick note">✎</button>
-    <button type="button" class="ln-edge-tab" title="Notes (Ctrl+/)"><span>Notes</span></button>`;
+    <button type="button" class="ln-edge-tab" title="Notes (Ctrl+/)"><span>Notes</span></button>
+    <span class="ln-edge-icons" role="toolbar" aria-label="Notes panel">
+      <button type="button" class="ln-edge-icon" data-view="home" title="Home: your documents and topics" aria-label="Home"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H9.5V10h-3v3.5H3a.5.5 0 0 1-.5-.5Z"/></svg></button>
+      <button type="button" class="ln-edge-icon" data-view="study" title="Study: this topic's notes (Ctrl+/)" aria-label="Study"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"/></svg></button>
+      <button type="button" class="ln-edge-icon" data-view="ai" title="AI" aria-label="AI"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l1.3 3.2 3.2 1.3-3.2 1.3L8 11.5 6.7 8.3 3.5 7l3.2-1.3Z"/><path d="M12.5 11v3M11 12.5h3"/></svg></button>
+      <span class="ln-edge-sep" aria-hidden="true"></span>
+      <button type="button" class="ln-edge-icon ln-edge-icon-pen" title="Quick note (Ctrl+.)" aria-label="Quick note">✎</button>
+    </span>`;
   document.body.appendChild(edge);
   const penBtn = edge.querySelector(".ln-edge-pen"), tabBtn = edge.querySelector(".ln-edge-tab");
+  // Edge tab mode, new look (lnEdgeStyle "icons", default): a row of icons up
+  // top, right where the panel opens (like Claude's own side-panel buttons):
+  // Home / Study / AI open the panel on that view, the lit one closes it.
+  // "tab" = the old slim "Notes" tab half-way down the right edge.
+  let edgeStyle = "icons", currentView = "study";
+  const iconsOn = () => mode === "tab" && edgeStyle !== "tab";
+  chrome.storage.local.get("lnEdgeStyle", (r) => { edgeStyle = r?.lnEdgeStyle || "icons"; apply({ refit: false }); });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && c.lnEdgeStyle) { edgeStyle = c.lnEdgeStyle.newValue || "icons"; apply({ refit: false }); } });
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -146,7 +161,14 @@
     fold.textContent = state.folded ? "+" : "−";
     fold.title = state.folded ? "Open it again" : "Fold to this bar";
     aside.hidden = !on;
-    edge.hidden = mode === "docked" || on;
+    edge.hidden = mode === "docked" || (on && !iconsOn());
+    edge.classList.toggle("ln-edge-iconbar", iconsOn());
+    aside.classList.toggle("ln-under-icons", iconsOn());
+    edge.querySelectorAll(".ln-edge-icon[data-view]").forEach((b) => {
+      const lit = on && b.dataset.view === currentView;
+      b.classList.toggle("on", lit);
+      b.setAttribute("aria-pressed", String(lit));
+    });
     penBtn.hidden = !floatBtnOn;
     btn.setAttribute("aria-pressed", String(on));
     btn.classList.toggle("on", on);
@@ -177,6 +199,15 @@
   }
   btn.addEventListener("click", togglePanel);
   tabBtn.addEventListener("click", togglePanel);
+  edge.querySelectorAll(".ln-edge-icon[data-view]").forEach((b) => b.addEventListener("click", () => {
+    const view = b.dataset.view;
+    if (shown() && currentView === view) { togglePanel(); return; }
+    if (!shown()) togglePanel();
+    currentView = view;
+    frame.contentWindow?.postMessage({ type: "ln-set-view", view }, location.origin);
+    apply({ refit: false });
+  }));
+  edge.querySelector(".ln-edge-icon-pen").addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   penBtn.addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   bar.querySelector(".ln-bar-close").addEventListener("click", () => { if (shown()) togglePanel(); });
   bar.querySelectorAll(".ln-bar-mode, .ln-bar-mode2, .ln-bar-mode3").forEach((b) => b.addEventListener("click", () => {
@@ -289,7 +320,10 @@
   addEventListener("message", (e) => {
     if (e.origin !== location.origin || e.source !== frame.contentWindow) return;
     if (e.data?.type === "ln-toggle-panel") togglePanel();
-    if (e.data?.type === "ln-view") viewSwitch.update(e.data);   // the title names the view (Study / AI / Home)
+    if (e.data?.type === "ln-view") {   // the title names the view (Study / AI / Home)
+      viewSwitch.update(e.data);
+      if (e.data.active && e.data.active !== currentView) { currentView = e.data.active; apply({ refit: false }); }
+    }
   });
 
   // Tab mode: clicking back in the document slides the panel away.

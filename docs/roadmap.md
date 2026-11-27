@@ -147,6 +147,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - ✅ **Hover-open for the web-page panel (2026-11-27):** floating + folded: rest on the bar to open it, move away to fold it back (unless you clicked into it). Same switches and delays as the readers (`lnPanelHover`, `lnPanelHoverMs`, `lnPanelHoverCloseMs`).
 
+- ✅ **Edge tab → icon row (2026-11-27, owner's screenshot of Claude's side-panel buttons):** in Edge tab mode the readers show Home · Study · AI · ✎ icons at the top right, where the panel opens; a click opens the panel on that view, the lit one closes it; the panel slides out just under them. Old slim "Notes" tab: Settings › Old ways (`lnEdgeStyle`).
+
 ## 3. UI (how it looks)
 - 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.
