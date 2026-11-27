@@ -137,3 +137,4 @@ seen → cause → what changed (commit) or what's still open.
 - Rename courses/topics (`RENAME_COURSE` / `RENAME_TOPIC`): ✎ on All notes rows; ✎ course / ✎ topic in the Study picker. Order kept; active course/topic and saved documents follow.
 - The outer "Lazy Notes" title above the panel's own header was redundant → removed (floating reader bar and page panel).
 - App name: one source, `name` in manifest.json (`shared/brand.js` swaps it into every extension page). Phone site: `APP_NAME` env var on Render.
+- Hover timing is adjustable: Settings › More options › "rest this long before it opens" (Instant / 0.15 / 0.3 / 0.6 / 1s, `lnPanelHoverMs`) and "wait before it closes" (0.2 / 0.7 / 1.5 / 3s, `lnPanelHoverCloseMs`).

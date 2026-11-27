@@ -15,7 +15,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnPanelHover", "lnReaderFullscreen", "lnPagePanelOwn", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnReaderNativePanel", "lnAiOn", "lnAskPlace"];
 
   const MARKUP = `
     <div class="set-label">Look</div>
@@ -61,6 +61,21 @@ globalThis.LazySettings = (() => {
       <label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote, no question)</label>
       <label class="set-check"><input type="checkbox" data-key="lnPanelFade" /> Floating Notes box fades while the mouse is away from it</label>
       <label class="set-check"><input type="checkbox" data-key="lnPanelHover" /> Hovering the Notes tab (or the folded bar) opens the panel; moving away closes it</label>
+      <div class="set-label set-sub">Hover: rest this long before it opens</div>
+      <div class="seg" data-key="lnPanelHoverMs" data-default="300" role="radiogroup" aria-label="Hover time before the panel opens">
+        <button type="button" data-value="0" role="radio">Instant</button>
+        <button type="button" data-value="150" role="radio">0.15s</button>
+        <button type="button" data-value="300" role="radio">0.3s</button>
+        <button type="button" data-value="600" role="radio">0.6s</button>
+        <button type="button" data-value="1000" role="radio">1s</button>
+      </div>
+      <div class="set-label set-sub">…and after you move away, wait this long before it closes</div>
+      <div class="seg" data-key="lnPanelHoverCloseMs" data-default="700" role="radiogroup" aria-label="Wait before the panel closes">
+        <button type="button" data-value="200" role="radio">0.2s</button>
+        <button type="button" data-value="700" role="radio">0.7s</button>
+        <button type="button" data-value="1500" role="radio">1.5s</button>
+        <button type="button" data-value="3000" role="radio">3s</button>
+      </div>
       <label class="set-check"><input type="checkbox" data-key="lnReaderFullscreen" /> Readers open full screen (F11 leaves it)</label>
       <label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" /> Lazy Notes' own panel on web pages (off: Chrome's side panel). Alt+Shift+L or the toolbar button opens it</label>
       <label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Also use Chrome's side panel inside readers (off = only the built-in Notes panel; the toolbar button toggles it)</label>

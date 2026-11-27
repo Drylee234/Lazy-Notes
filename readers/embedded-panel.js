@@ -415,28 +415,36 @@
   // Hover to open (lnPanelHover): resting on the edge tab shows the panel,
   // resting on a folded floating bar unfolds it; moving away puts it back
   // (unless you've clicked into it to type).
-  let hoverOn = true, hoverAuto = null, hoverT = 0;
+  let hoverOn = true, hoverAuto = null, hoverT = 0, openMs = 300, closeMs = 700;   // lnPanelHoverMs / lnPanelHoverCloseMs
   const rest = (fn, ms) => { clearTimeout(hoverT); hoverT = setTimeout(fn, ms); };
   tabBtn.addEventListener("pointerenter", () => {
     if (!hoverOn || shown()) return;
-    rest(() => { if (shown()) return; hoverAuto = "show"; togglePanel(); }, 300);
+    rest(() => { if (shown()) return; hoverAuto = "show"; togglePanel(); }, openMs);
   });
   const awayCheck = () => rest(() => {
     if (!hoverAuto || aside.matches(":hover") || tabBtn.matches(":hover") || document.activeElement === frame || document.body.classList.contains("ln-embed-moving")) return;
     if (hoverAuto === "fold") { state.folded = true; apply({ refit: false }); }
     else if (shown()) togglePanel();
     hoverAuto = null;
-  }, 700);
+  }, closeMs);
   tabBtn.addEventListener("pointerleave", () => { if (hoverAuto) awayCheck(); else clearTimeout(hoverT); });
   aside.addEventListener("pointerenter", () => {
     clearTimeout(hoverT);
-    if (hoverOn && mode === "float" && state.folded) rest(() => { hoverAuto = "fold"; state.folded = false; apply({ refit: false }); }, 350);
+    if (hoverOn && mode === "float" && state.folded) rest(() => { hoverAuto = "fold"; state.folded = false; apply({ refit: false }); }, openMs);
   });
   aside.addEventListener("pointerleave", () => { if (hoverAuto) awayCheck(); else clearTimeout(hoverT); });
   // Any deliberate use (a click into it, the buttons) keeps it open.
   aside.addEventListener("pointerdown", () => { hoverAuto = null; }, true);
-  chrome.storage.local.get("lnPanelHover", (r) => { hoverOn = r?.lnPanelHover !== false; });
-  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnPanelHover" in c) hoverOn = c.lnPanelHover.newValue !== false; });
+  const num = (v, d) => (Number.isFinite(Number(v)) && v !== undefined && v !== null ? Number(v) : d);
+  chrome.storage.local.get(["lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs"], (r) => {
+    hoverOn = r?.lnPanelHover !== false; openMs = num(r?.lnPanelHoverMs, 300); closeMs = num(r?.lnPanelHoverCloseMs, 700);
+  });
+  chrome.storage.onChanged.addListener((c, a) => {
+    if (a !== "local") return;
+    if ("lnPanelHover" in c) hoverOn = c.lnPanelHover.newValue !== false;
+    if ("lnPanelHoverMs" in c) openMs = num(c.lnPanelHoverMs.newValue, 300);
+    if ("lnPanelHoverCloseMs" in c) closeMs = num(c.lnPanelHoverCloseMs.newValue, 700);
+  });
 
   // Tell the background a reader is open: it switches Chrome's own side panel off here.
   const ready = () => chrome.runtime.sendMessage({ type: "READER_READY" }, () => void chrome.runtime.lastError);
