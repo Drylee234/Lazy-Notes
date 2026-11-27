@@ -1827,12 +1827,12 @@
     if (listSplit && selectedCategory === "list point" && splitToggleEl?.querySelector("input").checked) {
       const parts = [
         ...withHeading,
-        ...(listSplit.head ? [{ text: listSplit.head, category: "generic" }] : []),
+        ...(listSplit.head ? [{ text: listSplit.head, category: "generic", listStart: true }] : []),
         ...listSplit.items.map((t) => ({ text: t, category: "list point" }))
       ];
       const t0 = Date.now();
       const sent = parts.map((part, i) => ({
-        ...payload, id: newId(), text: part.text, category: part.category, context: null,
+        ...payload, id: newId(), text: part.text, category: part.category, context: null, ...(part.listStart ? { listStart: true } : {}),
         annotation: i === parts.length - 1 ? selectedAnnotation : "",
         timestamp: new Date(t0 + i).toISOString()
       }));

@@ -81,7 +81,7 @@ const TASKS = {
   ask: {
     maxTokens: 1200,
     prompt: (text, extra) =>
-      `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${extra || "What does this mean?"}\n\n--- passage ---\n${text}`
+      `Answer this question about the passage below, for a student revising. Use the passage where it helps and add what you know freely, like a helpful classmate. Keep it under 6 lines.\n\nQuestion: ${extra || "What does this mean?"}\n\n--- passage ---\n${text}`
   },
 
   // Your own question about the open document (or the page you're on).
@@ -89,7 +89,7 @@ const TASKS = {
   askDoc: {
     maxTokens: 1500,
     prompt: (text, extra) =>
-      `Answer this question about the lecture document below, for a student revising. Use only what the document says, and say which page it is on when the pages are marked. If the document doesn't say, answer "The document doesn't say" and then give the general answer in one or two lines, marked "(general)". Keep it under 10 lines.\n\nQuestion: ${extra || "What is this document about?"}\n\n--- document ---\n${text}`
+      `Answer this question about the lecture document below, for a student revising. Use the document where it helps (say which page when the pages are marked) and add what you know freely, like a helpful classmate. Keep it under 10 lines.\n\nQuestion: ${extra || "What is this document about?"}\n\n--- document ---\n${text}`
   },
 
   // The document itself, not the notes taken from it: the notes are an
@@ -349,7 +349,7 @@ export async function handleAiRun(message) {
 // AI_CHAT { question, scope: "doc"|"page"|"notes", page?, text? (notes),
 //           history: [{ role: "user"|"ai", text }], title? }
 //   → { ok, text, offline?, note? } | { ok: false, reason }
-const CHAT_SYSTEM = "You are a study helper inside a student's note-taking app. Answer clearly and briefly, in plain text (simple numbered or dashed lists are fine, no markdown headings or tables). Never invent facts about what the student's material says.";
+const CHAT_SYSTEM = "You are a friendly, natural study buddy inside a student's note-taking app. Talk like a helpful classmate who knows the subject well: reply to greetings and small talk normally, keep answers short and clear, and use plain text (short dashed or numbered lists are fine; no markdown headings or tables). Use the student's material when it's relevant, and freely add what you know to explain, give examples or fill gaps. Only point out a difference when your knowledge disagrees with their notes.";
 
 export async function handleAiChat(m) {
   const question = String(m?.question || "").trim();
@@ -375,9 +375,9 @@ export async function handleAiChat(m) {
 
   const history = (Array.isArray(m.history) ? m.history : []).slice(-8)
     .map((x) => `${x.role === "user" ? "Student" : "You"}: ${String(x.text || "").slice(0, 2000)}`).join("\n\n");
-  const prompt = `What the student is studying${m.title ? ` (${m.title})` : ""}:\n--- material ---\n${ctx}\n--- end of material ---\n\n` +
+  const prompt = `For reference, what the student is studying${m.title ? ` (${m.title})` : ""}:\n--- material ---\n${ctx}\n--- end of material ---\n\n` +
     (history ? `The conversation so far:\n${history}\n\n` : "") +
-    `Student: ${question}\n\nAnswer the student's last message. Use the material first; if it doesn't cover it, say so in one line, then give the general answer marked "(general)".`;
+    `Student: ${question}\n\nReply to the student's last message naturally. Their material is there to help when it's relevant; you don't have to stick to it.`;
   const out = await ask(cfg, { system: CHAT_SYSTEM, prompt, maxTokens: 1500 });
   if (!out.ok && offlineOn && /\[(UNREACHABLE|OFFLINE|TIMEOUT|SERVER_WAKING)/.test(out.reason || "")) {
     return offline(task, ctx, question, note, "Couldn't reach the AI, so this is the offline helper (no AI).");

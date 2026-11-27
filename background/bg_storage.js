@@ -194,7 +194,7 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 
   if (!topic.highlights) topic.highlights = {};
 
-  const inheritIndent = await followIndent(topic, payload.category);
+  const inheritIndent = await followIndent(topic, payload.listStart ? "list head" : payload.category);
 
   topic.highlights[id] = {
     ...(inheritIndent ? { indent: inheritIndent } : {}),
@@ -220,11 +220,13 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 }
 
 // A new note sits at the indent of the last note in the topic, so you stay
-// inside the nest you're writing in (Alt+← to leave it). Headers and sub
-// topics start at the left edge. Settings › Old ways › lnIndentFollowLists:
+// inside the nest you're writing in (Alt+← to leave it). Headers, sub
+// topics and list heads start at the left edge. Settings › Old ways › lnIndentFollowLists:
 // only list points follow (the old way).
 async function followIndent(topic, category) {
-  if (category === "header" || category === "sub topic") return 0;
+  // Headings and list heads start a new block at the left edge (a list head
+  // inheriting a deep indent made a new list look like part of the old nest).
+  if (category === "header" || category === "sub topic" || category === "list head") return 0;
   const { lnIndentFollowLists } = await storageGet("lnIndentFollowLists");
   if (lnIndentFollowLists === true && category !== "list point") return 0;
   const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));

@@ -245,7 +245,7 @@
     define: { label: "Define", maxTokens: 400, prompt: (t, course) =>
       `Define this term as it is used in ${course || "a university course"}, in one or two plain sentences a student can revise from. Return the definition only, without repeating the term.\n\n---\n${t}` },
     ask: { label: "", maxTokens: 1200, prompt: (t, q) =>
-      `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${q}\n\n--- passage ---\n${t}` }
+      `Answer this question about the passage below, for a student revising. Use the passage where it helps and add what you know freely, like a helpful classmate. Keep it under 6 lines.\n\nQuestion: ${q}\n\n--- passage ---\n${t}` }
   };
   let aiState = null;   // null = not checked yet, true = ready, string = why not
   async function aiCheck() {
