@@ -66,6 +66,48 @@ globalThis.LazyDocs = (() => {
     // only the topic is asked.
     const fromCourse = new URLSearchParams(location.search).get("course");
     if (ask) askWhere(name, lazynotes, lazynotes?.courses?.[fromCourse] ? fromCourse : null);
+    backupDoc(kind, name).catch(() => {});
+  }
+
+  // ── A copy for your phone ──────────────────────────────────────────────────
+  // Logged in (Settings › Account & sync) and lnDocBackup isn't off: the file
+  // you opened is copied to your account once (by its sha-256), so the phone
+  // site can open it under its course. lnDocs[key].sha links the two.
+  const READER_DB = { pdf: "lazynotes-pdfs", pptx: "lazynotes-slides", docx: "lazynotes-docs" };
+  async function fileBytes(kind) {
+    const q = new URLSearchParams(location.search);
+    if (q.get("local")) {
+      const db = await new Promise((res, rej) => { const r = indexedDB.open(READER_DB[kind], 1); r.onupgradeneeded = () => r.result.createObjectStore("files", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+      const rec = await new Promise((res) => { const g = db.transaction("files").objectStore("files").get(q.get("local")); g.onsuccess = () => res(g.result); g.onerror = () => res(null); });
+      db.close();
+      return rec?.data ? await rec.data.arrayBuffer() : null;
+    }
+    if (q.get("url")) {
+      const r = await fetch(q.get("url"));
+      return r.ok ? await r.arrayBuffer() : null;
+    }
+    return null;
+  }
+  async function backupDoc(kind, name) {
+    const { lnSyncUrl, lnSyncKey, lnDocBackup } = await chrome.storage.local.get(["lnSyncUrl", "lnSyncKey", "lnDocBackup"]);
+    if (lnDocBackup === false || !lnSyncUrl || !lnSyncKey || !READER_DB[kind]) return;
+    const bytes = await fileBytes(kind);
+    if (!bytes || bytes.byteLength > 25 * 1024 * 1024) return;
+    const sha = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const here = key;
+    await update((docs) => { if (docs[here]) docs[here].sha = sha; });
+    const base = lnSyncUrl.replace(/\/+$/, ""), auth = { Authorization: `Bearer ${lnSyncKey}` };
+    // Already there (this browser session, or on the server): nothing to send.
+    let sent = {};
+    try { ({ lnDocsSent: sent = {} } = await chrome.storage.session.get("lnDocsSent")); } catch (_) {}
+    if (sent[sha]) return;
+    const list = await fetch(`${base}/api/docs`, { headers: auth }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (!list?.items?.some((d) => d.sha === sha)) {
+      const r = await fetch(`${base}/api/docs/${sha}?name=${encodeURIComponent(name)}&kind=${kind}`, { method: "PUT", headers: auth, body: bytes }).catch(() => null);
+      if (!r?.ok) return;
+    }
+    sent[sha] = true;
+    try { await chrome.storage.session.set({ lnDocsSent: sent }); } catch (_) {}
   }
 
   // ── "Where do these notes go?" ─────────────────────────────────────────────

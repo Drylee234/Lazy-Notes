@@ -117,6 +117,11 @@ class Store:
             c.execute("CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, created_at TEXT NOT NULL)")
             c.execute(f"CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, owner_id BIGINT, to_user_id BIGINT, "
                       f"created_at TEXT NOT NULL, title TEXT, body {js} NOT NULL)")
+            # Documents (PDF / slides / Word) backed up from the extension, so
+            # the phone can open them. One copy per account per file (sha256).
+            blob = "BYTEA" if self.pg else "BLOB"
+            c.execute(f"CREATE TABLE IF NOT EXISTS docs (sha TEXT NOT NULL, user_key TEXT NOT NULL, name TEXT, kind TEXT, "
+                      f"size BIGINT, created_at TEXT NOT NULL, body {blob} NOT NULL, PRIMARY KEY (sha, user_key))")
 
     def q(self, sql):
         return sql.replace("?", "%s") if self.pg else sql
@@ -178,6 +183,29 @@ class Store:
     def drop_token(self, token_hash):
         with self._conn() as c:
             c.execute(self.q("DELETE FROM tokens WHERE hash = ?"), (token_hash,))
+
+    # ── documents ── (user_key: "owner" or the account id, as text)
+    def doc_list(self, user_key):
+        with self._conn() as c:
+            rows = c.execute(self.q("SELECT sha, name, kind, size, created_at FROM docs WHERE user_key = ? ORDER BY created_at DESC"), (user_key,)).fetchall()
+        return [{"sha": r[0], "name": r[1], "kind": r[2], "size": r[3], "createdAt": r[4]} for r in rows]
+
+    def doc_used(self, user_key):
+        with self._conn() as c:
+            return c.execute(self.q("SELECT COALESCE(SUM(size), 0) FROM docs WHERE user_key = ?"), (user_key,)).fetchone()[0] or 0
+
+    def doc_put(self, user_key, sha, name, kind, body):
+        with self._conn() as c:
+            if c.execute(self.q("SELECT 1 FROM docs WHERE sha = ? AND user_key = ?"), (sha, user_key)).fetchone():
+                return False
+            c.execute(self.q("INSERT INTO docs (sha, user_key, name, kind, size, created_at, body) VALUES (?, ?, ?, ?, ?, ?, ?)"),
+                      (sha, user_key, name, kind, len(body), now_iso(), body))
+        return True
+
+    def doc_get(self, user_key, sha):
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT name, kind, body FROM docs WHERE sha = ? AND user_key = ?"), (sha, user_key)).fetchone()
+        return (row[0], row[1], bytes(row[2])) if row else None
 
     # ── shared topics ──
     def add_share(self, share_id, owner_id, to_user_id, title, body):
@@ -433,6 +461,69 @@ def inbox():
     items = [{"id": i, "from": store.username(o) if o else "the server owner", "createdAt": at, "title": t}
              for (i, o, at, t) in store.inbox(w)]
     return jsonify(ok=True, items=items)
+
+
+# --------------------------------------------------------------------------
+# Documents: the extension backs up the files you read, the phone opens them.
+#   GET  /api/docs                 → { items: [{ sha, name, kind, size, createdAt }], used, limit }
+#   PUT  /api/docs/<sha>?name=&kind=   raw bytes (≤ 25 MB, ≤ 400 MB per account)
+#   GET  /api/docs/<sha>           → the file
+# --------------------------------------------------------------------------
+DOC_MAX = 25 * 1024 * 1024
+DOC_TOTAL = 400 * 1024 * 1024
+DOC_TYPES = {"pdf": "application/pdf",
+             "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+
+
+def user_key_of(w):
+    return "owner" if w == OWNER else str(w)
+
+
+@app.get("/api/docs")
+def docs_list():
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    k = user_key_of(w)
+    return jsonify(ok=True, items=store.doc_list(k), used=store.doc_used(k), limit=DOC_TOTAL)
+
+
+@app.put("/api/docs/<sha>")
+def docs_put(sha):
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    if not re.match(r"^[0-9a-f]{64}$", sha):
+        return jsonify(ok=False, reason="bad document id"), 400
+    body = request.get_data(cache=False)
+    if not body:
+        return jsonify(ok=False, reason="empty document"), 400
+    if len(body) > DOC_MAX:
+        return jsonify(ok=False, code="DOC_TOO_BIG", reason="Documents over 25 MB aren't copied to your account."), 413
+    if hashlib.sha256(body).hexdigest() != sha:
+        return jsonify(ok=False, reason="the document arrived damaged; it will be sent again"), 400
+    k = user_key_of(w)
+    if store.doc_used(k) + len(body) > DOC_TOTAL:
+        return jsonify(ok=False, code="DOCS_FULL", reason="Your account's document space (400 MB) is full."), 413
+    kind = request.args.get("kind", "pdf")
+    added = store.doc_put(k, sha, str(request.args.get("name", "document"))[:200], kind if kind in DOC_TYPES else "pdf", body)
+    return jsonify(ok=True, added=added)
+
+
+@app.get("/api/docs/<sha>")
+def docs_get(sha):
+    w = who()
+    if w is None:
+        return jsonify(ok=False, reason="wrong or missing key"), 401
+    got = store.doc_get(user_key_of(w), sha)
+    if not got:
+        return jsonify(ok=False, reason="That document isn't in your account (open it once in the extension while logged in)."), 404
+    name, kind, body = got
+    r = Response(body, mimetype=DOC_TYPES.get(kind, "application/octet-stream"))
+    r.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{urllib.parse.quote(name)}"
+    r.headers["Cache-Control"] = "private, max-age=31536000, immutable"
+    return r
 
 
 # Every AI failure says what went wrong as a short code the extension can show

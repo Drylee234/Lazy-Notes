@@ -227,6 +227,8 @@
         <div class="row-name">${esc(t.name)}</div>
         <div class="row-meta">${t.count} note${t.count === 1 ? "" : "s"}${t.last ? ` · ${ago(new Date(t.last).toISOString())}` : ""}</div>
       </span><span class="chev">›</span></a></li>`).join("")}</ul>` : `<div class="empty">No topics yet.</div>`;
+    const docBox = docsBlock(courseName);
+    if (docBox) view.appendChild(docBox);
   }
 
   // ── Ask the AI about a topic (the server holds the AI key) ──
@@ -238,6 +240,10 @@
       `Here are a student's notes on one topic. Write a short summary of them: 3 to 6 lines, each a single point, no numbering, no heading. Only use what is in the notes.\n\n---\n${t}` },
     quiz: { label: "Test questions", maxTokens: 1500, prompt: (t) =>
       `Write 5 short test-yourself questions from these notes, one per line, numbered. Each must be answerable from the notes. No answers.\n\n---\n${t}` },
+    explain: { label: "Explain", maxTokens: 800, prompt: (t) =>
+      `Explain this in plain words a first-year student would follow, in at most 4 short lines. Do not add facts beyond what is here.\n\n---\n${t}` },
+    define: { label: "Define", maxTokens: 400, prompt: (t, course) =>
+      `Define this term as it is used in ${course || "a university course"}, in one or two plain sentences a student can revise from. Return the definition only, without repeating the term.\n\n---\n${t}` },
     ask: { label: "", maxTokens: 1200, prompt: (t, q) =>
       `Answer this question about the passage below, for a student revising. Use only what the passage says; if it doesn't say, answer "The passage doesn't say" and then give the general answer in one line, marked "(general)". Keep it under 6 lines.\n\nQuestion: ${q}\n\n--- passage ---\n${t}` }
   };
@@ -251,6 +257,179 @@
     } catch (_) { return "Needs the internet."; }
     return aiState;
   }
+  async function aiCall(job, text, extra) {
+    try {
+      const r = await fetch("/api/ai", {
+        method: "POST", cache: "no-store",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ system: AI_SYSTEM, prompt: AI_JOBS[job].prompt(text, extra), max_tokens: AI_JOBS[job].maxTokens })
+      });
+      const j = await r.json().catch(() => ({}));
+      return r.ok && j.ok ? { ok: true, text: j.text } : { ok: false, text: `${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}` };
+    } catch (_) { return { ok: false, text: "Couldn't reach your server. The AI needs the internet." }; }
+  }
+
+  // ── Highlight to ask (like Google's highlight to search): select words in
+  // your notes and a small ✨ Ask AI button appears; it explains, defines or
+  // answers a question about just those words (with the topic as context). ──
+  let selCtx = null;   // { notes, course } of the topic on screen
+  const askBtn = document.createElement("button");
+  askBtn.type = "button"; askBtn.className = "sel-ask"; askBtn.textContent = "✨ Ask AI"; askBtn.hidden = true;
+  document.body.appendChild(askBtn);
+  const sheet = document.createElement("section");
+  sheet.className = "sel-sheet"; sheet.hidden = true;
+  sheet.innerHTML = `<div class="sel-head"><span class="sel-quote"></span><button type="button" class="sel-x" aria-label="Close">✕</button></div>
+    <div class="ai-row"><button type="button" data-job="explain">Explain</button><button type="button" data-job="define">Define</button></div>
+    <form class="ai-row" autocomplete="off"><input class="ai-q" type="text" enterkeyhint="send" placeholder="Ask about these words…"><button class="ai-go" type="submit">Ask</button></form>
+    <div class="ai-text sel-out"></div>`;
+  document.body.appendChild(sheet);
+  let picked = "";
+  function selectedInNotes() {
+    const sel = getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const t = sel.toString().replace(/\s+/g, " ").trim();
+    const node = sel.anchorNode?.nodeType === 1 ? sel.anchorNode : sel.anchorNode?.parentElement;
+    return t.length > 1 && node?.closest?.(".notes") ? { t, rect: sel.getRangeAt(0).getBoundingClientRect() } : null;
+  }
+  document.addEventListener("selectionchange", () => {
+    clearTimeout(askBtn.t);
+    askBtn.t = setTimeout(() => {
+      const s = selCtx && key ? selectedInNotes() : null;
+      if (!s) { askBtn.hidden = true; return; }
+      picked = s.t;
+      askBtn.hidden = false;
+      // Under the selection, clear of the phone's own copy/share menu above it.
+      const top = Math.min(innerHeight - 56, s.rect.bottom + 12);
+      askBtn.style.top = `${Math.max(8, top)}px`;
+      askBtn.style.left = `${Math.min(innerWidth - 120, Math.max(8, s.rect.left + s.rect.width / 2 - 50))}px`;
+    }, 250);
+  });
+  askBtn.addEventListener("click", () => {
+    askBtn.hidden = true;
+    sheet.querySelector(".sel-quote").textContent = `“${picked.length > 140 ? picked.slice(0, 137) + "…" : picked}”`;
+    sheet.querySelector(".sel-out").textContent = "";
+    sheet.hidden = false;
+  });
+  sheet.querySelector(".sel-x").addEventListener("click", () => { sheet.hidden = true; });
+  const sheetRun = async (job, q = "") => {
+    const out = sheet.querySelector(".sel-out");
+    out.textContent = "Thinking…";
+    const st = await aiCheck();
+    if (st !== true) { out.textContent = st; return; }
+    const r = job === "ask"
+      ? await aiCall("ask", `${plainNotes(selCtx.notes)}`, `About “${picked}”: ${q}`)
+      : await aiCall(job, picked, selCtx.course);
+    out.textContent = r.text;
+    out.classList.toggle("failed", !r.ok);
+  };
+  sheet.querySelectorAll("[data-job]").forEach((b) => b.addEventListener("click", () => sheetRun(b.dataset.job)));
+  sheet.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); const v = sheet.querySelector(".ai-q").value.trim(); if (v) sheetRun("ask", v); });
+
+  // ── Documents: the files the extension copied to your account, by course.
+  // Downloaded once, then kept on the phone (Cache Storage) for next time. ──
+  const DOC_CACHE = "ln-docs-v1";
+  const docsFor = (course, topic) => Object.values(snap?.data?.lnDocs || {})
+    .filter((d) => d.sha && d.course === course && (!topic || d.topic === topic))
+    .sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0))
+    .filter((d, i, a) => a.findIndex((x) => x.sha === d.sha) === i);
+  async function docCached(sha) {
+    try { return !!(await (await caches.open(DOC_CACHE)).match(`/doc-cache/${sha}`)); } catch (_) { return false; }
+  }
+  function docsBlock(course, topic) {
+    const docs = docsFor(course, topic);
+    if (!docs.length) return null;
+    const box = document.createElement("section");
+    box.className = "docs";
+    box.innerHTML = `<div class="section-title">Documents</div><ul class="list"></ul>`;
+    const ul = box.querySelector("ul");
+    docs.forEach((d) => {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "row doc-row";
+      b.innerHTML = `<span class="doc-kind"></span><span class="row-main"><div class="row-name"></div><div class="row-meta"></div></span>`;
+      b.querySelector(".doc-kind").textContent = { pdf: "PDF", pptx: "PPT", docx: "DOC" }[d.kind] || "DOC";
+      b.querySelector(".row-name").textContent = d.name;
+      const meta = b.querySelector(".row-meta");
+      meta.textContent = d.topic || "";
+      docCached(d.sha).then((yes) => { if (yes) meta.textContent = `${d.topic ? d.topic + " · " : ""}On this phone ✓`; });
+      b.addEventListener("click", () => openDoc(d, meta));
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    return box;
+  }
+  async function openDoc(d, meta) {
+    let res = null, cache = null;
+    try { cache = await caches.open(DOC_CACHE); res = await cache.match(`/doc-cache/${d.sha}`); } catch (_) {}
+    if (!res) {
+      meta.textContent = "Downloading…";
+      try {
+        const r = await fetch(`/api/docs/${d.sha}`, { headers: { Authorization: `Bearer ${key}` } });
+        if (!r.ok) { const j = await r.json().catch(() => ({})); meta.textContent = j.reason || `Couldn't download it (${r.status}).`; return; }
+        res = r;
+        if (cache) await cache.put(`/doc-cache/${d.sha}`, r.clone());
+      } catch (_) { meta.textContent = "Couldn't download it: check your internet."; return; }
+    }
+    const blob = await res.blob();
+    meta.textContent = `${d.topic ? d.topic + " · " : ""}On this phone ✓`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = d.name;
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+  }
+
+  // ── Folding: headers, sub topics and list heads fold what's under them
+  // (same rules as the extension's noteParents). Remembered on this phone. ──
+  const FOLD_KEY = "ln-folded";
+  let folded = new Set();
+  try { folded = new Set(JSON.parse(store.get(FOLD_KEY) || "[]")); } catch (_) {}
+  function noteParents(notes) {
+    const parent = new Map();
+    let header = null, sub = null, head = null, lastAt = [];
+    notes.forEach((n, i) => {
+      const id = String(n.id), c = n.kind === "typed" ? "typed" : n.category;
+      const lvl = Math.max(0, Math.min(3, n.indent || 0));
+      const isHead = c === "header" || c === "sub topic";
+      if (c === "header") { parent.set(id, null); header = id; sub = null; head = null; }
+      else if (c === "sub topic") { parent.set(id, header); sub = id; head = null; }
+      else if (c === "list head" || (c === "generic" && notes[i + 1]?.category === "list point" && notes[i + 1]?.kind !== "typed")) { parent.set(id, sub || header); head = id; }
+      else if (c === "list point") parent.set(id, head || sub || header);
+      else { parent.set(id, sub || header); head = null; }
+      if (isHead) { lastAt = []; return; }
+      if (lvl > 0) for (let k = lvl - 1; k >= 0; k--) if (lastAt[k] != null) { parent.set(id, lastAt[k]); break; }
+      lastAt[lvl] = id;
+      lastAt.length = lvl + 1;
+    });
+    return parent;
+  }
+  function wireFolding(container, notes) {
+    const parent = noteParents(notes);
+    const els = [...container.querySelectorAll(":scope > .note")];
+    const kids = new Map();
+    notes.forEach((n) => { const p = parent.get(String(n.id)); if (p) kids.set(p, (kids.get(p) || 0) + 1); });
+    const hidden = (id) => { for (let a = parent.get(id); a; a = parent.get(a)) if (folded.has(a)) return true; return false; };
+    const draw = () => notes.forEach((n, i) => { if (els[i]) els[i].hidden = hidden(String(n.id)); });
+    notes.forEach((n, i) => {
+      const id = String(n.id), el = els[i];
+      if (!el || !kids.has(id)) return;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "fold";
+      const label = () => { const f = folded.has(id); b.textContent = f ? `▸ ${kids.get(id)}` : "▾"; b.setAttribute("aria-expanded", String(!f)); b.title = f ? "Show what's under it" : "Fold what's under it"; };
+      label();
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        folded.has(id) ? folded.delete(id) : folded.add(id);
+        store.set(FOLD_KEY, JSON.stringify([...folded].slice(-500)));
+        label(); draw();
+      });
+      (el.querySelector(".note-text, .th, p") || el).appendChild(b);
+    });
+    draw();
+  }
+
   function plainNotes(notes) {
     return notes.filter((n) => n.category !== "figure").map((n) => {
       const pad = "  ".repeat(Math.max(0, Math.min(3, n.indent || 0)));
@@ -311,7 +490,13 @@
     view.innerHTML = notes.length
       ? `<div class="notes">${(mixedSources = new Set(notes.filter((n) => n.kind !== "typed").map((n) => n.sourceTitle || n.sourceUrl || "")).size > 1, "")}${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>`
       : `<div class="empty">No notes in this topic yet.</div>`;
-    if (notes.length) view.prepend(aiBar(notes));
+    if (notes.length) {
+      wireFolding(view.querySelector(".notes"), notes);
+      view.prepend(aiBar(notes));
+    }
+    const docBox = docsBlock(courseName, topicName);
+    if (docBox) view.appendChild(docBox);
+    selCtx = { notes, course: courseName };
     window.scrollTo(0, 0);
   }
 
@@ -340,6 +525,7 @@
 
   function route() {
     menu.hidden = true;
+    selCtx = null; askBtn.hidden = true; sheet.hidden = true;
     const shared = location.pathname.match(/^\/s\/([\w-]+)/);
     if (shared) { sharedScreen(shared[1]); return; }
     if (!key) { keyScreen(); return; }

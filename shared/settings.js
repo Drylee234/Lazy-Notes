@@ -19,7 +19,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus", "lnHabits", "lnEditLastInList", "lnEditCard", "lnSaveToast", "lnEdgeStyle", "lnAiView"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus", "lnHabits", "lnEditLastInList", "lnEditCard", "lnSaveToast", "lnEdgeStyle", "lnAiView", "lnDocBackup"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -214,6 +214,7 @@ globalThis.LazySettings = (() => {
         <span class="set-key-row"><input type="url" class="set-shared-link" placeholder="paste a shared link (…/s/…)" spellcheck="false" />
         <button type="button" class="set-btn set-shared-add">Add</button></span></label>
       <div class="set-shared-status"></div>
+      <label class="set-check"><input type="checkbox" data-key="lnDocBackup" /> Copy the documents I open to my account, so my phone can open them too (up to 25 MB each)</label>
       <div class="set-sync-status"></div>
       <div class="set-sync-phone" hidden>On your phone, open <span class="set-sync-link"></span> and log in.</div>
       <details class="set-adv">
