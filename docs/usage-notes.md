@@ -11,6 +11,30 @@ seen → cause → what changed (commit) or what's still open.
 
 ---
 
+## 2026-11-27 (night) · Owner's list before logging off + Claude's own test run on a PDF
+
+**Asked for (owner)**
+- Settings were cluttered: couldn't tell "switches kept in case I want to revert" from useful ones → regrouped: everyday choices first, **Fine-tuning** (helpers that are on), **Old ways, kept in case you want them back** (all off; tick to bring an old way back). Changed lines get a mark + ↺ (back to default); "Find a setting" box. `lnPagePanelOwn` shows inverted there ("Chrome's own side panel… instead").
+- "Forgetting how to use my own creation" → **How-to-use tour** (`tour.html`): slides with real screenshots and numbered markers; opens by itself each time the extension is reloaded/updated (`lnTourOnReload`, switch on the tour's last line and in Settings). Pictures are made by `tools/make-tour-shots.js` — rerun it after UI changes.
+- **The real reason for the indent/ownership complaints**: the gap between two separately saved notes (8px) was bigger than between lines typed in one note (0px) → notes now sit 2px apart (headings keep their room). `lnNoteGap` "roomy" = old gap (in Old ways).
+- ⋮⋮ ⇤ ⇥ edge buttons hard to find → bigger, stacked down the left margin (still off the words), wider hover zone; the hovered note's card wins over a focused one. `lnToolsSize` "small" = old row. (Existing shortcut: Alt + ← → on a focused note.)
+- "Why can't I edit typed notes in All notes" → typed notes edit in place there (same formatted box; Enter saves, Shift+Enter new line, Esc cancels, click away saves); every note gets ↑ ↓ ⇤ ⇥ on its left edge and Alt + arrows; nesting + guide lines show; a highlight turned into "My note" keeps its place. Only while showing everything "As taken".
+
+**Slips found by Claude using the highlighter on a lecture PDF**
+
+| Seen | Whose | Change |
+|---|---|---|
+| "Where do these notes go?": after picking the course with the keyboard, Enter did nothing (topic not picked, Save disabled) | Extension | A course with one topic picks it; Enter saves. "+ New topic…" in the topic list (a new lecture usually needs one) |
+| After "Save notes here" the highlighter stayed off, so selecting did nothing | Extension | Choosing a place switches the highlighter on |
+| Reader pill "Highlighter off": clicking it tried to open Chrome's side panel (disabled now) | Extension | Click switches the highlighter on when a topic is picked |
+| Big all-caps PDF title guessed as **Definition** (the " - " in "PIO 201 - TRANSPORT…") | Extension | Big / all-caps short lines guessed Header / Sub topic first; in PDFs size is compared with the page's usual text size |
+| Save pop-up offered "Join to …Introduction" (a sentence glued onto a heading) | Extension | No Join after a Header / Sub topic / figure / table |
+| A Definition from a PDF showed the list items, heading and next paragraph around it | Extension | PDF context stays inside the paragraph; a highlight that's already a whole sentence shows alone |
+| Floating panel covers the right part of the page at "Fit to width" | Design | **Open idea**: fit to the space left of the panel (switchable) |
+| Quick note box: "Pick a course and topic…" while the panel shows one (after "Not now") | Design | **Open idea**: offer the panel's topic right in the box |
+
+---
+
 ## 2026-11-26 · Which course a new document saves to
 
 **Reported by the owner (screenshot of the side panel Home + message)**

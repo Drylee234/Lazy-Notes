@@ -1,6 +1,6 @@
 # active-memory handoff: Lazy Notes (Chrome extension)
 
-**Handoff #4** · 2026-11-27 · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options; #4 (2026-11-26/27): PDF snap-to-word + Home/End, nesting ownership + guide lines, floating panel (resize all edges, fade, hover-open + delays, view switcher with Home), our own panel on web pages (docked/floating) replacing Chrome's, readers full screen, How-to-use page, rename courses/topics, phone site PWA, app name soft-coded, Ctrl+↑ / Ctrl+Shift+., "perhaps" rule
+**Handoff #4** · 2026-11-27 · Lineage: #1 (2026-11-25): PDF prompt, slides reader, Study-tab note-taker, hover dropdowns, Enter-to-save, new types, editor, undo, PDF selection fix; #2 (2026-11-26): slides look like PPT, themes, Home/Study redesign, rich note box, spell check, chips + number keys, list splitting, join, outline headings, figures, reorder/indent, backup, sync server on Render, built-in Notes panel in readers, zoom/rotate/caret, Word reader; #3 (2026-11-26): edge-tab Notes panel + pop-out window, pop-up note box (5 ways to open), PDF caret-while-dragging fix, document words in spell check + typing hints, pinch zoom, Note/Quote on web pages, joined PDF lines, + New topic in Study, List head type back, fold/unfold + filters with heads, Settings › More options; #4 (2026-11-26/27): PDF snap-to-word + Home/End, nesting ownership + guide lines, floating panel (resize all edges, fade, hover-open + delays, view switcher with Home), our own panel on web pages (docked/floating) replacing Chrome's, readers full screen, How-to-use page, rename courses/topics, phone site PWA, app name soft-coded, Ctrl+↑ / Ctrl+Shift+., "perhaps" rule; #5 (2026-11-27 night, no new handoff number): tight note spacing, big ⋮⋮ ⇤ ⇥, All notes editing + arranging, settings regrouped (Fine-tuning / Old ways / ↺ / find), How-to-use tour on reload, PDF place-dialog + highlighter + type-guess + Join + definition-context fixes
 
 ## 0. Instructions for Claude (read first)
 
@@ -102,6 +102,11 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | Rename courses/topics (RENAME_COURSE / RENAME_TOPIC; keeps order, updates activeCourse/Topic + lnDocs); ✎ on All notes rows; "✎ course / ✎ topic" on the Study picker | user asked |
 | App name in one place: manifest.json "name" (shared/brand.js); phone site APP_NAME env | user may rename |
 | How to use: shared/howto.js list; ? in the reader panel bar or ? key; howto.html; side-panel footer link | user forgot Ctrl+. |
+| Notes sit 2px apart (as close as typed lines); headings keep room (lnNoteGap "roomy" = old 8px) | user: separate notes looked further apart than typed lines — the real reason behind the indent/ownership complaints |
+| ⋮⋮ ⇤ ⇥ big, stacked in the left margin, 42px hover zone (lnToolsSize "small" = old) | user couldn't find them |
+| All notes (display.html): typed notes editable in place; ↑ ↓ ⇤ ⇥ + Alt+arrows; nesting/guides; only with no filter and "As taken" | user: "total control" there |
+| Settings: everyday first · Fine-tuning (helpers that are on) · Old ways (all off; tick = bring back) · ↺ on changed lines · Find box | user: tell revert switches from useful ones |
+| Tour: tour.html + tour/slides.js (text) + tour/positions.js & *.png (made by tools/make-tour-shots.js); opens on install/update (lnTourOnReload) | user asked; rerun the maker after UI changes |
 | Phone site: PWA (manifest, icons 192/512/maskable, /sw.js); source line only when a topic mixes sources | user asked |
 
 ## 7. Changed / rejected
@@ -120,6 +125,7 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 - Server routes: GET /api/health → {"ok":true,"app":"lazy-notes"}; PUT/GET /api/snapshot (Bearer key); GET /api/report; `/`, `/manifest.webmanifest`, `/static/app.js` served with APP_NAME swapped in; `/sw.js` (Service-Worker-Allowed: /).
 - Timings: dropdown/view-switch hover open 500ms, hover-opened close 400ms; panel hover open default 300ms (choices 0/150/300/600/1000), close default 700ms (200/700/1500/3000); fade opacity 0.45; PDF snap 28px; ✕ badge 2500ms; undo toast 6000ms; double-click 230ms.
 - Sizes: web-page docked panel default 380px (min 300, max 70% of width; lnPageDockW); floating min 280×160 (readers) / 300×200 (pages); reader panel default 360px.
+- Newest keys: lnNoteGap ("tight"|"roomy"), lnToolsSize ("big"|"small"), lnTourOnReload (default on). Settings checkboxes support data-on/data-off-value (text settings) and data-invert.
 - New settings keys (More options): lnDocSnap, lnDropPlain (off), lnPanelFade, lnEmbedHome (off), lnPanelHover, lnPanelHoverMs, lnPanelHoverCloseMs, lnReaderFullscreen, lnPagePanelOwn, lnPagePanelMode ("dock"|"float"), lnReaderNativePanel (off), lnQuickWhenFolded (off). Storage: lnPageFloat {x,y,w,h,folded}, lnPageDockW. sessionStorage: ln-page-panel-open, ln-fs-done.
 - Messages: LN_TOGGLE_PANEL (bg → reader), READER_READY, READER_FULLSCREEN, LN_PAGE_PANEL {action: toggle|open|focus}, RENAME_COURSE, RENAME_TOPIC; window messages ln-view {name, active, views}, ln-set-view, ln-next-view, ln-focus-composer, ln-panel-done, ln-toggle-panel. Command "toggle-panel" = Alt+Shift+L.
 - Older facts (storage keys lazynotes/activeCourse/activeTopic/lnDocs…, IndexedDB lazynotes-pdfs/-slides/-docs, spell lib, sync retries 1/5/15/30/60 min) unchanged since handoff #3.
@@ -137,6 +143,8 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 | Page panel on sites with strict CSP | untested | page-panel.js | may be blocked → ✕ |
 | Spacing fix (trimBlankLines) | pushed, cause inferred | notes-render.js | user to confirm with real data |
 | Hover-open for the web-page panel | not done | — | offered |
+| Everything in #5 (this night) | tested in headless Chromium, on main | see usage-notes 2026-11-27 (night) | real-Chrome check by user pending |
+| Fit-to-width leaving room for the floating panel; quick note box offering the panel's topic | ideas, not built | — | from Claude's PDF run |
 | Remaining More options toggles from #3 (pop-up course/topic pickers, Saving-to line, Document reader footer link, formatting bar, built-in panel on/off) | not done | — | rule 2 |
 
 Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chromium.launchPersistentContext(dir,{channel:'chromium',headless:true,args:['--disable-extensions-except=<repo>','--load-extension=<repo>']})`; seed `lazynotes:{courses:{C:{topics:{T:{highlights:{},notes:{}}}}}}` + activeCourse/activeTopic via the service worker; remove the `#ln-place` dialog in readers; `python3 -m http.server 8765` for test pages; test PDF via reportlab.

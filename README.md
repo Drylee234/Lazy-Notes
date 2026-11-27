@@ -14,7 +14,9 @@ to convert raw highlights into notes
 | `shared/` | Used everywhere: colours and Light/Dark (`theme.*`), helpers (`utils.js`), spell check (`spell.js`), the AI services table (`ai-providers.js`). |
 | `lib/` | Third-party code: PDF.js, nspell and the English dictionary. |
 | `icons/` | Extension icons and logo. |
-| `docs/` | Notes for continuing work (handoff file). |
+| `tour/` + `tour.html` | The How-to-use tour (slides, screenshots, marker positions, a sample lecture PDF). Opens after each reload/update. |
+| `tools/` | `make-tour-shots.js`: remakes the tour's pictures from the real extension (`node tools/make-tour-shots.js`, needs Playwright). |
+| `docs/` | Notes for continuing work (handoff file, usage notes). |
 | `server/` | Optional sync server + read-only mobile site (see `server/README.md`). |
 
 ## AI help
