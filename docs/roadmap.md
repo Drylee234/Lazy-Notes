@@ -149,6 +149,9 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - ✅ **Edge tab → icon row (2026-11-27, owner's screenshot of Claude's side-panel buttons):** in Edge tab mode the readers show Home · Study · AI · ✎ icons at the top right, where the panel opens; a click opens the panel on that view, the lit one closes it; the panel slides out just under them. Old slim "Notes" tab: Settings › Old ways (`lnEdgeStyle`).
 
+- ✅ **One bar, not two (2026-11-27, owner):** in Edge tab mode with the icon row, the panel's own bar (? · Float · Dock · Bottom · ⧉ · ✕) moves up into the icon row as small icons (names in tooltips); the panel starts right under it.
+- 💡 **Guess Definition for "Term:" then its meaning** (owner 2026-11-27): the owner's main use of Plain is a "Passive Transport:" line with the meaning indented under it ("means the transport without usage of ATP"). That's a definition split in two. Idea: when saving a line right under a Plain line ending in ":" (and it starts like "means / is / are / refers to"), the pop-up lights **Definition (3)** instead of Plain; Study could then show the pair as term + definition. **Why:** the owner uses Plain where Definition fits, so Quiz me / Define / bold terms miss them. Today's ways: highlight both lines and use 2 → "Split into heading + Definition", or press 3 for the meaning line.
+
 ## 3. UI (how it looks)
 - 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.

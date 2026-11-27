@@ -212,3 +212,8 @@ seen → cause → what changed (commit) or what's still open.
 - **Study showed a topic on Google's search page.** Owner: Study should be empty when not on a document. Now empty with "Show it anyway" unless in a reader, on a page the notes came from, or with the highlighter on (`lnStudyAnywhere` brings back the old way).
 - **Settings felt cramped in the panel**; only All notes' settings felt like real settings → the panel's settings now fill the panel the same way.
 - Owner liked idea E (easier switching) → built (Alt+1/2/3, pinned Course › Topic); asked to see A as an image and B explained with an image before building.
+
+## 2026-11-27 (night) · Plain for "Term:" + meaning; one bar up top
+
+- Owner: "the main type of times I use Plain is: heading : then definition" (screenshot: "Passive Transport:" then, indented, "means the transport without usage of ATP"). Not a slip, a habit: that's a definition split in two notes. Told them the existing ways (highlight both + 2 → "Split into heading + Definition", or 3 for the meaning line); logged an idea to guess Definition there.
+- Owner asked to move the panel's own bar (AI ▾ ? Float Dock Bottom ⧉ ✕) up into the icon row → done (one bar).

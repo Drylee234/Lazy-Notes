@@ -163,6 +163,18 @@
     aside.hidden = !on;
     edge.hidden = mode === "docked" || (on && !iconsOn());
     edge.classList.toggle("ln-edge-iconbar", iconsOn());
+    // Icon row mode: the panel's own bar (? · other modes · ⧉ · ✕) moves up
+    // into the icon row, so there's one bar, not two.
+    const row = edge.querySelector(".ln-edge-icons");
+    const tools = [".ln-bar-help", ".ln-bar-mode", ".ln-bar-mode2", ".ln-bar-mode3", ".ln-bar-pop", ".ln-bar-close"].map((c) => bar.querySelector(c) || row.querySelector(c));
+    if (iconsOn() && on) {
+      if (!row.querySelector(".ln-edge-sep2")) { const sep = document.createElement("span"); sep.className = "ln-edge-sep ln-edge-sep2"; row.appendChild(sep); }
+      tools.forEach((t) => t && row.appendChild(t));
+    } else {
+      row.querySelector(".ln-edge-sep2")?.remove();
+      tools.forEach((t) => t && t.parentElement !== bar && bar.appendChild(t));
+    }
+    aside.classList.toggle("ln-bar-merged", iconsOn() && on);
     aside.classList.toggle("ln-under-icons", iconsOn());
     edge.querySelectorAll(".ln-edge-icon[data-view]").forEach((b) => {
       const lit = on && b.dataset.view === currentView;
@@ -179,9 +191,11 @@
     const LABEL = { float: ["🗗 Float", "A box you can drag anywhere"], tab: ["⇥ Edge tab", "Hide it behind a tab on the edge"],
                     docked: ["📌 Dock", "Keep it beside the document"], bottom: ["▁ Bottom", "A wide panel that slides up from the bottom"] };
     const others = ["float", "tab", "docked", "bottom"].filter((m) => m !== mode);
-    [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2"), bar.querySelector(".ln-bar-mode3")].forEach((b, i) => {
+    const pick = (c) => bar.querySelector(c) || edge.querySelector(c);   // in the bar, or moved up into the icon row
+    [pick(".ln-bar-mode"), pick(".ln-bar-mode2"), pick(".ln-bar-mode3")].forEach((b, i) => {
       b.dataset.to = others[i];
-      b.textContent = LABEL[others[i]][0];
+      // In the icon row up top, just the symbol (the name is in the tooltip).
+      b.textContent = iconsOn() ? LABEL[others[i]][0].split(" ")[0] : LABEL[others[i]][0];
       b.title = LABEL[others[i]][1];
     });
     // The PDF reader refits on resize; the others reflow by themselves.
