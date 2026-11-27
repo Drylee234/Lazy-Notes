@@ -30,7 +30,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ The "Where do these notes go?" box works with Enter; "+ New topic…"; the highlighter turns on after choosing.
 - ✅ Better type guessing (big or all-caps lines = Header); no Join after headings.
 - 💡 Quick note box offers the topic the panel is showing. **Meaning:** the pop-up note box (Ctrl+Shift+. in a reader) saves to the *active* topic (the one highlights go to). If the floating panel's Study view is showing a different topic, a quick note lands somewhere other than where you're looking. Idea: the box offers the panel's topic (or shows where it'll save). (Explained to owner 2026-11-27.)
-- ⚠️💡 Horizontal panel instead of the edge tab (a bottom drawer was rejected earlier).
+- ✅ **Built as an extra mode (2026-11-27):** "Bottom": a wide Notes tab at the foot of the reader; hover/click slides a full-width panel up over the page; drag its top edge for height (double-click resets); clicking the page puts it away. Settings › Notes panel in the readers › Bottom, or the ▁ Bottom button in the panel bar. Opt-in only (a bottom drawer was rejected once before), the edge tab is unchanged.
+  Was: ⚠️💡 Horizontal panel instead of the edge tab (a bottom drawer was rejected earlier).
   **Why:** opening and closing the edge tab doesn't feel smooth.
 
 - ✅ **Done (2026-11-27):** editing a highlight now happens in place: the note keeps its spot, bullet and indent; only a thin box around the words, "Enter saves · Esc cancels" and ⋯ (Alt+M) for type / annotation / context / AI / delete. Study and All notes. Old big card: Settings › Old ways (`lnEditCard`).

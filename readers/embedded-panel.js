@@ -13,6 +13,9 @@
 //            its full width. Ctrl+. opens the pop-up note box (quick-note.js).
 //   "docked" — always beside the document, which makes room for it.
 //            Ctrl+. jumps into its note box and back.
+//   "bottom" — like the edge tab, but along the bottom: a wide "Notes" tab
+//            at the foot of the page; hovering/clicking it slides a wide
+//            panel up over the page (drag its top edge to make it taller).
 //
 // Both: "Notes" button in the toolbar opens/closes it; drag its left edge to
 // resize (double-click resets); ⧉ pops it out into a window of its own
@@ -28,8 +31,9 @@
   try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {} };
 
-  let mode = "float";          // lnPanelMode: "float" | "tab" | "docked"
-  const modeOf = (v) => (v === "docked" || v === "tab" ? v : "float");
+  let mode = "float";          // lnPanelMode: "float" | "tab" | "docked" | "bottom"
+  const modeOf = (v) => (v === "docked" || v === "tab" || v === "bottom" ? v : "float");
+  const slides = () => mode === "tab" || mode === "bottom";   // hidden behind a tab, slides out over the page
   let slidOut = false;         // tab mode: panel showing over the page
   let floatBtnOn = true;       // lnQuickFloat
   let chromePanelOpen = false;
@@ -50,6 +54,7 @@
     <button type="button" class="ln-bar-btn ln-bar-fold" title="Fold to this bar" aria-label="Fold">−</button>
     <button type="button" class="ln-bar-btn ln-bar-mode" data-to=""></button>
     <button type="button" class="ln-bar-btn ln-bar-mode2" data-to=""></button>
+    <button type="button" class="ln-bar-btn ln-bar-mode3" data-to=""></button>
     <button type="button" class="ln-bar-btn ln-bar-pop" title="Pop out into its own window">⧉</button>
     <button type="button" class="ln-bar-btn ln-bar-close" title="Hide (Ctrl+/)" aria-label="Hide">✕</button>`;
   const frame = document.createElement("iframe");
@@ -106,7 +111,7 @@
   // ── Show / hide ──
   function shown() {
     if (mode === "float") return state.floatOpen !== false;
-    return mode === "tab" ? slidOut : state.open && (!chromePanelOpen || forced);
+    return slides() ? slidOut : state.open && (!chromePanelOpen || forced);
   }
   // Floating box: where it is, how big, folded or not (kept in state).
   function placeFloat() {
@@ -127,6 +132,10 @@
     const wasDocked = document.body.classList.contains("ln-embed-open");
     document.body.classList.toggle("ln-embed-open", mode === "docked" && on);
     document.body.classList.toggle("ln-embed-float", mode === "tab");
+    document.body.classList.toggle("ln-embed-bottom", mode === "bottom");
+    aside.classList.toggle("ln-bottom", mode === "bottom");
+    edge.classList.toggle("ln-edge-bottom", mode === "bottom");
+    document.documentElement.style.setProperty("--ln-embed-h", `${Math.round(Math.min(Math.max(state.bh || window.innerHeight * 0.42, 160), window.innerHeight - 80))}px`);
     document.body.classList.toggle("ln-embed-floating", mode === "float");
     aside.classList.toggle("ln-floating", mode === "float");
     aside.classList.toggle("ln-folded", mode === "float" && !!state.folded);
@@ -143,12 +152,12 @@
     btn.classList.toggle("on", on);
     btn.title = (mode === "docked" && chromePanelOpen && !forced
       ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
-      : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (mode !== "tab" ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
+      : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (!slides() ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
     // The two other ways to show it.
     const LABEL = { float: ["🗗 Float", "A box you can drag anywhere"], tab: ["⇥ Edge tab", "Hide it behind a tab on the edge"],
-                    docked: ["📌 Dock", "Keep it beside the document"] };
-    const others = ["float", "tab", "docked"].filter((m) => m !== mode);
-    [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2")].forEach((b, i) => {
+                    docked: ["📌 Dock", "Keep it beside the document"], bottom: ["▁ Bottom", "A wide panel that slides up from the bottom"] };
+    const others = ["float", "tab", "docked", "bottom"].filter((m) => m !== mode);
+    [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2"), bar.querySelector(".ln-bar-mode3")].forEach((b, i) => {
       b.dataset.to = others[i];
       b.textContent = LABEL[others[i]][0];
       b.title = LABEL[others[i]][1];
@@ -159,7 +168,7 @@
 
   function togglePanel() {
     if (mode === "float") state.floatOpen = !shown();
-    else if (mode === "tab") slidOut = !slidOut;
+    else if (slides()) slidOut = !slidOut;
     else if (chromePanelOpen && !forced) { forced = true; state.open = true; }
     else { state.open = !shown(); if (!state.open) forced = false; }
     save();
@@ -170,10 +179,10 @@
   tabBtn.addEventListener("click", togglePanel);
   penBtn.addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   bar.querySelector(".ln-bar-close").addEventListener("click", () => { if (shown()) togglePanel(); });
-  bar.querySelectorAll(".ln-bar-mode, .ln-bar-mode2").forEach((b) => b.addEventListener("click", () => {
+  bar.querySelectorAll(".ln-bar-mode, .ln-bar-mode2, .ln-bar-mode3").forEach((b) => b.addEventListener("click", () => {
     state.open = true;
     state.floatOpen = true;
-    slidOut = b.dataset.to === "tab";
+    slidOut = b.dataset.to === "tab" || b.dataset.to === "bottom";
     save();
     chrome.storage.local.set({ lnPanelMode: b.dataset.to });   // the listener below applies it
   }));
@@ -285,7 +294,7 @@
 
   // Tab mode: clicking back in the document slides the panel away.
   document.addEventListener("mousedown", (e) => {
-    if (mode !== "tab" || !slidOut) return;
+    if (!slides() || !slidOut) return;
     if (aside.contains(e.target) || edge.contains(e.target) || btn.contains(e.target)) return;
     if (e.target.closest?.(".lnq-box, .lazy-notes-popup")) return;
     slidOut = false;
@@ -320,7 +329,7 @@
     }
   }
   function hideAfterPop() {
-    if (mode === "tab") slidOut = false; else state.open = false;
+    if (slides()) slidOut = false; else state.open = false;
     save();
     apply();
   }
@@ -331,6 +340,11 @@
     divider.setPointerCapture(e.pointerId);
     document.body.classList.add("ln-embed-resizing");
     const move = (ev) => {
+      if (mode === "bottom") {   // the top edge: taller / shorter
+        state.bh = Math.round(Math.min(Math.max(window.innerHeight - ev.clientY, 160), window.innerHeight - 80));
+        document.documentElement.style.setProperty("--ln-embed-h", `${state.bh}px`);
+        return;
+      }
       state.width = Math.min(Math.max(window.innerWidth - ev.clientX, MIN_W), Math.floor(window.innerWidth / 2));
       document.documentElement.style.setProperty("--ln-embed-w", `${state.width}px`);
     };
@@ -346,7 +360,8 @@
     divider.addEventListener("pointerup", up);
   });
   divider.addEventListener("dblclick", () => {
-    state.width = DEFAULT_W; save(); apply();
+    if (mode === "bottom") state.bh = 0; else state.width = DEFAULT_W;
+    save(); apply();
     if (mode === "docked") window.dispatchEvent(new Event("resize"));
   });
 
@@ -360,7 +375,7 @@
   function focusDocument() {
     frame.blur();
     window.focus();
-    if (mode === "tab" && slidOut) { slidOut = false; apply(); }
+    if (slides() && slidOut) { slidOut = false; apply(); }
     const sel = getSelection();
     // Keep the PDF caret/selection; otherwise just give the page focus.
     if (!sel || !sel.rangeCount) document.querySelector("#viewer")?.focus?.();
@@ -372,7 +387,7 @@
   chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnQuickWhenFolded" in c) quickWhenFolded = c.lnQuickWhenFolded.newValue === true; });
   globalThis.LazyNotesPanelIdle = () => quickWhenFolded && mode === "float" && (state.folded || state.floatOpen === false);
   addEventListener("keydown", (e) => {
-    if (mode === "tab") return;   // tab mode: quick-note.js opens the pop-up note box
+    if (slides()) return;   // tab / bottom: quick-note.js opens the pop-up note box
     if (globalThis.LazyNotesPanelIdle()) return;   // folded/hidden + setting: quick-note.js does it
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".") {
       e.preventDefault();

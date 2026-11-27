@@ -55,6 +55,7 @@ globalThis.LazySettings = (() => {
       <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>
       <button type="button" data-value="tab" role="radio" title="Hidden behind a tab on the right edge; slides out over the page">Edge tab</button>
       <button type="button" data-value="docked" role="radio" title="Always beside the document">Docked</button>
+      <button type="button" data-value="bottom" role="radio" title="A wide tab at the foot of the page; the panel slides up from the bottom">Bottom</button>
     </div></div>
     <div class="set-item"><div class="set-label">Panel on web pages</div>
     <div class="seg" data-key="lnPagePanelMode" data-default="dock" role="radiogroup" aria-label="Panel on web pages">

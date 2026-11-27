@@ -304,7 +304,7 @@
   addEventListener("keydown", (e) => {
     if (!((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ".")) return;
     // Floating panel folded or hidden + lnQuickWhenFolded: the pop-up box (embedded-panel.js asks via LazyNotesQuick.ctrlDot).
-    if (settings.lnPanelMode !== "tab" && !globalThis.LazyNotesPanelIdle?.()) return;   // float / docked: Ctrl+. goes into the panel
+    if (settings.lnPanelMode !== "tab" && settings.lnPanelMode !== "bottom" && !globalThis.LazyNotesPanelIdle?.()) return;   // float / docked: Ctrl+. goes into the panel
     e.preventDefault();
     e.stopImmediatePropagation();
     if (!box.hidden) { close(); return; }
