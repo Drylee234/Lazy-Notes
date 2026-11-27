@@ -21,6 +21,7 @@ import { handleSaveTypedNote, handleDeleteTypedNote } from './bg_typed_notes.js'
 import { handleGetLast, handleJoinToLast, handleUnjoin } from './bg_join.js';
 import { handleAiTest, handleAiRun, handleAiReady, handleAiSaveNote } from './bg_ai.js';
 import { oneAtATime, updateHighlight } from './bg_storage.js';
+import { watchHabits, countHabit } from './bg_habits.js';
 
 export function broadcastToAllTabs(message) {
   chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
@@ -102,13 +103,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   const replyHandler = REPLY_HANDLERS[message.type];
   if (replyHandler) {
-    (NOT_QUEUED.has(message.type) ? replyHandler(message) : oneAtATime(() => replyHandler(message)))
+    (NOT_QUEUED.has(message.type) ? replyHandler(message)
+      : oneAtATime(async () => { await watchHabits(message).catch(() => {}); return replyHandler(message); }))
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, reason: String(err) }));
     return true;  // keep the channel open for the async reply
   }
 
   switch (message.type) {
+    case "HABIT":            // a page noticed a habit (bg_habits.js)
+      countHabit(message.name);
+      return;
     case "NEW_HIGHLIGHT":
       oneAtATime(() => handleNewHighlight(message));
       return;

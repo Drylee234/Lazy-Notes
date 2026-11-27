@@ -410,6 +410,7 @@ const StudyPage = (() => {
   let indentAlone = false;
   chrome.storage.local.get("lnIndentAlone", (r) => { indentAlone = r?.lnIndentAlone === true; });
   chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnIndentAlone" in c) indentAlone = c.lnIndentAlone.newValue === true; });
+  const habit = (name) => { try { chrome.runtime.sendMessage({ type: "HABIT", name }); } catch (_) {} };
   function indentBy(note, delta, { alone = false } = {}) {
     const many = picked.has(String(note.id)) && picked.size > 1;
     const lead = many ? shown.filter((n) => picked.has(String(n.id))) : [note];
@@ -598,6 +599,7 @@ const StudyPage = (() => {
       if (!els.length) return;
       e.preventDefault();
       e.stopPropagation();
+      habit("key-ctrl-up");
       setActiveNote(els[els.length - 1]);
     }
   }, true);
@@ -628,11 +630,13 @@ const StudyPage = (() => {
     } else if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
       if (!note) return;
       e.preventDefault();
+      habit("key-alt-indent");
       indentBy(note, e.key === "ArrowRight" ? 1 : -1, { alone: e.shiftKey });
     } else if (!e.altKey && !e.ctrlKey && !e.metaKey && e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       // Shift+↑/↓: pick this note and the next, to indent them together.
       e.preventDefault();
       const to = els[Math.max(0, Math.min(els.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))];
+      if (!picked.size) habit("pick-notes");
       picked.add(el.dataset.id);
       if (to) { if (picked.has(to.dataset.id) && to !== el) picked.delete(el.dataset.id); else picked.add(to.dataset.id); }
       drawPicked();
@@ -672,7 +676,7 @@ const StudyPage = (() => {
     const u = document.createElement("button");
     u.type = "button";
     u.textContent = "Undo";
-    u.addEventListener("click", () => { t.hidden = true; send2(undoItems); });
+    u.addEventListener("click", () => { t.hidden = true; habit("undo-arrange"); send2(undoItems); });
     t.append(" · ", u);
     t.hidden = false;
     clearTimeout(toastTimer);

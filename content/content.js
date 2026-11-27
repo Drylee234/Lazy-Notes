@@ -1232,7 +1232,7 @@
       if (isCourseOpen)   shutMenu(courseMenuEl);
       else if (isTopicOpen)    shutMenu(topicMenuEl);
       else if (isCategoryOpen) shutMenu(categoryMenuEl);
-      else hidePopup();
+      else { habit("popup-dismissed"); hidePopup(); }
       return;
     }
 
@@ -1709,6 +1709,7 @@
     // first) just showed the popup — don't immediately dismiss it.
     const sel = window.getSelection();
     if (sel && sel.toString().trim().length > 0) return;
+    habit("popup-dismissed");
     hidePopup();
   }
 
@@ -1852,6 +1853,9 @@
   const UNDO_MS = 6000;
   let undoToast = null;   // { host, cancel }
 
+  // A habit for the usage report (bg_habits.js): counts only, never text.
+  function habit(name) { try { chrome.runtime.sendMessage({ type: "HABIT", name }); } catch (_) {} }
+
   function showUndoToast(saved) {
     undoToast?.cancel();
 
@@ -1906,6 +1910,7 @@
 
     function undo() {
       close();
+      habit("undo-save");
       if (saved.onUndo) { try { saved.onUndo(); } catch (_) {} return; }
       try {
         (saved.ids || [saved.id]).forEach((id) =>

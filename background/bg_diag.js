@@ -1,3 +1,4 @@
+import { FEATURES } from './bg_habits.js';
 // Lazy Notes — usage and error reports, so problems show up without the
 // user having to describe them.
 //
@@ -67,6 +68,17 @@ export async function buildReport() {
   Object.values(lazynotes?.courses || {}).forEach((c) => { courses++; Object.values(c.topics || {}).forEach((t) => {
     topics++; highlights += Object.keys(t.highlights || {}).length; notes += Object.keys(t.notes || {}).length; }); });
   const { lnDiag = {}, lnSyncState = null, ...settings } = r;
+  // Habits (bg_habits.js) on their own, and what was never used in 30 days.
+  const { lnHabits } = await chrome.storage.local.get("lnHabits");
+  const usage = {}, habits = {};
+  const used = new Set();
+  Object.entries(lnDiag.usage || {}).forEach(([day, counts]) => Object.entries(counts).forEach(([k, n]) => {
+    used.add(k);
+    const into = k.startsWith("habit:") ? habits : usage;
+    (into[day] || (into[day] = {}))[k.replace(/^habit:/, "")] = n;
+  }));
+  const neverUsed = lnHabits === false ? [] : Object.entries(FEATURES)
+    .filter(([k]) => ![...used].some((u) => u === k || (k.endsWith(":") && u.startsWith(k)))).map(([, label]) => label);
   return {
     madeAt: new Date().toISOString(),
     version: chrome.runtime.getManifest().version,
@@ -74,7 +86,8 @@ export async function buildReport() {
     counts: { courses, topics, highlights, notes },
     settings,
     sync: lnSyncState,
-    usage: lnDiag.usage || {},
+    usage,
+    ...(lnHabits === false ? {} : { habits, neverUsed }),
     errors: lnDiag.errors || []
   };
 }

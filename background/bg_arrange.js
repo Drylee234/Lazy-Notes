@@ -10,6 +10,7 @@
 
 import { getLazyNotes, setLazyNotes, oneAtATime } from './bg_storage.js';
 import { notifySidePanel } from './bg_sidepanel.js';
+import { watchHabits } from './bg_habits.js';
 
 async function setArrangement({ courseName, topicName, items }) {
   const data = await getLazyNotes();
@@ -30,7 +31,7 @@ async function setArrangement({ courseName, topicName, items }) {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "SET_ARRANGEMENT") return;
-  oneAtATime(() => setArrangement(message))
+  oneAtATime(async () => { await watchHabits(message).catch(() => {}); return setArrangement(message); })
     .then(sendResponse)
     .catch((err) => sendResponse({ ok: false, reason: String(err) }));
   return true;   // reply comes later

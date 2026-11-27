@@ -785,6 +785,7 @@ shareBtn.addEventListener("click", () => {
   if (sharePop) { closeSharePop(); return; }
   const t = exportTarget();
   if (!t?.topicName) return;
+  try { chrome.runtime.sendMessage({ type: "HABIT", name: "share" }); } catch (_) {}
   sharePop = document.createElement("form");
   sharePop.className = "share-pop";
   sharePop.innerHTML = `<div class="share-title"></div>

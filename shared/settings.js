@@ -19,7 +19,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus", "lnHabits"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -154,7 +154,9 @@ globalThis.LazySettings = (() => {
     </details>
     <div class="set-item set-item--block"><div class="set-label set-backup-label">Problems</div>
     <label class="set-check"><input type="checkbox" data-key="lnSendReports" /> Send usage &amp; error reports with sync (never your notes or key)</label>
+    <label class="set-check"><input type="checkbox" data-key="lnHabits" /> Also record habits: which features and shortcuts get used, and signs of struggle (deleting or re-indenting a note right after saving it, Undo, closing the save pop-up). Counts only</label>
     <div class="set-backup set-report-row">
+      <button type="button" class="set-btn set-habits-see" title="Show what's recorded, in plain words">See what's recorded</button>
       <button type="button" class="set-btn set-report-copy" title="Copy a report of recent errors and what was used, to paste to whoever helps you">Copy problem report</button>
       <span class="set-report-status"></span>
     </div></div>
@@ -578,6 +580,20 @@ globalThis.LazySettings = (() => {
 
     // ── Problem report (background/bg_diag.js) ──
     const reportStatus = root.querySelector(".set-report-status");
+    root.querySelector(".set-habits-see").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "DIAG_REPORT" }, (report) => {
+        void chrome.runtime.lastError;
+        if (!report || report.error) { reportStatus.textContent = "Couldn't read the report."; return; }
+        const sum = (byDay) => {
+          const t = {};
+          Object.values(byDay || {}).forEach((c) => Object.entries(c).forEach(([k, n]) => { t[k] = (t[k] || 0) + n; }));
+          return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(", ") || "nothing yet";
+        };
+        reportStatus.textContent = `Last 30 days. Used: ${sum(report.usage)}.` +
+          (report.habits ? ` Habits: ${sum(report.habits)}. Never used: ${(report.neverUsed || []).join(", ") || "—"}.` : " Habits: off.") +
+          ` Errors: ${report.errors.length}. No note text or keys are in it.`;
+      });
+    });
     root.querySelector(".set-report-copy").addEventListener("click", () => {
       chrome.runtime.sendMessage({ type: "DIAG_REPORT" }, async (report) => {
         void chrome.runtime.lastError;

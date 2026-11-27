@@ -146,6 +146,7 @@
 
   let returnFocus = null;
   async function open({ mode = "note", text = "", base = null, rect = null, x, y, category } = {}) {
+    try { chrome.runtime.sendMessage({ type: "HABIT", name: "quick-note" }); } catch (_) {}
     const { activeCourse, activeTopic } = await chrome.storage.local.get(["activeCourse", "activeTopic"]);
     const quote = mode === "quote" ? String(text).trim() : "";
     state = { mode: quote ? "quote" : "note", base, quote, cat: null, course: activeCourse, topic: activeTopic };
