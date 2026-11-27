@@ -566,7 +566,7 @@ function refreshAiTab() {
   });
 }
 chrome.storage.onChanged.addListener((c, area) => {
-  if (area === "local" && (c.lnAiOn || c.lnAiKeys || c.lnAiProvider)) refreshAiTab();
+  if (area === "local" && (c.lnAiOn || c.lnAiKeys || c.lnAiProvider || c.lnAiOffline)) refreshAiTab();
 });
 refreshAiTab();
 

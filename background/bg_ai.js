@@ -18,13 +18,17 @@
 //   AI_RUN   {task, text, extra?}              → { ok, text?, reason?, note? }
 //            a "…Doc" task may leave text out and send {scope, page} instead:
 //            the open document's own words are read from storage.session
-//   AI_READY  (no arguments)                   → { ok, on, provider, model, hasKey }
+//   AI_READY  (no arguments)                   → { ok, on, provider, model, hasKey, offline }
+//            offline: true = no AI set up, the offline helpers answer
+//            (bg_ai_offline.js; lnAiOffline, default on)
 //   AI_SAVE_NOTE {courseName, topicName, text, category} → { ok, id?, reason? }
 
 import '../shared/ai-providers.js';
 import { insertHighlight } from './bg_storage.js';
 import { validateHighlight } from './bg_validators.js';
 import { notifySidePanel } from './bg_sidepanel.js';
+import { offlineJob } from './bg_ai_offline.js';
+import { getLazyNotes } from './bg_storage.js';
 
 const AI = globalThis.LazyAIProviders;
 const TIMEOUT_MS = 60 * 1000;   // free services are slow when they're busy
@@ -318,6 +322,13 @@ export async function handleAiRun(message) {
     : "That's too much text at once. Pick fewer notes." };
 
   const cfg = await config();
+  const offlineOn = await offlineHelpers();
+  const aiReady = cfg.on && !!cfg.key;
+  // No AI set up, or no internet: the offline helpers answer from your own text.
+  if (offlineOn && (!aiReady || !navigator.onLine)) {
+    return offline(message.task, text, message.extra, note,
+      aiReady ? "You're offline, so this is the offline helper (no AI)." : "Offline helper (no AI set up): picked from your own text.");
+  }
   if (!cfg.on) return { ok: false, reason: "The AI is switched off. Turn it on in Settings › AI." };
 
   const out = await ask(cfg, {
@@ -325,15 +336,43 @@ export async function handleAiRun(message) {
     prompt: job.prompt(text, message.extra),
     maxTokens: job.maxTokens
   });
+  // The AI couldn't be reached (asleep server, no network): fall back.
+  if (!out.ok && offlineOn && /\[(UNREACHABLE|OFFLINE|TIMEOUT|SERVER_WAKING)/.test(out.reason || "")) {
+    return offline(message.task, text, message.extra, note, "Couldn't reach the AI, so this is the offline helper (no AI).");
+  }
   // Say so when we couldn't send the whole document: a summary of half a
   // lecture that claims to be the whole one would be worse than useless.
   return note && out.ok ? { ...out, note } : out;
 }
 
-// So a page can grey out its AI buttons without doing a request.
+async function offlineHelpers() {
+  const { lnAiOffline } = await chrome.storage.local.get("lnAiOffline");
+  return lnAiOffline !== false;
+}
+
+// Define searches the open document and the notes of the course you're in.
+async function offline(task, text, extra, note, why) {
+  let corpus = "";
+  if (task === "define") {
+    const doc = await documentText({ scope: "all" }).catch(() => null);
+    const { activeCourse } = await chrome.storage.local.get("activeCourse");
+    const data = await getLazyNotes();
+    const course = data.courses?.[activeCourse] || {};
+    const notes = Object.values(course.topics || {}).flatMap((t) => [...Object.values(t.highlights || {}), ...Object.values(t.notes || {})])
+      .map((n) => n.text || "").join("\n");
+    corpus = `${doc?.ok ? doc.text : ""}\n${notes}`;
+  }
+  const out = offlineJob(task, text, extra, corpus);
+  return out.ok ? { ...out, offline: true, note: [note, why].filter(Boolean).join(" ") } : { ...out, offline: true };
+}
+
+// So a page can grey out its AI buttons without doing a request. With the
+// offline helpers on, there's always something (on: true, offline: true).
 export async function handleAiReady() {
   const cfg = await config();
-  return { ok: true, on: cfg.on, provider: cfg.provider, model: cfg.model, hasKey: !!cfg.key };
+  const aiReady = cfg.on && !!cfg.key;
+  const off = !aiReady && await offlineHelpers();
+  return { ok: true, on: cfg.on || off, provider: cfg.provider, model: cfg.model, hasKey: !!cfg.key || off, offline: off };
 }
 
 // Keep an AI-written answer as a note of its own (📖 Define). It is marked

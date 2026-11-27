@@ -143,7 +143,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** know at a glance if sync / AI will work.
 - 💡 **AI background for a new course / document** (future): when a course or doc is opened, the AI fetches related info about the topic and doc, including things the lecture doesn't mention.
   **Why:** fill gaps in lecture notes.
-- 💡 **Some AI offline** (future): a small local model (or simpler non-AI helpers) for tidy / define when there's no connection.
+- ✅ **Offline helpers (2026-11-27)** (`bg_ai_offline.js`): with no AI set up, no internet, or the server unreachable, Summarise / Quiz me / Ask / Define / Tidy work from your own text (document + notes), marked **Offline**; Explain says it needs the AI. Switch: Settings › AI help (`lnAiOffline`, on). The ✨ AI tab now shows even without a key.
+  Was: 💡 **Some AI offline** (future): a small local model (or simpler non-AI helpers) for tidy / define when there's no connection.
   **Why:** studying often happens without internet.
 
 - 💡 **AI on the phone / web note viewer** (owner, 2026-11-27): the phone site is read-only; at least let you ask the AI about the notes you're reading (explain, quiz me, define). The server already has `/api/ai` with the key on Render, so the phone can use it without a key on the phone.

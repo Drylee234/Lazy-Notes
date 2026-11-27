@@ -19,7 +19,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -148,6 +148,7 @@ globalThis.LazySettings = (() => {
       </div>
       <div class="set-ai-status"></div>
       <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b> (off until a test passes)</label>
+      <label class="set-check"><input type="checkbox" data-key="lnAiOffline" /> Offline helpers when the AI can't be reached or isn't set up: Summarise, Quiz me, Define and Ask work from your own text (no AI, marked “Offline”)</label>
       <div class="set-ai-note">Your key is kept in this Chrome only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
     </details>
     <div class="set-item set-item--block"><div class="set-label set-backup-label">Problems</div>

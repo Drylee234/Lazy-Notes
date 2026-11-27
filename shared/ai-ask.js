@@ -147,6 +147,7 @@ globalThis.LazyAIAsk = (() => {
       if (r?.ok) {
         panel.resolve(id, {
           text: r.note ? `${r.text}\n\n(${r.note})` : r.text,
+          offline: !!r.offline,
           ...(msg.text ? { sourceText: msg.text, extra: msg.extra } : {})
         });
       } else {

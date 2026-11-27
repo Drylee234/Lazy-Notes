@@ -168,8 +168,8 @@ globalThis.LazyAIPanel = (() => {
       head.className = "aip-card-head";
       const badge = document.createElement("span");
       badge.className = "aip-badge";
-      badge.textContent = "AI";
-      badge.title = "Written by AI, not by you";
+      badge.textContent = e.offline ? "Offline" : "AI";
+      badge.title = e.offline ? "Picked from your own text by the offline helper (no AI)" : "Written by AI, not by you";
       const asked = document.createElement("h4");
       asked.className = "aip-asked";
       asked.textContent = titleOf(e);
@@ -410,10 +410,11 @@ globalThis.LazyAIPanel = (() => {
         return e.id;
       },
 
-      resolve(id, { text = "", question, scope, sourceText, extra } = {}) {
+      resolve(id, { text = "", question, scope, sourceText, extra, offline } = {}) {
         const e = find(id);
         if (!e) return null;
         e.state = "done";
+        e.offline = !!offline;
         e.text = String(text || "");
         e.reason = "";
         e.at = Date.now();
