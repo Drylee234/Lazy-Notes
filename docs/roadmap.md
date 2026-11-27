@@ -76,6 +76,13 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - 📘 **A list point indented itself** (owner, 2026-11-27, didn't know why): by design, a List point saved right after an indented note takes that note's indent (`insertHighlight`, bg_storage.js). Other types don't, which is why earlier notes landed outdented. Worth making the rule visible/consistent (see "New highlight lands outdented").
 
+- 💡 **"Saved to Course › Topic · Undo" toast at the bottom may be unnecessary** (owner, 2026-11-27). The note appearing in the panel already confirms it. Idea: smaller / shorter, or off by a switch (keep Undo reachable, e.g. Ctrl+Z).
+  **Why:** a big bar after every save is noise.
+- 💡 **Numbered list points that follow indents** (1., 2. → a., b. when nested), for highlights too, not only typed "1." lists.
+  **Why:** real notes number steps and sub-steps.
+- 💡 **Bold (and other formatting) inside highlights**, like typed notes have (Ctrl+B etc.): part of blurring highlights vs typed notes ("one note" goal).
+  **Why:** today only typed notes can be formatted, so highlights and typed lines look and behave differently.
+
 ## 3. UI (how it looks)
 - 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
   **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.
