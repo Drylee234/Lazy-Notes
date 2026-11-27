@@ -39,6 +39,12 @@ globalThis.LazySettings = (() => {
       <button type="button" data-value="right" role="radio">Right</button>
       <button type="button" data-value="split" role="radio" title="Text on one side of the mouse, type and Save on the other">Split</button>
     </div></div>
+    <div class="set-item"><div class="set-label">After saving</div>
+    <div class="seg" data-key="lnSaveToast" data-default="small" role="radiogroup" aria-label="Message after saving">
+      <button type="button" data-value="small" role="radio" title="A small “Saved · Undo” in the corner">Small</button>
+      <button type="button" data-value="off" role="radio" title="Nothing shows; Ctrl+Z still undoes for a few seconds">Off</button>
+      <button type="button" data-value="full" role="radio" title="The old bar: “Saved to Course › Topic · Undo”">Full</button>
+    </div></div>
     <div class="set-item"><label class="set-range">
       <span class="set-range-head"><span>Autocorrect</span><b class="set-level-name">Mild</b></span>
       <input type="range" class="set-level" min="0" max="3" step="1" value="1" aria-label="Autocorrect strength" />

@@ -89,7 +89,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - 📘 **A list point indented itself** (owner, 2026-11-27, didn't know why): by design, a List point saved right after an indented note takes that note's indent (`insertHighlight`, bg_storage.js). Other types don't, which is why earlier notes landed outdented. Worth making the rule visible/consistent (see "New highlight lands outdented").
 
-- 💡 **"Saved to Course › Topic · Undo" toast at the bottom may be unnecessary** (owner, 2026-11-27). The note appearing in the panel already confirms it. Idea: smaller / shorter, or off by a switch (keep Undo reachable, e.g. Ctrl+Z).
+- ✅ **Done (2026-11-27):** the toast is now a small "Saved · Undo" pill by default; Settings › After saving: Small / Off (Ctrl+Z still undoes ~6s) / Full (old bar) (`lnSaveToast`).
+  Was: 💡 **"Saved to Course › Topic · Undo" toast at the bottom may be unnecessary** (owner, 2026-11-27). The note appearing in the panel already confirms it. Idea: smaller / shorter, or off by a switch (keep Undo reachable, e.g. Ctrl+Z).
   **Why:** a big bar after every save is noise.
 - 💡 **Numbered list points that follow indents** (1., 2. → a., b. when nested), for highlights too, not only typed "1." lists.
   **Why:** real notes number steps and sub-steps.

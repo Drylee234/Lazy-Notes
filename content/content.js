@@ -67,8 +67,10 @@
   let listHeadOn = true;  // lnListHeadType: the List head chip (8)
   let pageNumOn = true;   // lnDropPageNums: drop lone page numbers from PDF text
   let dupWarnOn = true;   // lnDupWarn: say when these words are already saved
+  let saveToast = "small"; // lnSaveToast: "small" (Saved · Undo) | "off" (Ctrl+Z still undoes) | "full" (old bar)
   let headSplitOn = true; // lnHeadSplit: offer "Heading" + "Definition" for "Heading: words…"
-  storageGet(["lnQuickSelButtons", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit"], (r) => {
+  storageGet(["lnQuickSelButtons", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnSaveToast"], (r) => {
+    if (r?.lnSaveToast) saveToast = r.lnSaveToast;
     handoffOn = r?.lnQuickSelButtons !== false;
     listHeadOn = r?.lnListHeadType !== false;
     pageNumOn = r?.lnDropPageNums !== false;
@@ -1880,6 +1882,12 @@
           font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .msg { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Small (default): the note showing in your notes is the confirmation;
+           this only offers Undo. */
+        .small { gap: 8px; padding: 4px 4px 4px 10px; border-radius: 999px; font-size: 12px; opacity: .92; }
+        .small button { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; }
+        .small .bar { height: 2px; }
+        .off { display: none; }
         button {
           all: unset; cursor: pointer; padding: 5px 10px; border-radius: 5px;
           background: #4f46e5; color: #fff; font-weight: 600; font-size: 12px;
@@ -1897,7 +1905,11 @@
         <button type="button" title="Undo (Ctrl+Z)">Undo</button>
         <div class="bar"></div>
       </div>`;
-    root.querySelector(".msg").textContent = saved.message ?? (saved.count
+    // lnSaveToast: small pill (default), off (Ctrl+Z only), or the old full bar.
+    root.querySelector(".toast").classList.add(saveToast === "full" ? "full" : saveToast === "off" ? "off" : "small");
+    if (saveToast !== "full") {
+      root.querySelector(".msg").textContent = saved.count ? `Saved ${saved.count} points` : saved.message && !/^Saved to/.test(saved.message) ? saved.message : "Saved";
+    } else root.querySelector(".msg").textContent = saved.message ?? (saved.count
       ? `Saved ${saved.count} points to ${saved.course} › ${saved.topic}`
       : `Saved to ${saved.course} › ${saved.topic}`);
 
@@ -2037,6 +2049,7 @@
     if (changes.lnQuickSelButtons) handoffOn = changes.lnQuickSelButtons.newValue !== false;
     if (changes.lnDropPageNums) pageNumOn = changes.lnDropPageNums.newValue !== false;
     if (changes.lnDupWarn) dupWarnOn = changes.lnDupWarn.newValue !== false;
+    if (changes.lnSaveToast) saveToast = changes.lnSaveToast.newValue || "small";
     if (changes.lnHeadSplit) headSplitOn = changes.lnHeadSplit.newValue !== false;
     if (changes.lnListHeadType) { listHeadOn = changes.lnListHeadType.newValue !== false; showListHeadChip(); }
 
