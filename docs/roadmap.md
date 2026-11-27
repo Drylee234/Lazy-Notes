@@ -108,6 +108,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 ## 5. All notes / editing
 - ✅ Typed notes editable there; ↑ ↓ ⇤ ⇥ and Alt + arrows.
 
+- 💡 **Choose your home: the main page (side panel Home) or "All notes"** (owner, 2026-11-27): a setting for which one opens first (e.g. from the toolbar button / new tab / reader logo).
+  **Why:** "we're sleeping on the All notes page": it's the fullest view (every course, editing, export) but you have to go looking for it.
+- 💡 **Give All notes more love**: make it a first-class place to study, not just a browser of notes. Investigate with image options first.
+
 ## 6. V3: online (anything that needs the internet)
 - ✅ Sync server + phone site (PWA) on Render.
 - ✅ AI help (Groq etc.).
