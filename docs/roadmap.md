@@ -6,10 +6,52 @@ The single list of what's done and what's waiting, by group, so it's easy to see
 
 **Not every report needs code.** Some are fixed by using the extension differently or understanding it (an existing shortcut, a setting). Check that first, and say so: mark those 📘 "usage/understanding" with the explanation.
 
+## 0. Designs thought up, waiting to be shown (2026-11-27)
+Owner: "think it up, don't build yet; tell and show me before doing it." Each needs labelled images (Image 1 / Image 2) before any code.
+
+**A. Notes read as one note (roadmap 1 + "what makes notes feel real"; owner: also about every note showing its own source line).**
+- Sources move to the end: no source/date line under each highlight; a **Sources** block at the bottom of the topic lists each document once with the pages used ("PIO 201 Lecture two · pp. 3–7"). Hovering a note shows a tiny page tag in the left margin (where the ⋮⋮ tools already live) and clicking it opens the page.
+- A **Reading look** switch (Study and All notes): highlight marker off or very faint, so highlights and typed lines look the same; structure carries the meaning: headers/sub topics as headings, list heads as lead-ins, points as one list, nesting by indent with guide lines only on hover.
+- Spacing follows structure (same block = tight, new block after a heading/list = small gap); the 2px rule stays inside blocks.
+- Nothing about saving changes; it's only how a topic is drawn. Old look stays a switch.
+
+**B. "List first, then explain each item" (roadmap 1).** Owner's workaround: Ctrl+B on the item name at the start of each explanation. Two ways, owner to pick:
+- *Flow (no code):* save the list (head + points) → highlight each explanation → it lands at the points' indent (new rule) → Alt+→ nests it under the point above; with the point it explains just above it, that's correct. Write it in How to use as "List → explain".
+- *Feature:* the save pop-up offers "Explains: [point ▾]" when the topic's last block is a list; picking a point nests the explanation under that point (any order), and the point shows a small ▸ to fold its explanation.
+- "Edge line being stripped": `trimBlankLines` removes empty lines at the start/end of every note, which kills the owner's spacing workaround (an empty last line to separate blocks). Option: keep one empty line at a note's edge (as a gap), behind a switch.
+
+**C. Numbered lists that follow indents (roadmap 2 #12).** A list head gets "Numbered" (in ⋯ when editing it, or a key in the save pop-up); its points draw as 1. 2. 3., nested points as a. b. c., then i. ii. (CSS counters per indent level, nothing stored per point). Typed "1." lists already number; make their nested levels follow the same a./i. pattern so both look alike.
+
+**D. Bold inside highlights (roadmap 2 #13).** Highlights store the same light marks typed notes use (`**bold**`, `==mark==`, `*italic*`); Ctrl+B / Ctrl+I work in the save pop-up's text box and in the in-place editor (wrap the selection). Drawn with the typed-note formatter everywhere (Study, All notes, phone, export). Search and AI read the plain words (marks stripped). Risk: old exports/backups show the marks as plain text; the phone site already understands them.
+
+**E. Switching Home / Study without scrolling up (owner, roadmap 2).** Options for images: (1) the tab row stays pinned at the top while the list scrolls; (2) Alt+1 / Alt+2 / Alt+3 = Home / Study / AI from anywhere in the panel; (3) a small Home · Study · AI switch in the footer, next to the note box, where the eyes already are; (4) the reader panel's title-bar switcher used in the side panel too. Likely answer: (1) + (2).
+
+**F. Settings redesign (roadmap 3).** A left column of sections (Everyday · Reading · Notes · AI · Sync & account · Problems · Old ways) with the search box on top; each section a card of plain rows (name, one-line what it does, control on the right); changed rows show ↺; "Old ways" stays separate. In the narrow side panel the sections become a dropdown at the top. Show 2 looks.
+
+**G. A document used by two courses (bug report: "docs keep reading to different courses").** Today a document remembers one course/topic (`lnDocs[doc].course/topic`), and opening it while another course is picked re-files it. Design: a document keeps a list of places (course › topic, last used); opening one with two places asks "Which course this time?" (last used picked, Enter = go); document lists show small course chips ("BME213 · GET 201") instead of the doc twice; a course's page lists it once with its topics in that course.
+
+**H. The quick note box and the panel's topic (roadmap 2 #5; owner: "idg").** To explain with an image. Note: picking a topic in Study already makes it the topic highlights and quick notes save to (`SET_ACTIVE_TOPIC`), so this may be a non-issue (📘) unless the panel is showing a topic picked elsewhere.
+
+**I. UX items: is there already a way? (owner: for every UX task, first check if a workaround exists but isn't smooth or isn't known).**
+| Item | Existing way | Smooth? | Verdict |
+|---|---|---|---|
+| Key to jump to the notes list (#10) | Ctrl+. → note box, then Ctrl+↑ → last note (↑/↓ walk). Since 2026-11-27, Ctrl+↑ in an empty box first opens your last *typed* note for editing; Ctrl+↑ again goes to the list | Two steps; the second Ctrl+↑ isn't obvious | 📘 teach "Ctrl+↑ twice"; or one key (Ctrl+Shift+↑) straight to the list |
+| Rethink the edge buttons (#9) | Alt+←/→ / Alt+↑/↓ (owner uses them), Shift+↑/↓ picks several | Smooth by keyboard; mouse still fiddly | Keep; mouse drag-to-indent only if the owner wants the mouse path |
+| Indent a whole list | Indent the head (points follow), or pick with Shift | Built 2026-11-27 | ✅ |
+| Quick note topic (#5) | Pick the topic in Study (it becomes active) | Probably fine | 📘 explain |
+| Saved toast (#11) | — | Built | ✅ |
+| Edit card (#7) | — | Built | ✅ |
+| Autocorrect list (#14) | → took the single hint | Built: ↑ into the list | ✅ |
+| Spell bar unclear | — | Relabelled | ✅ |
+| Save list points without their head | Delete the head after saving (× twice) | Clunky | 💡 still wanted |
+| Join pages | Join (J) | Now also one drag across pages | ✅ |
+
+**J. Find where there are already two ways (roadmap 2 #8) → moved to the end of the list.** Needs a simulated note-taking session (save, list, explain, indent, edit) recording every path used, then a table of tasks that have two built ways and which one is smoother. Do last.
+
 ## 1. Notes feel like one note (owner's idea, 2026-11-27)
 Today a topic reads like a pile of highlights. The parts that already feel like real notes are heading → sub topic → list head with things nested under them.
 - 💡 Make the whole topic read as one written note: fewer visible seams between separate highlights (marker, gaps, hover boxes), with headings and nesting carrying the structure.
-- 💡 Same-indent notes closer together than the gap where an indent starts or ends.
+- 📘 ~~Same-indent notes closer together than the gap where an indent starts or ends.~~ Owner re-checked (2026-11-27): false alarm.
   **Why:** the spacing itself should show what belongs together; equal gaps everywhere hide the structure.
 - 💡 **"List first, then explain each item"** (owner screenshot, 2026-11-27): a head ("Protein channels are gated… through various methods:") → list points (Voltage / Liquid / Mechanically gated channels) → then a paragraph explaining each one ("Voltage-gated channels open based on…", "Liquid gated ion channels, also known as ionotropic receptors…").
   **Why:** this is how real lecture notes are written; today the explanations are just lines in a typed note, not tied to their list item, and the structure doesn't show.
@@ -111,14 +153,14 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
 - ✅ Dim white pictures (snips) in dark mode (78% brightness; full on hover).
-- 💡 Underline spelling mistakes in the Study view.
+- 💡 Underline spelling mistakes in the Study view. *(Claude's idea from an earlier session, not the owner's.)*
 
 ## 4. Reader improvements
 - ✅ PDF snap-to-word, Home/End, full screen, floating panel.
-- 💡 "Fit to width" leaves room for the floating panel.
+- 💡 "Fit to width" leaves room for the floating panel. *(Claude's idea, from its own PDF test run; not the owner's.)*
 - ✅ **Fixed (2026-11-27):** ↑/↓ now go to the row really above/below and keep the column (also across pages; on the last line ↓ goes to the line's end); ←/→ skip the invisible stop where two text pieces meet. Cause: each PDF text piece is its own box, so the browser's "line" was one piece. Tested in Chromium.
   Original report: BUG (owner, 2026-11-27): PDF keyboard cursor: ↓ jumps to the end of the word; ← / → at the edge of a word needs two presses before the cursor visibly moves.
-- 💡 "Join to last figure": stack a table snip that runs over a page break.
+- 💡 "Join to last figure": stack a table snip that runs over a page break. *(Claude's idea, not the owner's.)*
 
 - ✅ **Done (2026-11-27):** one drag can run from the bottom of a page onto the next. Starting on a word already worked; starting in the gap beside the words (snap-to-word) stopped at the page edge and didn't scroll. Now the snapped drag follows onto the nearest page and scrolls by itself at the window's top/bottom edge. Join (J) still works for the old way.
   Was: 💡 **Catch text across PDF pages** (owner reminder, 2026-11-27): one selection that runs from the bottom of one page onto the next. Today: Join (J) glues the second part onto the last highlight. Idea: drag across the page gap in one go, or a "continue on next page" mode.
