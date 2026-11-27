@@ -849,7 +849,7 @@ async function renderDisplay() {
     el.addEventListener("keydown", (e) => {
       if (!e.altKey || e.target !== el) return;
       const act = { ArrowUp: () => moveBy(note, -1), ArrowDown: () => moveBy(note, 1),
-        ArrowLeft: () => indentBy(note, -1), ArrowRight: () => indentBy(note, 1) }[e.key];
+        ArrowLeft: () => indentBy(note, -1, e.shiftKey), ArrowRight: () => indentBy(note, 1, e.shiftKey) }[e.key];
       if (act) { e.preventDefault(); act(); }
     });
   }
@@ -860,9 +860,15 @@ async function renderDisplay() {
       if (!r?.ok) alert(`Couldn't arrange: ${r?.reason || "unknown error"}`);
     });
   }
-  function indentBy(note, delta) {
-    const to = Math.max(0, Math.min(3, (note.indent || 0) + delta));
-    if (to !== (note.indent || 0)) arrange([{ kind: kindOf(note), id: note.id, indent: to }], note.id);
+  // Same as the Study tab: the notes under it come along (Alt+Shift+arrow,
+  // or Settings › Old ways › lnIndentAlone: just this one).
+  let indentAlone = false;
+  chrome.storage.local.get("lnIndentAlone", (r) => { indentAlone = r?.lnIndentAlone === true; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnIndentAlone" in c) indentAlone = c.lnIndentAlone.newValue === true; });
+  function indentBy(note, delta, alone = false) {
+    const plan = indentPlan(shown, [note], delta, alone || indentAlone);
+    if (plan.items.length) arrange(plan.items, note.id);
+    else if (plan.stuck && delta > 0) alert("Can't indent further: notes go 3 levels deep at most.");
   }
   // Same as the Study tab: the note's order goes between its new
   // neighbours, or the topic is renumbered when they're too close.

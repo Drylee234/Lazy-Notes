@@ -314,6 +314,7 @@ const StudyPage = (() => {
     let clickTimer = null;
     el.addEventListener("click", (e) => {
       if (e.target.closest("button, a, .note-tools")) return;
+      if (e.shiftKey) { e.preventDefault(); getSelection()?.removeAllRanges(); togglePick(note.id); return; }
       if (e.detail > 1) return;
       clearTimeout(clickTimer);
       clickTimer = setTimeout(edit, 230);
@@ -343,7 +344,9 @@ const StudyPage = (() => {
 
     const edit = () => openEditor(el, note, where);
     el.addEventListener("click", (e) => {
-      if (!e.target.closest("button, a, textarea, .rich-box, .format-bar, .note-tools")) edit();
+      if (e.target.closest("button, a, textarea, .rich-box, .format-bar, .note-tools")) return;
+      if (e.shiftKey && !editing) { e.preventDefault(); getSelection()?.removeAllRanges(); togglePick(note.id); return; }
+      edit();
     });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target === el) {
@@ -400,14 +403,37 @@ const StudyPage = (() => {
     });
   }
 
-  // Indent by ±1 (0-3). Undo puts it back.
-  function indentBy(note, delta) {
-    const from = note.indent || 0;
-    const to = Math.max(0, Math.min(3, from + delta));
-    if (to === from) return;
+  // Indent by ±1 (0-3), with the notes under it (a list head takes its
+  // points, a note takes what's nested under it), and every picked note
+  // (Shift+↑/↓ or Shift+click) together. alone: just that note (Alt+Shift+
+  // arrow, or Settings › Old ways › lnIndentAlone). Undo puts it all back.
+  let indentAlone = false;
+  chrome.storage.local.get("lnIndentAlone", (r) => { indentAlone = r?.lnIndentAlone === true; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnIndentAlone" in c) indentAlone = c.lnIndentAlone.newValue === true; });
+  function indentBy(note, delta, { alone = false } = {}) {
+    const many = picked.has(String(note.id)) && picked.size > 1;
+    const lead = many ? shown.filter((n) => picked.has(String(n.id))) : [note];
+    const plan = indentPlan(shown, lead, delta, alone || indentAlone);
+    if (!plan.items.length) {
+      if (plan.stuck && delta > 0) showError("Can't indent further: notes go 3 levels deep at most.");
+      return;
+    }
     focusAfterDraw = note.id;
-    send2([{ kind: kindOf(note), id: note.id, indent: to }], () =>
-      arrangeToast(to > from ? "Indented" : "Outdented", [{ kind: kindOf(note), id: note.id, indent: from }]));
+    const extra = plan.items.length - lead.length;
+    const what = (delta > 0 ? "Indented" : "Outdented") + (many ? ` ${lead.length} notes` : "") + (extra > 0 ? ` (+${extra} under ${many ? "them" : "it"})` : "");
+    send2(plan.items, () => arrangeToast(what, plan.undo));
+  }
+
+  // Picked notes (Shift+↑/↓, Shift+click): indent / outdent them together.
+  const picked = new Set();
+  function drawPicked() {
+    noteList.querySelectorAll(".note[data-id]").forEach((n) => n.classList.toggle("picked", picked.has(n.dataset.id)));
+  }
+  function clearPicked() { if (!picked.size) return; picked.clear(); drawPicked(); }
+  function togglePick(id) {
+    id = String(id);
+    if (picked.has(id)) picked.delete(id); else picked.add(id);
+    drawPicked();
   }
 
   // Put `note` at index `to` of the list without it. Order = between its new
@@ -522,6 +548,9 @@ const StudyPage = (() => {
     // The small buttons and links inside notes have keys of their own
     // (Delete, Alt+arrows, Enter), so Tab skips them.
     noteList.querySelectorAll(".note button, .note a").forEach((b) => { b.tabIndex = -1; });
+    // Picked notes stay picked across a redraw (an indent redraws the list).
+    [...picked].forEach((id) => { if (!els.some((n) => n.dataset.id === id)) picked.delete(id); });
+    drawPicked();
   }
   // The ⋮⋮ ⇤ ⇥ card shows only while the mouse is in a note's left margin
   // (where it sits), so it never covers the words you're reading.
@@ -599,10 +628,22 @@ const StudyPage = (() => {
     } else if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
       if (!note) return;
       e.preventDefault();
-      indentBy(note, e.key === "ArrowRight" ? 1 : -1);
+      indentBy(note, e.key === "ArrowRight" ? 1 : -1, { alone: e.shiftKey });
+    } else if (!e.altKey && !e.ctrlKey && !e.metaKey && e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      // Shift+↑/↓: pick this note and the next, to indent them together.
+      e.preventDefault();
+      const to = els[Math.max(0, Math.min(els.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))];
+      picked.add(el.dataset.id);
+      if (to) { if (picked.has(to.dataset.id) && to !== el) picked.delete(el.dataset.id); else picked.add(to.dataset.id); }
+      drawPicked();
+      setActiveNote(to);
     } else if (!e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       e.preventDefault();
+      clearPicked();
       setActiveNote(els[Math.max(0, Math.min(els.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]);
+    } else if (e.key === "Escape" && picked.size) {
+      e.preventDefault();
+      clearPicked();
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
       setActiveNote(e.key === "Home" ? els[0] : els[els.length - 1]);

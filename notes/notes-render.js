@@ -346,6 +346,51 @@ function noteParents(notes) {
   return parent;
 }
 
+// Indenting: what moves along with a note. Its own notes come with it (the
+// ones indented under it, or a list head's points), so a list or a nest
+// moves as one. A Header / Sub topic owns a whole section, so it only takes
+// the notes indented deeper right after it.
+// list: the topic's notes in order ({ id, kind, category, indent }).
+function noteSubtree(list, note) {
+  const i = list.indexOf(note);
+  if (i < 0) return [];
+  const lvl = note.indent || 0;
+  if (note.kind !== "typed" && (note.category === "header" || note.category === "sub topic")) {
+    const out = [];
+    for (let k = i + 1; k < list.length && (list[k].indent || 0) > lvl; k++) out.push(list[k]);
+    return out;
+  }
+  const parent = noteParents(list), me = String(note.id);
+  return list.slice(i + 1).filter((n) => {
+    for (let a = parent.get(String(n.id)); a; a = parent.get(a)) if (a === me) return true;
+    return false;
+  });
+}
+
+// What indenting `picked` notes by delta (±1) changes: [{ kind, id, indent }]
+// plus the old values for Undo. alone = only the picked notes (Alt+Shift+→,
+// or the "old way" setting). A group that would go past 3 levels (or left
+// of the edge) stays put, and `stuck` says so.
+function indentPlan(list, picked, delta, alone = false) {
+  const kind = (n) => (n.kind === "typed" ? "typed" : "highlight");
+  const taken = new Set(), items = [], undo = [];
+  let stuck = 0;
+  list.filter((n) => picked.includes(n)).forEach((lead) => {
+    if (taken.has(lead)) return;
+    const group = [lead, ...(alone ? [] : noteSubtree(list, lead))].filter((n) => !taken.has(n));
+    const lv = group.map((n) => n.indent || 0);
+    if ((delta > 0 && Math.max(...lv) + delta > 3) || (delta < 0 && (lead.indent || 0) + delta < 0)) { stuck++; return; }
+    group.forEach((n) => {
+      taken.add(n);
+      const from = n.indent || 0, to = Math.max(0, Math.min(3, from + delta));
+      if (to === from) return;
+      items.push({ kind: kind(n), id: n.id, indent: to });
+      undo.push({ kind: kind(n), id: n.id, indent: from });
+    });
+  });
+  return { items, undo, stuck };
+}
+
 // The heads among them, with how many notes each holds (all levels).
 function noteChildren(parent) {
   const kids = new Map();

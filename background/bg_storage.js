@@ -194,15 +194,7 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 
   if (!topic.highlights) topic.highlights = {};
 
-  // A list point saved right after an indented note sits at the same indent
-  // (the next item of the list you're building).
-  let inheritIndent = 0;
-  if (payload.category === "list point") {
-    const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));
-    const all = [...Object.values(topic.highlights), ...Object.values(topic.notes || {})];
-    const last = all.sort((a, b) => ord(b) - ord(a))[0];
-    if (last && last.indent > 0) inheritIndent = Math.min(3, last.indent);
-  }
+  const inheritIndent = await followIndent(topic, payload.category);
 
   topic.highlights[id] = {
     ...(inheritIndent ? { indent: inheritIndent } : {}),
@@ -225,6 +217,20 @@ export async function insertHighlight(id, payload, courseName, topicName) {
 
   await setLazyNotes(data);
   return topic.highlights[id];
+}
+
+// A new note sits at the indent of the last note in the topic, so you stay
+// inside the nest you're writing in (Alt+← to leave it). Headers and sub
+// topics start at the left edge. Settings › Old ways › lnIndentFollowLists:
+// only list points follow (the old way).
+async function followIndent(topic, category) {
+  if (category === "header" || category === "sub topic") return 0;
+  const { lnIndentFollowLists } = await storageGet("lnIndentFollowLists");
+  if (lnIndentFollowLists === true && category !== "list point") return 0;
+  const ord = (n) => (typeof n.order === "number" ? n.order : (Date.parse(n.timestamp) || 0));
+  const all = [...Object.values(topic.highlights || {}), ...Object.values(topic.notes || {})];
+  const last = all.sort((a, b) => ord(b) - ord(a))[0];
+  return last && last.indent > 0 ? Math.min(3, last.indent) : 0;
 }
 
 export async function updateHighlight(id, courseName, topicName, fields) {
@@ -268,7 +274,8 @@ export async function insertTypedNote(id, courseName, topicName, text) {
   if (!topic) return null;
 
   if (!topic.notes) topic.notes = {};
-  topic.notes[id] = { text, timestamp: new Date().toISOString(), edited: null };
+  const indent = await followIndent(topic, "typed");
+  topic.notes[id] = { ...(indent ? { indent } : {}), text, timestamp: new Date().toISOString(), edited: null };
 
   await setLazyNotes(data);
   return topic.notes[id];

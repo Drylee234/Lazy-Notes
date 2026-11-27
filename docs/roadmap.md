@@ -35,7 +35,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   **Why:** the jump in size breaks reading flow; the note should still look like itself while you edit it (ties to "feel like one note").
   Possible fixes: edit the words in place (same font and position), show the type/annotation/AI/buttons only on demand (a small ⋯ or after a key), and Enter saves / Esc cancels with no buttons visible.
 
-- 💡 New highlight lands outdented (owner screenshot, 2026-11-27). After indented typed lines ("Also play roles in generation electrical signals"), a new highlight ("Liquid gated ion channels, also known as ionotropic receptors…") was saved at indent 0, left of them.
+- ✅ **Done (2026-11-27):** every new note (highlight or typed) takes the indent of the last note; Header / Sub topic start at the left. Old way behind Settings › Old ways (`lnIndentFollowLists`).
+  Was: 💡 New highlight lands outdented (owner screenshot, 2026-11-27). After indented typed lines ("Also play roles in generation electrical signals"), a new highlight ("Liquid gated ion channels, also known as ionotropic receptors…") was saved at indent 0, left of them.
   **Cause:** only *list points* take the indent of the note above (`insertHighlight`, bg_storage.js); every other type starts at 0.
   **Why:** you're still writing inside that nest; jumping out breaks it and you have to indent by hand.
   Possible fixes: every new note takes the last note's indent (Alt+← to leave), or a setting for that. Or it's a habit change: press Alt+→ / ⇥ after saving.
@@ -59,14 +60,16 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   Original report: 🐞 **Some list points won't delete** (owner, 2026-11-27): deleting failed for some list points; after refreshing the page it worked (or they were gone). Not reproduced yet.
   **Why:** a delete that doesn't show is scary ("is my note still there?").
   Suspects: the Study list not redrawing after DELETE_HIGHLIGHT, a stale note id after a split into list points, or the panel iframe missing the storage change. Need: which view (Study / All notes / panel), how deleted (× / Delete twice / editor).
-- 💡 **Indenting a head moves only the head** (answer to owner, 2026-11-27): ⇥ / Alt+→ changes just that one note; its list points stay where they were (each note keeps its own indent; `indentBy` in study-page.js). Idea: indenting a head (or any owner) takes everything under it along, with Undo.
+- ✅ **Done (2026-11-27):** indenting takes the notes under it along (list head → its points; a note → what's nested under it; Header/Sub topic → only deeper notes right after). Alt+Shift+←/→ = just that note; old way: `lnIndentAlone`. Study + All notes.
+  Was: 💡 **Indenting a head moves only the head** (answer to owner, 2026-11-27): ⇥ / Alt+→ changes just that one note; its list points stay where they were (each note keeps its own indent; `indentBy` in study-page.js). Idea: indenting a head (or any owner) takes everything under it along, with Undo.
   **Why:** a list is one thing; moving the head alone breaks it apart.
 
 - 📘 **Owner indents with Alt+← / Alt+→** (2026-11-27), partly because the mouse buttons (⋮⋮ ⇤ ⇥ on the left edge) felt troublesome.
 - 💡 **Rethink the edge arrange buttons**: (a) a horizontal bar instead of the vertical stack, or (b) drop the ⇤ ⇥ buttons and just drag: drag left/right to indent, up/down to move (keyboard Alt+arrows stays).
   **Why:** the mouse path is awkward even after making the buttons bigger; the owner already avoids it. ⚠️ Removing buttons = keep them behind a setting (togglable rule). Show image options first.
 
-- 💡 **Indent a whole list at once** (owner, 2nd time, 2026-11-27): had to indent list points one by one again. Ideas: indenting a head takes its points along; or select several notes (Shift+↑↓) and Alt+→ them together.
+- ✅ **Done (2026-11-27):** indent the head (takes its points), or pick several notes with Shift+↑/↓ or Shift+click, then Alt+←/→ (Study).
+  Was: 💡 **Indent a whole list at once** (owner, 2nd time, 2026-11-27): had to indent list points one by one again. Ideas: indenting a head takes its points along; or select several notes (Shift+↑↓) and Alt+→ them together.
   **Why:** repeated manual work on every list.
 - 📘 **Keyboard focus to the panel** (owner, 2026-11-27): wants to move focus to the side panel, not just show/hide it. Already exists: **Ctrl+.** jumps into the panel's note box and back to the page; from the note box **Ctrl+↑** goes to the last note, then ↑↓ / Alt+arrows. Maybe not discoverable enough. 💡 Idea: a key that focuses the notes list directly.
 - 📘 **PDF keyboard cursor off**: owner highlights with the mouse, so would turn the PDF cursor off. Already a switch: Settings › Fine-tuning › "Keyboard cursor in PDFs" (`lnDocCaret`).

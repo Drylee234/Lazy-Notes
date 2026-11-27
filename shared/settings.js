@@ -19,7 +19,7 @@
 globalThis.LazySettings = (() => {
   const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -115,6 +115,8 @@ globalThis.LazySettings = (() => {
       <div class="set-group-note">Things you changed or removed. All off: tick one to bring the old way back.</div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnNoteGap" data-on="roomy" data-off-value="tight" /> Roomy gap between notes (old: 8px). Off = notes sit as close as typed lines</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnToolsSize" data-on="small" data-off-value="big" /> Small ⋮⋮ ⇤ ⇥ buttons in a row (old size)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnIndentAlone" data-off /> Indenting moves only that note, not the notes under it (Alt+Shift+→ / ← always does)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnIndentFollowLists" data-off /> Only new list points keep the indent of the note above (old: other new notes started at the left edge)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnQuickWhenFolded" data-off /> Ctrl+. opens the pop-up note box while the floating panel is folded or hidden (Ctrl+Shift+. always does)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnBoldItalic" data-off /> B / I buttons in the note box (Ctrl+B / Ctrl+I always work)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note)</label></div>

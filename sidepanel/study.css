@@ -461,3 +461,6 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 /* The note under the mouse wins: a focused note's card steps aside. */
 #note-list:has(.tools-near) .note:not(.tools-near) > .note-tools { opacity: 0; pointer-events: none; }
 #note-list .note.tools-near > .note-tools { z-index: 4; }
+
+/* Picked notes (Shift+↑/↓ or Shift+click): indent / outdent together. */
+.note.picked { background: var(--accent-soft); border-radius: var(--radius-sm); box-shadow: inset 2px 0 0 var(--accent); }
