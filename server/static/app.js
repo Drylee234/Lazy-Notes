@@ -101,9 +101,11 @@
 
   const BULLETS = ["•", "◦", "▪", "▫"];
 
+  let mixedSources = false;
   function noteHtml(n, next, prev) {
     // The source shows only where it changes, not under every note.
-    const showSrc = !prev || (prev.sourceTitle || prev.sourceUrl) !== (n.sourceTitle || n.sourceUrl);
+    // And only in a topic that mixes sources: one document = no repeated file name.
+    const showSrc = mixedSources && (!prev || (prev.sourceTitle || prev.sourceUrl) !== (n.sourceTitle || n.sourceUrl));
     const indent = Math.max(0, Math.min(3, n.indent || 0));
     const style = `style="--indent:${indent * 18}px;--bullet:'${BULLETS[indent]}'"`;
     if (n.kind === "typed") return `<div class="note typed" ${style}>${typedHtml(n.text)}</div>`;
@@ -204,7 +206,7 @@
     if (!t) { view.innerHTML = `<div class="empty">This topic isn't in the last sync.</div>`; return; }
     const notes = topicNotes(t);
     view.innerHTML = notes.length
-      ? `<div class="notes">${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>`
+      ? `<div class="notes">${(mixedSources = new Set(notes.filter((n) => n.kind !== "typed").map((n) => n.sourceTitle || n.sourceUrl || "")).size > 1, "")}${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>`
       : `<div class="empty">No notes in this topic yet.</div>`;
     window.scrollTo(0, 0);
   }

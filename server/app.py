@@ -306,6 +306,22 @@ def index():
     return send_from_directory(os.path.join(HERE, "static"), "index.html")
 
 
+@app.get("/manifest.webmanifest")
+def web_manifest():
+    r = send_from_directory(os.path.join(HERE, "static"), "manifest.webmanifest", mimetype="application/manifest+json")
+    r.headers["Cache-Control"] = "no-cache"
+    return r
+
+
+@app.get("/sw.js")
+def service_worker():
+    # At the site root so it can control every page.
+    r = send_from_directory(os.path.join(HERE, "static"), "sw.js", mimetype="text/javascript")
+    r.headers["Cache-Control"] = "no-cache"
+    r.headers["Service-Worker-Allowed"] = "/"
+    return r
+
+
 @app.get("/static/<path:name>")
 def static_file(name):
     return send_from_directory(os.path.join(HERE, "static"), name)
