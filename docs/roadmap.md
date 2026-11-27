@@ -70,7 +70,13 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 📘 **Keyboard focus to the panel** (owner, 2026-11-27): wants to move focus to the side panel, not just show/hide it. Already exists: **Ctrl+.** jumps into the panel's note box and back to the page; from the note box **Ctrl+↑** goes to the last note, then ↑↓ / Alt+arrows. Maybe not discoverable enough. 💡 Idea: a key that focuses the notes list directly.
 - 📘 **PDF keyboard cursor off**: owner highlights with the mouse, so would turn the PDF cursor off. Already a switch: Settings › Fine-tuning › "Keyboard cursor in PDFs" (`lnDocCaret`).
 
+- 📘 **New topic when opening a new doc** (owner, 2026-11-27): had to create the topic first, then save the doc to it. Already built last night (owner hadn't reloaded yet): "+ New topic…" at the bottom of the topic list in "Where do these notes go?". Check it works for them.
+- 💡 **Open a document from a course in All notes** (owner, 2026-11-27): the course page lists its documents; add "+ Open a document…" there, and the new doc saves to that course straight away (only the topic asked).
+  **Why:** fewer steps; you're already in the course.
+
 ## 3. UI (how it looks)
+- 💡 **Settings look lacklustre** (owner, 2026-11-27): works, but plain. Redesign the look (sections, icons, spacing, cards); show image options first.
+  **Why:** settings is where the owner manages a lot now; it should feel as finished as the rest.
 - ✅ How-to tour with screenshots, opens on reload.
 - ✅ PDF definitions show only their own paragraph.
 - 💡 Dim white pictures (snips) in dark mode.
@@ -95,6 +101,15 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - 💡 **Usage reports that show habits, not just errors** (owner, 2026-11-27): with "Send usage & error reports" on, also record which features/shortcuts are used and never used, and signs of struggle (repeated undo, delete-and-redo, editing right after saving, re-indenting by hand, dismissing the pop-up, opening How to use). Never note text or keys.
   **Why:** alpha testers won't send live bug reports like the owner does; the data should show what's unused, unknown or stressful so it can be fixed or taught.
+
+- 💡 **Textbooks** (future, owner 2026-11-27): a textbook can serve several courses. Ideas: jump to the chapter/pages for the topic you're studying; search the textbook for context related to a note. Could be offline (search the PDF's text) or online (AI).
+  **Why:** real textbooks are big and shared across courses; finding the relevant part is slow.
+- 💡 **"Online" status bar** (future): once real online features exist (login, sync, AI), a small indicator says whether the extension is connected.
+  **Why:** know at a glance if sync / AI will work.
+- 💡 **AI background for a new course / document** (future): when a course or doc is opened, the AI fetches related info about the topic and doc, including things the lecture doesn't mention.
+  **Why:** fill gaps in lecture notes.
+- 💡 **Some AI offline** (future): a small local model (or simpler non-AI helpers) for tidy / define when there's no connection.
+  **Why:** studying often happens without internet.
 
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
