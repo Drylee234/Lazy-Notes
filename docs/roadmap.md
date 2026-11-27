@@ -41,7 +41,7 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
   Possible fixes: every new note takes the last note's indent (Alt+← to leave), or a setting for that. Or it's a habit change: press Alt+→ / ⇥ after saving.
 
 ## 2b. Unclear to the owner (explain, or redesign)
-- 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. Teach it in the tour / How to use. It's also a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
+- 📘 **Owner's own workaround (2026-11-27):** **Ctrl+B** to bold the item name at the start of each explanation ("**Voltage-gated channels** open based on…") makes the "list first, then explain" pattern readable. **Just a usage observation, not an official method**: don't teach it or build on it unless the owner decides later. Possibly a hint for the real-notes design (an explanation that starts with a bold term = a sub-head of that list item).
 - 💡 Spell bar under the note box ("~~Vltage~~ **Voltage** Add to dictionary"): the crossed-out word is your typo, click **Voltage** to replace it, **Add to dictionary** keeps your spelling. **Why:** the owner couldn't tell what the bar was or what to click → label it (e.g. "Did you mean: Voltage?"), add a key (Tab/→ accepts), and put it in the tour.
 
 ## 3. UI (how it looks)
