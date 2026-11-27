@@ -155,8 +155,12 @@ body.ln-embed-open { --ln-embed-open-w: var(--ln-embed-w, 360px); }   /* lets th
 .ln-edge-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .ln-edge-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; }
 #ln-embed.ln-under-icons { top: calc(var(--toolbar-h, 49px) + 44px); border-top: 1px solid var(--border); border-top-left-radius: 10px; }
-/* Icon row mode: the panel's bar lives in the icon row; the panel starts right under it. */
-#ln-embed.ln-bar-merged > .ln-embed-bar { display: none; }
-.ln-edge-icons .ln-bar-btn { height: 28px; min-width: 28px; padding: 0 6px; border-radius: 7px; font-size: 13px; color: var(--sec); }
-.ln-edge-icons .ln-bar-btn:hover { background: var(--hover); color: var(--pri); }
-.ln-edge-icons .ln-bar-close { margin-left: 0; }
+
+/* The panel's own bar: Home · Study · AI icons on the left; the modes, ?, ⧉
+   and ✕ as icons on the right (names in tooltips). */
+.ln-bar-views { display: inline-flex; gap: 1px; }
+.ln-embed-bar .ln-bar-btn { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 5px; }
+.ln-bar-view.on { background: var(--accent-soft); color: var(--accent); }
+#ln-embed.ln-floating .ln-bar-view.on { background: rgba(255, 255, 255, 0.22); color: var(--on-accent); }
+.ln-embed-bar .ln-bar-title { visibility: hidden; min-width: 12px; }   /* still the drag handle in Float */
+.ln-embed-bar .ln-bar-btn[hidden] { display: none; }

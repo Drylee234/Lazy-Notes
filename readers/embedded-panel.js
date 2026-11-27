@@ -49,6 +49,11 @@
   const bar = document.createElement("div");
   bar.className = "ln-embed-bar";
   bar.innerHTML = `
+    <span class="ln-bar-views" role="toolbar" aria-label="Views">
+      <button type="button" class="ln-bar-btn ln-bar-view" data-view="home" title="Home (Alt+1)" aria-label="Home"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H9.5V10h-3v3.5H3a.5.5 0 0 1-.5-.5Z"/></svg></button>
+      <button type="button" class="ln-bar-btn ln-bar-view" data-view="study" title="Study (Alt+2)" aria-label="Study"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"/></svg></button>
+      <button type="button" class="ln-bar-btn ln-bar-view" data-view="ai" title="AI (Alt+3)" aria-label="AI"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l1.3 3.2 3.2 1.3-3.2 1.3L8 11.5 6.7 8.3 3.5 7l3.2-1.3Z"/></svg></button>
+    </span>
     <span class="ln-bar-title" title="Drag to move"></span>
     <button type="button" class="ln-bar-btn ln-bar-help" title="How to use (shortcuts)" aria-label="How to use">?</button>
     <button type="button" class="ln-bar-btn ln-bar-fold" title="Fold to this bar" aria-label="Fold">−</button>
@@ -83,10 +88,10 @@
   // top, right where the panel opens (like Claude's own side-panel buttons):
   // Home / Study / AI open the panel on that view, the lit one closes it.
   // "tab" = the old slim "Notes" tab half-way down the right edge.
-  let edgeStyle = "icons", currentView = "study";
+  let edgeStyle = "tab", currentView = "study";   // Home/Study/AI now live in the panel's own bar
   const iconsOn = () => mode === "tab" && edgeStyle !== "tab";
-  chrome.storage.local.get("lnEdgeStyle", (r) => { edgeStyle = r?.lnEdgeStyle || "icons"; apply({ refit: false }); });
-  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && c.lnEdgeStyle) { edgeStyle = c.lnEdgeStyle.newValue || "icons"; apply({ refit: false }); } });
+  chrome.storage.local.get("lnEdgeStyle", (r) => { edgeStyle = r?.lnEdgeStyle || "tab"; apply({ refit: false }); });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && c.lnEdgeStyle) { edgeStyle = c.lnEdgeStyle.newValue || "tab"; apply({ refit: false }); } });
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -163,18 +168,6 @@
     aside.hidden = !on;
     edge.hidden = mode === "docked" || (on && !iconsOn());
     edge.classList.toggle("ln-edge-iconbar", iconsOn());
-    // Icon row mode: the panel's own bar (? · other modes · ⧉ · ✕) moves up
-    // into the icon row, so there's one bar, not two.
-    const row = edge.querySelector(".ln-edge-icons");
-    const tools = [".ln-bar-help", ".ln-bar-mode", ".ln-bar-mode2", ".ln-bar-mode3", ".ln-bar-pop", ".ln-bar-close"].map((c) => bar.querySelector(c) || row.querySelector(c));
-    if (iconsOn() && on) {
-      if (!row.querySelector(".ln-edge-sep2")) { const sep = document.createElement("span"); sep.className = "ln-edge-sep ln-edge-sep2"; row.appendChild(sep); }
-      tools.forEach((t) => t && row.appendChild(t));
-    } else {
-      row.querySelector(".ln-edge-sep2")?.remove();
-      tools.forEach((t) => t && t.parentElement !== bar && bar.appendChild(t));
-    }
-    aside.classList.toggle("ln-bar-merged", iconsOn() && on);
     aside.classList.toggle("ln-under-icons", iconsOn());
     edge.querySelectorAll(".ln-edge-icon[data-view]").forEach((b) => {
       const lit = on && b.dataset.view === currentView;
@@ -188,14 +181,14 @@
       ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
       : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (!slides() ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
     // The two other ways to show it.
-    const LABEL = { float: ["🗗 Float", "A box you can drag anywhere"], tab: ["⇥ Edge tab", "Hide it behind a tab on the edge"],
-                    docked: ["📌 Dock", "Keep it beside the document"], bottom: ["▁ Bottom", "A wide panel that slides up from the bottom"] };
+    // Icons only; the name is in the tooltip.
+    const LABEL = { float: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M2.5 6h11"/></svg>', "Float: a box you can drag anywhere"], tab: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M10 6.5 8.5 8l1.5 1.5"/><path d="M12 2.5v11"/></svg>', "Edge tab: hide it behind a tab on the edge"],
+                    docked: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M10 2.5v11"/></svg>', "Dock: keep it beside the document"], bottom: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 10h11"/></svg>', "Bottom: a wide panel that slides up from the bottom"] };
     const others = ["float", "tab", "docked", "bottom"].filter((m) => m !== mode);
-    const pick = (c) => bar.querySelector(c) || edge.querySelector(c);   // in the bar, or moved up into the icon row
-    [pick(".ln-bar-mode"), pick(".ln-bar-mode2"), pick(".ln-bar-mode3")].forEach((b, i) => {
+    [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2"), bar.querySelector(".ln-bar-mode3")].forEach((b, i) => {
       b.dataset.to = others[i];
-      // In the icon row up top, just the symbol (the name is in the tooltip).
-      b.textContent = iconsOn() ? LABEL[others[i]][0].split(" ")[0] : LABEL[others[i]][0];
+      b.innerHTML = LABEL[others[i]][0];
+      b.setAttribute("aria-label", LABEL[others[i]][1]);
       b.title = LABEL[others[i]][1];
     });
     // The PDF reader refits on resize; the others reflow by themselves.
@@ -224,6 +217,16 @@
   edge.querySelector(".ln-edge-icon-pen").addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   penBtn.addEventListener("click", () => globalThis.LazyNotesQuick?.open({ mode: "note" }));
   bar.querySelector(".ln-bar-close").addEventListener("click", () => { if (shown()) togglePanel(); });
+  // Home · Study · AI right in the panel's own bar.
+  bar.querySelectorAll(".ln-bar-view").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    currentView = b.dataset.view;
+    frame.contentWindow?.postMessage({ type: "ln-set-view", view: currentView }, location.origin);
+    litViews();
+  }));
+  function litViews() {
+    bar.querySelectorAll(".ln-bar-view").forEach((b) => { const on = b.dataset.view === currentView; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+  }
   bar.querySelectorAll(".ln-bar-mode, .ln-bar-mode2, .ln-bar-mode3").forEach((b) => b.addEventListener("click", () => {
     state.open = true;
     state.floatOpen = true;
@@ -337,6 +340,7 @@
     if (e.data?.type === "ln-view") {   // the title names the view (Study / AI / Home)
       viewSwitch.update(e.data);
       if (e.data.active && e.data.active !== currentView) { currentView = e.data.active; apply({ refit: false }); }
+      litViews();
     }
   });
 
