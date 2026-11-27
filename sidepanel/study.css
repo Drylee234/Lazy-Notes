@@ -464,3 +464,9 @@ body.is-reordering, body.is-reordering * { cursor: grabbing !important; user-sel
 
 /* Picked notes (Shift+↑/↓ or Shift+click): indent / outdent together. */
 .note.picked { background: var(--accent-soft); border-radius: var(--radius-sm); box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Editing the last typed note in the note box (Ctrl+↑) */
+#composer-editing { flex-basis: 100%; font-size: 11px; color: var(--accent); padding: 0 2px 4px; }
+#composer-editing[hidden] { display: none; }
+#note-list .note.in-box { opacity: 0.45; }
+#composer.box-editing #composer-type { display: none; }

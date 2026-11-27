@@ -211,6 +211,7 @@ const StudyPage = (() => {
     const sameTopic = target?.courseName === courseName && target?.topicName === topicName;
     if (editing && !sameTopic) closeEditor({ redraw: false });
     if (hlEditing && !sameTopic) closeHighlightEditor({ redraw: false });
+    if (boxEditing && !sameTopic) stopBoxEdit();
 
     // Notes that appeared since the last draw of this topic (saved from a
     // page/reader): the list scrolls down to the newest.
@@ -549,6 +550,7 @@ const StudyPage = (() => {
     // The small buttons and links inside notes have keys of their own
     // (Delete, Alt+arrows, Enter), so Tab skips them.
     noteList.querySelectorAll(".note button, .note a").forEach((b) => { b.tabIndex = -1; });
+    markBoxEdit();
     // Picked notes stay picked across a redraw (an indent redraws the list).
     [...picked].forEach((id) => { if (!els.some((n) => n.dataset.id === id)) picked.delete(id); });
     drawPicked();
@@ -600,6 +602,12 @@ const StudyPage = (() => {
       e.preventDefault();
       e.stopPropagation();
       habit("key-ctrl-up");
+      const last = shown[shown.length - 1];
+      if (!editInList && !boxEditing && !composerInput.value.trim() && last?.kind === "typed" && !editing && !hlEditing) {
+        startBoxEdit(last);
+        return;
+      }
+      stopBoxEdit();
       setActiveNote(els[els.length - 1]);
     }
   }, true);
@@ -789,8 +797,54 @@ const StudyPage = (() => {
     return e.key === "Enter" && !e.shiftKey && !e.isComposing;
   }
 
+  // ── Editing your latest typed note back in the note box ──
+  // Ctrl+↑ in an empty note box, when the last note is one you typed: its
+  // words come back into the box, Enter saves the change, Esc stops. (You're
+  // usually still writing that thought.) Old way: Ctrl+↑ goes to the list
+  // (Settings › Old ways › lnEditLastInList).
+  let boxEditing = null;   // { id, where }
+  let editInList = false;
+  chrome.storage.local.get("lnEditLastInList", (r) => { editInList = r?.lnEditLastInList === true; });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && "lnEditLastInList" in c) editInList = c.lnEditLastInList.newValue === true; });
+  function startBoxEdit(note) {
+    boxEditing = { id: note.id, where: { ...target } };
+    composerInput.value = note.text;
+    autoGrow(composerInput);
+    composerInput.focus();
+    composerInput.caretToEnd?.();
+    let tag = document.getElementById("composer-editing");
+    if (!tag) {
+      tag = document.createElement("div");
+      tag.id = "composer-editing";
+      composer.prepend(tag);
+    }
+    tag.textContent = "Editing your last note · Enter saves · Esc stops";
+    tag.hidden = false;
+    composer.classList.add("box-editing");
+    markBoxEdit();
+  }
+  function stopBoxEdit({ clear = true } = {}) {
+    if (!boxEditing) return;
+    boxEditing = null;
+    if (clear) { composerInput.value = ""; autoGrow(composerInput); }
+    const tag = document.getElementById("composer-editing");
+    if (tag) tag.hidden = true;
+    composer.classList.remove("box-editing");
+    markBoxEdit();
+  }
+  function markBoxEdit() {
+    noteList.querySelectorAll(".note.in-box").forEach((n) => n.classList.remove("in-box"));
+    if (boxEditing) noteList.querySelector(`.note[data-id="${CSS.escape(String(boxEditing.id))}"]`)?.classList.add("in-box");
+  }
+
   async function submitComposer() {
     const text = composerInput.value.trim();
+    if (boxEditing) {
+      const { id, where } = boxEditing;
+      if (text && await saveTypedNote({ id, ...where, text })) { scrollToId = id; stopBoxEdit(); }
+      else if (!text) stopBoxEdit();   // emptied: nothing changes (× deletes a note)
+      return;
+    }
     if (!text || !target) return;
 
     // Saved as a highlight type: plain words, like a highlight without a link.
@@ -832,6 +886,10 @@ const StudyPage = (() => {
     if (isSaveKey(e)) {
       e.preventDefault();
       submitComposer();
+    }
+    if (e.key === "Escape" && boxEditing) {
+      e.preventDefault();
+      stopBoxEdit();
     }
   });
   composerInput.addEventListener("input", () => {

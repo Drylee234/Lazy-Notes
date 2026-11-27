@@ -20,7 +20,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 **Investigate what makes notes feel "real"**: structure (head → items → explanations), spacing that follows meaning, fewer per-highlight seams, no edit-box jump. Show options as labelled images before building.
 - ✅ Tight spacing: separate notes 2px apart, like typed lines.
 - ✅ Nesting: ownership by indent, guide lines, folding.
-- 💡 Editing your most recent typed note happens back in the note box (where you type), not in place in the list.
+- ✅ **Done (2026-11-27):** Ctrl+↑ in an empty note box brings your last typed note back into the box ("Editing your last note · Enter saves · Esc stops"; the note dims in the list). Old way: `lnEditLastInList`.
+  Was: 💡 Editing your most recent typed note happens back in the note box (where you type), not in place in the list.
   **Why:** you're usually still writing that thought; going back to the box feels like one continuous note, not editing a separate item.
 
 ## 2. UX (how it behaves)

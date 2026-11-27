@@ -34,7 +34,7 @@
       ["All notes (toolbar)", "Browse, search and edit everything in a new tab"],
     ]},
     { title: "Study tab — your notes list", rows: [
-      [`${C} + ↑  (in the note box)`, "Jump to the last note so you can edit it; Enter edits it"],
+      [`${C} + ↑  (empty note box)`, "Your last typed note comes back into the box to edit: Enter saves, Esc stops. If the last note is a highlight (or the box has text), it jumps to the last note instead"],
       [`${C} + ↓  (on a note)`, "Back to the note box"],
       ["↑ ↓ · Home · End", "Move between notes"],
       ["Enter · Space", "Edit the note"],
