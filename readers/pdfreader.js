@@ -941,6 +941,20 @@ document.addEventListener("pointerup", () => setTimeout(drawCaret, 0));
 function drawCaret() {
   const sel = selectionInText();
   if (!sel || snipping || !caretOn || pointerIsDown || (!sel.isCollapsed && !keySelecting)) { caretEl.hidden = true; return; }
+  const rect = caretRect(sel);
+  if (!rect) { caretEl.hidden = true; return; }
+  caretEl.style.left = `${rect.left + scrollX}px`;
+  caretEl.style.top = `${rect.top + scrollY}px`;
+  caretEl.style.height = `${rect.height}px`;
+  caretEl.hidden = false;
+  caretEl.classList.remove("blink");
+  void caretEl.offsetWidth;          // restart the blink after each move
+  caretEl.classList.add("blink");
+}
+
+// Where the caret (the selection's focus) is on screen: { left, top,
+// height } in the viewport, or null.
+function caretRect(sel) {
   // The caret's spot as a point inside text: when the focus sits between
   // elements (end of a line, a <br>), use the end of the text just before it
   // or the start of the text just after it.
@@ -959,7 +973,7 @@ function drawCaret() {
     const before = textIn(prev, true), after = textIn(next, false);
     if (after) { node = after; off = 0; }
     else if (before) { node = before; off = before.nodeValue.length; }
-    else { caretEl.hidden = true; return; }
+    else return null;
   }
   // Measure a real character (an empty point at a line's end can be
   // reported on the next line): the one before the caret, else the one after.
@@ -969,23 +983,55 @@ function drawCaret() {
     if (off > 0) { r.setStart(node, off - 1); r.setEnd(node, off); atEnd = true; }
     else if (node.nodeValue?.length) { r.setStart(node, 0); r.setEnd(node, 1); }
     else { r.setStart(node, off); r.collapse(true); }
-  } catch (_) { caretEl.hidden = true; return; }
+  } catch (_) { return null; }
   const cr = r.getClientRects();
   let rect = cr[cr.length - 1] || r.getBoundingClientRect();
   if (rect && (rect.width || rect.height)) rect = { left: atEnd ? rect.right : rect.left, top: rect.top, height: rect.height };
   if (!rect || (!rect.height && !rect.width)) {
     const b = node.parentElement?.getBoundingClientRect();
-    if (!b?.height) { caretEl.hidden = true; return; }
+    if (!b?.height) return null;
     rect = { left: off > 0 ? b.right : b.left, top: b.top, height: b.height };
   }
-  if (rect.height > 80) { caretEl.hidden = true; return; }   // never a page-tall bar
-  caretEl.style.left = `${rect.left + scrollX}px`;
-  caretEl.style.top = `${rect.top + scrollY}px`;
-  caretEl.style.height = `${rect.height}px`;
-  caretEl.hidden = false;
-  caretEl.classList.remove("blink");
-  void caretEl.offsetWidth;          // restart the blink after each move
-  caretEl.classList.add("blink");
+  if (rect.height > 80) return null;   // never a page-tall bar
+  return rect;
+}
+
+// ↑ / ↓: each PDF text piece is its own box, so the browser's "next line"
+// is just the end of the next piece on the same row. Go to the row really
+// above/below instead, keeping the caret's column (like a text editor).
+let goalX = null, goalAt = null;   // the column ↑/↓ keep, while nothing else moved the caret
+function verticalSpot(sel, down) {
+  const here = caretRect(sel);
+  if (!here) return null;
+  const same = goalAt && goalAt.node === sel.focusNode && goalAt.offset === sel.focusOffset;
+  const x = same && goalX != null ? goalX : here.left;
+  const cy = here.top + here.height / 2;
+  const pieces = [];
+  for (const sp of document.querySelectorAll(".textLayer span:not(.markedContent)")) {
+    if (!sp.firstChild || sp.firstChild.nodeType !== 3 || !sp.textContent.trim()) continue;
+    const b = sp.getBoundingClientRect();
+    if (!b.width || !b.height || b.height > 80) continue;
+    const c = b.top + b.height / 2;
+    if (down ? c > cy + here.height * 0.5 : c < cy - here.height * 0.5) pieces.push({ sp, b, c });
+  }
+  if (!pieces.length) return null;
+  // The nearest row, then the piece on it closest to the column.
+  const rowC = pieces.reduce((m, p) => (down ? Math.min(m, p.c) : Math.max(m, p.c)), down ? Infinity : -Infinity);
+  const row = pieces.filter((p) => Math.abs(p.c - rowC) <= p.b.height * 0.5);
+  const dist = (p) => (x < p.b.left ? p.b.left - x : x > p.b.right ? x - p.b.right : 0);
+  const best = row.reduce((a, p) => (dist(p) < dist(a) ? p : a));
+  // The character gap in that piece nearest the column.
+  const tn = best.sp.firstChild, len = tn.nodeValue.length, r = document.createRange();
+  let off = 0, bd = Infinity;
+  for (let i = 0; i <= len; i++) {
+    try {
+      if (i < len) { r.setStart(tn, i); r.setEnd(tn, i + 1); } else { r.setStart(tn, len - 1); r.setEnd(tn, len); }
+    } catch (_) { break; }
+    const cb = r.getBoundingClientRect();
+    const gx = i < len ? cb.left : cb.right;
+    if (Math.abs(gx - x) < bd) { bd = Math.abs(gx - x); off = i; }
+  }
+  return { node: tn, offset: off, x };
 }
 document.addEventListener("selectionchange", drawCaret);
 addEventListener("resize", drawCaret);
@@ -1105,9 +1151,28 @@ document.addEventListener("keydown", (e) => {
         return;
       }
     }
-    const by = (e.ctrlKey || e.metaKey) && unit === "character" ? "word" : unit;
     keySelecting = true;
-    sel.modify(e.shiftKey ? "extend" : "move", dir, by);
+    const how = e.shiftKey ? "extend" : "move";
+    // No row further (end of the text drawn so far): the line's end/start,
+    // like a text editor, instead of jumping out of the text.
+    const vertical = unit === "line" && !e.ctrlKey && !e.metaKey
+      && (verticalSpot(sel, dir === "forward") || visualLineEnd(sel, dir === "backward"));
+    if (vertical) {
+      if (e.shiftKey) sel.extend(vertical.node, vertical.offset); else sel.collapse(vertical.node, vertical.offset);
+      if (vertical.x != null) goalX = vertical.x;
+      goalAt = { node: sel.focusNode, offset: sel.focusOffset };
+    } else {
+      const by = (e.ctrlKey || e.metaKey) && unit === "character" ? "word" : unit;
+      const before = caretRect(sel);
+      sel.modify(how, dir, by);
+      // Where two text pieces meet, the end of one and the start of the next
+      // are the same spot on screen: keep going until the caret really moves.
+      for (let i = 0; i < 3 && before && unit === "character"; i++) {
+        const now = caretRect(sel);
+        if (!now || Math.abs(now.left - before.left) > 1 || Math.abs(now.top - before.top) > 1) break;
+        sel.modify(how, dir, by);
+      }
+    }
     drawCaret();
     // Keep the caret on screen.
     const c = caretEl.getBoundingClientRect();

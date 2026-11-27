@@ -98,7 +98,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 ## 4. Reader improvements
 - ✅ PDF snap-to-word, Home/End, full screen, floating panel.
 - 💡 "Fit to width" leaves room for the floating panel.
-- 💡 BUG (owner, 2026-11-27): PDF keyboard cursor: ↓ jumps to the end of the word; ← / → at the edge of a word needs two presses before the cursor visibly moves.
+- ✅ **Fixed (2026-11-27):** ↑/↓ now go to the row really above/below and keep the column (also across pages; on the last line ↓ goes to the line's end); ←/→ skip the invisible stop where two text pieces meet. Cause: each PDF text piece is its own box, so the browser's "line" was one piece. Tested in Chromium.
+  Original report: BUG (owner, 2026-11-27): PDF keyboard cursor: ↓ jumps to the end of the word; ← / → at the edge of a word needs two presses before the cursor visibly moves.
 - 💡 "Join to last figure": stack a table snip that runs over a page break.
 
 - 💡 **Catch text across PDF pages** (owner reminder, 2026-11-27): one selection that runs from the bottom of one page onto the next. Today: Join (J) glues the second part onto the last highlight. Idea: drag across the page gap in one go, or a "continue on next page" mode.
