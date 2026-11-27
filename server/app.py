@@ -16,9 +16,11 @@ import hmac
 import json
 import os
 import secrets
+import socket
 import sqlite3
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -40,7 +42,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 #   AI_PROVIDER  groq | gemini | anthropic | openrouter    (default groq)
 #   AI_MODEL     the model name            (default: that provider's usual one)
 #   AI_BASE      a different address, for anything OpenAI-shaped (optional)
-AI_KEY = os.environ.get("AI_KEY", "")
+AI_KEY_RAW = os.environ.get("AI_KEY", "")
+AI_KEY = AI_KEY_RAW.strip()   # a pasted key often brings a space or newline with it
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "groq").strip().lower()
 AI_MODEL = os.environ.get("AI_MODEL", "").strip()
 AI_BASE = os.environ.get("AI_BASE", "").strip().rstrip("/")
@@ -201,6 +204,56 @@ def get_report():
     return jsonify(savedAt=saved_at, report=(data or {}).get("lnReport"))
 
 
+# Every AI failure says what went wrong as a short code the extension can show
+# and look up, plus a plain reason. Codes:
+#   SYNC_KEY_WRONG      the extension's sync key isn't this server's LAZYNOTES_KEY
+#   NO_AI_KEY           AI_KEY isn't set on Render
+#   BAD_PROVIDER        AI_PROVIDER unknown and no AI_BASE
+#   EMPTY_PROMPT        nothing was sent
+#   AI_KEY_REFUSED      the service said 401 to AI_KEY
+#   AI_FORBIDDEN        403 (key lacks access to that model / region)
+#   AI_BLOCKED          the service's firewall (Cloudflare) blocked the server
+#   AI_MODEL_NOT_FOUND  404: AI_MODEL is wrong
+#   AI_RATE_LIMIT       429: free allowance used up
+#   AI_BAD_REQUEST      400 from the service
+#   AI_SERVICE_ERROR    5xx / other from the service
+#   AI_TIMEOUT          no answer in time
+#   AI_UNREACHABLE      DNS / TLS / network from Render to the service
+#   AI_BAD_REPLY / AI_EMPTY  an answer we couldn't use
+def ai_fail(code, reason, status, upstream=None):
+    out = {"ok": False, "code": code, "reason": reason, "provider": AI_PROVIDER}
+    if upstream is not None:
+        out["upstream_status"] = upstream
+    return jsonify(out), status
+
+
+def ai_config_problem():
+    if not AI_KEY:
+        return ("NO_AI_KEY", "This server has no AI key: add AI_KEY in Render › lazy-notes › Environment.")
+    if AI_PROVIDER not in AI_SERVICES and not AI_BASE:
+        return ("BAD_PROVIDER", f"AI_PROVIDER '{AI_PROVIDER}' isn't one I know (groq, gemini, anthropic, openrouter), and no AI_BASE was given.")
+    return None
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    """What the server's AI set-up looks like, without asking the AI: is a key
+    there, which service and model. Never returns the key itself."""
+    if not authorized():
+        return ai_fail("SYNC_KEY_WRONG", "Your server refused the sync key (LAZYNOTES_KEY).", 401)
+    service = AI_SERVICES.get(AI_PROVIDER) or {}
+    problem = ai_config_problem()
+    return jsonify(ok=not problem, code=problem[0] if problem else "READY",
+                   reason=problem[1] if problem else "AI is set up on this server.",
+                   has_key=bool(AI_KEY), key_length=len(AI_KEY),
+                   key_looks_like=("groq (gsk_…)" if AI_KEY.startswith("gsk_") else "google (AIza…)" if AI_KEY.startswith("AIza")
+                                   else "anthropic (sk-ant-…)" if AI_KEY.startswith("sk-ant-") else "openrouter (sk-or-…)" if AI_KEY.startswith("sk-or-")
+                                   else "unknown" if AI_KEY else "none"),
+                   key_had_spaces=AI_KEY_RAW != AI_KEY,
+                   provider=AI_PROVIDER, model=AI_MODEL or service.get("model", ""),
+                   base=AI_BASE or service.get("base", ""))
+
+
 @app.post("/api/ai")
 def ask_ai():
     """Relay one question to the AI service, adding our own AI key.
@@ -210,20 +263,16 @@ def ask_ai():
     only adds the key and translates between the services' request shapes.
     """
     if not authorized():
-        return jsonify(ok=False, reason="wrong or missing key"), 401
-    if not AI_KEY:
-        return jsonify(ok=False, reason="This server has no AI key: set AI_KEY on it."), 503
-
-    service = AI_SERVICES.get(AI_PROVIDER)
-    if not service and not AI_BASE:
-        return jsonify(ok=False, reason=f"AI_PROVIDER '{AI_PROVIDER}' isn't one I know, "
-                                        "and no AI_BASE was given."), 503
-    service = service or {"shape": "openai", "base": AI_BASE, "model": AI_MODEL}
+        return ai_fail("SYNC_KEY_WRONG", "Your server refused the sync key (LAZYNOTES_KEY).", 401)
+    problem = ai_config_problem()
+    if problem:
+        return ai_fail(*problem, 503)
+    service = AI_SERVICES.get(AI_PROVIDER) or {"shape": "openai", "base": AI_BASE, "model": AI_MODEL}
 
     body = request.get_json(silent=True) or {}
     prompt = str(body.get("prompt") or "").strip()
     if not prompt:
-        return jsonify(ok=False, reason="nothing to ask"), 400
+        return ai_fail("EMPTY_PROMPT", "Nothing to ask.", 400)
     system = str(body.get("system") or "")
     try:
         max_tokens = max(1, min(int(body.get("max_tokens") or 1000), 4000))
@@ -257,24 +306,52 @@ def ask_ai():
         payload = {"model": model, "max_tokens": max_tokens, "temperature": 0.2,
                    "messages": messages}
 
+    # A real User-Agent: Cloudflare in front of some services (Groq) blocks
+    # Python's default "Python-urllib/x" with a 403 "error code: 1010".
+    headers["User-Agent"] = "LazyNotesServer/1.0"
+    headers["Accept"] = "application/json"
     req = urllib.request.Request(url, data=json.dumps(payload).encode(),
                                  headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=AI_TIMEOUT) as answer:
-            data = json.loads(answer.read().decode("utf-8", "replace") or "{}")
-    except urllib.error.HTTPError as err:
-        detail = err.read().decode("utf-8", "replace")[:300]
+            raw = answer.read().decode("utf-8", "replace")
         try:
-            detail = (json.loads(detail).get("error") or {}).get("message") or detail
+            data = json.loads(raw or "{}")
+        except ValueError:
+            return ai_fail("AI_BAD_REPLY", f"The AI service answered with something that isn't JSON: {raw[:120]}", 502)
+    except urllib.error.HTTPError as err:
+        raw = err.read().decode("utf-8", "replace")[:400]
+        detail = raw
+        try:
+            j = json.loads(raw)
+            e = j.get("error")
+            detail = (e.get("message") if isinstance(e, dict) else e) or j.get("message") or raw
         except Exception:
             pass
-        if err.code in (401, 403):
-            return jsonify(ok=False, reason=f"The AI service refused this server's AI_KEY. {detail}"), 502
-        if err.code == 429:
-            return jsonify(ok=False, reason="The AI service's allowance is used up for now."), 502
-        return jsonify(ok=False, reason=f"The AI service said no ({err.code}). {detail}"), 502
-    except Exception as err:                                  # timeout, DNS, TLS
-        return jsonify(ok=False, reason=f"Couldn't reach the AI service ({type(err).__name__})."), 502
+        detail = str(detail).strip()[:300]
+        st = err.code
+        if st in (401, 403) and ("1010" in raw or "cloudflare" in raw.lower()):
+            return ai_fail("AI_BLOCKED", f"The AI service's firewall blocked this server ({st}). {detail}", 502, st)
+        if st == 401:
+            return ai_fail("AI_KEY_REFUSED", f"The AI service refused AI_KEY: check it's complete and still valid. {detail}", 502, st)
+        if st == 403:
+            return ai_fail("AI_FORBIDDEN", f"The AI service won't let this key do that (403). {detail}", 502, st)
+        if st == 404:
+            return ai_fail("AI_MODEL_NOT_FOUND", f"Model '{model}' isn't there: set AI_MODEL on Render. {detail}", 502, st)
+        if st == 429:
+            return ai_fail("AI_RATE_LIMIT", f"The AI service's allowance is used up for now. {detail}", 502, st)
+        if st == 400:
+            return ai_fail("AI_BAD_REQUEST", f"The AI service didn't accept the request. {detail}", 502, st)
+        return ai_fail("AI_SERVICE_ERROR", f"The AI service had a problem ({st}). {detail}", 502, st)
+    except socket.timeout:
+        return ai_fail("AI_TIMEOUT", f"The AI service took over {AI_TIMEOUT}s to answer.", 504)
+    except urllib.error.URLError as err:
+        why = getattr(err, "reason", err)
+        if isinstance(why, socket.timeout):
+            return ai_fail("AI_TIMEOUT", f"The AI service took over {AI_TIMEOUT}s to answer.", 504)
+        return ai_fail("AI_UNREACHABLE", f"This server couldn't reach {urllib.parse.urlsplit(url).hostname} ({why}).", 502)
+    except Exception as err:
+        return ai_fail("AI_UNREACHABLE", f"Couldn't reach the AI service ({type(err).__name__}: {err}).", 502)
 
     if shape == "gemini":
         parts = ((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or []
@@ -287,7 +364,7 @@ def ask_ai():
 
     text = text.strip()
     if not text:
-        return jsonify(ok=False, reason="The AI service answered with nothing."), 502
+        return ai_fail("AI_EMPTY", "The AI service answered with nothing.", 502)
     # No prompt, no key, no note text is stored or logged here.
     return jsonify(ok=True, text=text, model=model, provider=AI_PROVIDER)
 

@@ -204,16 +204,20 @@ globalThis.LazyAIProviders = (() => {
       data?.error?.message || data?.error?.type || data?.message || ""
     ).slice(0, 300);
     if (get(id).shape === "relay") {
-      if (status === 401 || status === 403) return "Your server refused the sync key — check Settings › Sync.";
-      if (status === 503) return raw || "Your server has no AI key yet. Put AI_KEY on Render.";
-      if (status === 502) return raw || "Your server couldn't reach the AI service.";
+      // Our server says exactly what went wrong: { code, reason } (server/app.py).
+      if (data?.code) return `${data.reason || "Your server's AI failed."} [${data.code}${data.upstream_status ? ` · AI said ${data.upstream_status}` : ""}]`;
+      if (status === 401 || status === 403) return "Your server refused the sync key — check Settings › Sync. [SYNC_KEY_WRONG]";
+      if (status === 404) return "Your server has no AI route yet: it's running old code. Redeploy it on Render. [SERVER_OLD]";
+      if (status === 502 || status === 503) return `Your server is asleep or restarting (Render free plan). Wait ~1 minute and test again. [SERVER_WAKING · ${status}]`;
+      if (status >= 500) return `Your server crashed on this request (${status}). Check its Logs on Render. [SERVER_ERROR]`;
     }
-    if (status === 401 || status === 403) return `The key was refused — check you pasted all of it.${raw ? ` (${raw})` : ""}`;
-    if (status === 404) return `That model name isn't there. Pick another model.${raw ? ` (${raw})` : ""}`;
-    if (status === 429) return "You've used up this service's free allowance for now. Try later, or use another service.";
+    if (status === 401) return `The key was refused — check you pasted all of it, with no spaces. [KEY_REFUSED · 401]${raw ? ` (${raw})` : ""}`;
+    if (status === 403) return `This key isn't allowed to do that (403): wrong key for this service, or blocked. [FORBIDDEN · 403]${raw ? ` (${raw})` : ""}`;
+    if (status === 404) return `That model name isn't there. Pick another model. [MODEL_NOT_FOUND · 404]${raw ? ` (${raw})` : ""}`;
+    if (status === 429) return "You've used up this service's free allowance for now. Try later, or use another service. [RATE_LIMIT · 429]";
     if (status === 400 && /credit|balance|quota/i.test(raw)) return `The account has no credit left. (${raw})`;
-    if (status >= 500) return "The service is having trouble. Try again in a minute.";
-    return raw || `The service said no (${status}).`;
+    if (status >= 500) return `The service is having trouble. Try again in a minute. [SERVICE_ERROR · ${status}]`;
+    return `${raw || "The service said no."} [HTTP ${status}]`;
   }
 
   // ── for pages: ask the service worker to do the job ──

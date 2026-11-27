@@ -172,7 +172,9 @@ async function ask(cfg, { system, prompt, maxTokens }) {
       body: JSON.stringify(req.body),
       signal: ctl.signal
     });
-    const data = await res.json().catch(() => ({}));
+    const rawText = await res.text().catch(() => "");
+    let data = {};
+    try { data = JSON.parse(rawText || "{}"); } catch (_) { data = { message: rawText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160) }; }
 
     if (!res.ok) {
       const reason = AI.readError(cfg.provider, res.status, data);
@@ -190,9 +192,14 @@ async function ask(cfg, { system, prompt, maxTokens }) {
     await setState({ lastOkAt: Date.now(), lastError: "", provider: cfg.provider, model: cfg.model });
     return { ok: true, text, ms: Date.now() - started, model: cfg.model };
   } catch (err) {
+    // Say which address couldn't be reached and why, as far as the browser tells us.
+    let host = "";
+    try { host = new URL(req.url).host; } catch (_) {}
     const reason = err?.name === "AbortError"
-      ? "The service took too long (over a minute) and was given up on."
-      : "Couldn't reach the service — check the address and your connection.";
+      ? `${host || "The service"} took too long (over a minute) and was given up on.${viaServer ? " A sleeping Render server can take ~1 minute: test again." : ""} [TIMEOUT]`
+      : !navigator.onLine
+        ? "This computer is offline. [OFFLINE]"
+        : `Couldn't reach ${host || "the service"}: ${viaServer ? "check the server address in Settings › Sync (https://…onrender.com)" : "check your connection, or a firewall / VPN / ad blocker"}. (${err?.message || err}) [UNREACHABLE]`;
     await setState({ lastError: reason });
     return { ok: false, reason };
   } finally {
@@ -205,6 +212,21 @@ async function ask(cfg, { system, prompt, maxTokens }) {
 // "Is this key any good?" — the smallest possible real request.
 export async function handleAiTest(message) {
   const cfg = await config(message || {});
+  // Through our server: first ask it how its AI is set up (no AI call), so a
+  // missing / mistyped AI_KEY is named exactly. Old servers (404) skip this.
+  if (AI.get(cfg.provider).needsServer && cfg.base && cfg.key) {
+    const root = cfg.base.replace(/\/+$/, "").replace(/\/api\/ai$/, "");
+    try {
+      const res = await fetch(`${root}/api/ai/status`, { headers: { Authorization: `Bearer ${cfg.key}` }, signal: AbortSignal.timeout(90000) });
+      const st = await res.json().catch(() => null);
+      if (st && st.ok === false) {
+        const extra = st.code === "NO_AI_KEY" ? "" : st.has_key ? ` (key: ${st.key_length} characters, looks like ${st.key_looks_like}${st.key_had_spaces ? ", had spaces around it — trimmed" : ""}; service ${st.provider}, model ${st.model || "?"})` : "";
+        const reason = `${st.reason}${extra} [${st.code}]`;
+        await setState({ lastError: reason, provider: cfg.provider });
+        return { ok: false, reason, code: st.code };
+      }
+    } catch (_) { /* unreachable: the real ask below says why */ }
+  }
   const out = await ask(cfg, {
     system: "",
     prompt: "Reply with exactly: ready",

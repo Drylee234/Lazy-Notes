@@ -75,3 +75,20 @@ logged here.
 
 A free Render service sleeps after a while, so the first AI press after a
 quiet spell waits for it to wake (up to about a minute), exactly like sync.
+
+## AI error codes
+Every `/api/ai` failure returns `{ ok:false, code, reason }` and the extension shows `[CODE]`.
+`GET /api/ai/status` (Bearer sync key) says how AI is set up without calling the AI: `has_key`, `key_length`, `key_looks_like`, `provider`, `model`. It never returns the key.
+
+| Code | Meaning / fix |
+|---|---|
+| SYNC_KEY_WRONG | Extension's sync key ≠ `LAZYNOTES_KEY` |
+| NO_AI_KEY | Add `AI_KEY` on Render |
+| BAD_PROVIDER | `AI_PROVIDER` unknown and no `AI_BASE` |
+| AI_KEY_REFUSED | The service said 401: wrong/expired key, or the key is for another service than `AI_PROVIDER` |
+| AI_FORBIDDEN / AI_BLOCKED | 403 / firewall (Cloudflare) |
+| AI_MODEL_NOT_FOUND | Fix `AI_MODEL` |
+| AI_RATE_LIMIT | Free allowance used up |
+| AI_BAD_REQUEST / AI_SERVICE_ERROR | 400 / 5xx from the service |
+| AI_TIMEOUT / AI_UNREACHABLE | No answer / network from Render |
+| Extension only: SERVER_WAKING, SERVER_OLD, UNREACHABLE, TIMEOUT, OFFLINE, KEY_REFUSED, RATE_LIMIT… | Shown when the server can't answer, or on the direct route |
