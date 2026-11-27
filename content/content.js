@@ -1423,14 +1423,12 @@
 
   function activateHighlighter() {
     if (dead) return;
-    document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("mouseup", handleDocumentClick);
+    document.addEventListener("mouseup", afterMouseUp);
     document.addEventListener("keydown", handleKeyDown);
   }
 
   function deactivateHighlighter() {
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.removeEventListener("mouseup", handleDocumentClick);
+    document.removeEventListener("mouseup", afterMouseUp);
     document.removeEventListener("keydown", handleKeyDown);
     hidePopup();
   }
@@ -1671,6 +1669,14 @@
     const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
     if (!element) return null;
     return element.closest("p, li, h1, h2, h3, h4, h5, h6") || element;
+  }
+
+  // Read the selection once the browser has finished with this click. A
+  // click on text that's still selected only clears the selection after
+  // mouseup, so reading it straight away brought the pop-up back for words
+  // you'd just saved or dismissed (Enter then saved them a second time).
+  function afterMouseUp(event) {
+    setTimeout(() => { handleMouseUp(event); handleDocumentClick(event); }, 0);
   }
 
   function handleMouseUp(event) {

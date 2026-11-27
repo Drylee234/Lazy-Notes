@@ -103,7 +103,8 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - 💡 **Catch text across PDF pages** (owner reminder, 2026-11-27): one selection that runs from the bottom of one page onto the next. Today: Join (J) glues the second part onto the last highlight. Idea: drag across the page gap in one go, or a "continue on next page" mode.
   **Why:** sentences and lists often break over a page.
-- 🐞 **Clicking away after a highlight counts as a new highlight** (owner, 2026-11-27): after saving, a click elsewhere on the PDF is often taken as starting another selection (pop-up / tiny selection).
+- ✅ **Fixed (2026-11-27):** with the pop-up open, a click on the still-selected text brought the pop-up back (Chrome clears that selection only after mouseup), and Enter then saved the words again. The click is now read after Chrome finishes (`afterMouseUp`, content.js), on PDFs and web pages. Tested in Chromium. Note: a **double-click** still selects a word and opens the pop-up (normal browser behaviour; a trackpad tap can count as a double-click).
+  Original report: 🐞 **Clicking away after a highlight counts as a new highlight** (owner, 2026-11-27): after saving, a click elsewhere on the PDF is often taken as starting another selection (pop-up / tiny selection).
   **Why:** stray pop-ups break flow. Suspects: snap-to-word (`lnDocSnap`, 28px) or the keyboard cursor turning a click into a 1-word selection. Check with both switched off.
 
 ## 5. All notes / editing
