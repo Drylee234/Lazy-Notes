@@ -88,6 +88,11 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - 💡 BUG (owner, 2026-11-27): PDF keyboard cursor: ↓ jumps to the end of the word; ← / → at the edge of a word needs two presses before the cursor visibly moves.
 - 💡 "Join to last figure": stack a table snip that runs over a page break.
 
+- 💡 **Catch text across PDF pages** (owner reminder, 2026-11-27): one selection that runs from the bottom of one page onto the next. Today: Join (J) glues the second part onto the last highlight. Idea: drag across the page gap in one go, or a "continue on next page" mode.
+  **Why:** sentences and lists often break over a page.
+- 🐞 **Clicking away after a highlight counts as a new highlight** (owner, 2026-11-27): after saving, a click elsewhere on the PDF is often taken as starting another selection (pop-up / tiny selection).
+  **Why:** stray pop-ups break flow. Suspects: snap-to-word (`lnDocSnap`, 28px) or the keyboard cursor turning a click into a 1-word selection. Check with both switched off.
+
 ## 5. All notes / editing
 - ✅ Typed notes editable there; ↑ ↓ ⇤ ⇥ and Alt + arrows.
 
