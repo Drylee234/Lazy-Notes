@@ -1,0 +1,44 @@
+# Lazy Notes download page: https://drylee234.github.io/Lazy-Notes/
+# On every push to main: zip the extension (without the server, docs and
+# tools) next to site/index.html and publish both with GitHub Pages.
+# One-time setup on GitHub: Settings › Pages › Source: "GitHub Actions".
+name: Download page
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zip the extension
+        # Committed files only, at the top of the zip: Windows "Extract All"
+        # then gives a lazy-notes folder with manifest.json straight inside.
+        run: |
+          mkdir -p _site
+          git archive --format=zip -o _site/lazy-notes.zip HEAD -- . \
+            ':!server' ':!docs' ':!tools' ':!site' ':!.github' ':!*.md' ':!render.yaml'
+          cp site/index.html _site/index.html
+          cp icons/logo.svg _site/logo.svg
+          echo "built $(date -u +%Y-%m-%d), ${GITHUB_SHA::7}" > _site/version.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -888,7 +888,7 @@ def extension_zip():
                     if f.startswith(".") or f.endswith((".md", ".db", ".pyc")) or f == "render.yaml":
                         continue
                     path = os.path.join(folder, f)
-                    z.write(path, os.path.join("lazy-notes", os.path.relpath(path, EXT_ROOT)))
+                    z.write(path, os.path.relpath(path, EXT_ROOT))   # top level: "Extract All" makes the folder
         _zip_cache = buf.getvalue()
     return _zip_cache
 
