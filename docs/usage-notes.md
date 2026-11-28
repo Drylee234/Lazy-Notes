@@ -227,3 +227,10 @@ seen → cause → what changed (commit) or what's still open.
 ## 2026-11-28 · Expected a big green dot on the toolbar icon
 
 - Owner: the green dot in the panel's Highlighter switch is what they expected on the toolbar icon (beside the puzzle piece) when the highlighter is on. Whose: ours: Chrome's badge only draws a small square in the corner. Now the icon itself gets a big round green dot with a white ring; off = the plain icon.
+
+## 2026-11-28 · "This server has no AI key" on the phone; boxed fold arrows; "less vibecoded"
+
+- Owner screenshot (phone): the AI box said "This server has no AI key: add AI_KEY in Render › lazy-notes › Environment", and two testers already have the link. Whose: ours: the server sent its set-up problems to everyone. Now testers only ever see plain words ("The AI isn't available right now. Try again later."); the full reason goes to the server log and to the owner's server key. Error codes in brackets are hidden from account users in the extension too. The "Use the server key instead" login option is hidden unless the address has `?key`.
+- Fold arrows had a box around them → just a chevron (folded: › and the count), on the phone and in the extension.
+- Owner asked to apply online tips on avoiding the "vibe-coded" look to the new site: no pill labels, gradients, glows, emoji icon cards or fake window frames; a book serif for headings; concrete copy.
+- Owner asked if the extension can reload itself: Chrome doesn't let an unpacked extension replace its own files, but it can reload itself. The update notice now has "Reload Q-notes", and says "the new version is in your folder" once the files are replaced.

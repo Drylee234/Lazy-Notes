@@ -162,7 +162,12 @@ main { padding: 12px 16px 24px; }
 .shared-foot { margin: 18px 16px; font-size: 13px; color: var(--dim); }
 
 /* Folding (▾ / ▸ n) */
-.fold { margin-left: 6px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--sec); font-size: 12px; line-height: 1.5; vertical-align: middle; cursor: pointer; }
+/* Just the chevron, no box (owner, 2026-11-28); the tap area stays finger-sized. */
+.fold { display: inline-flex; align-items: center; gap: 2px; margin: -8px 0 -8px 2px; padding: 8px 6px; border: 0; background: none; color: var(--dim);
+  font: inherit; font-size: 13px; vertical-align: middle; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fold svg { width: 15px; height: 15px; transition: transform .15s; }
+.fold.shut svg { transform: rotate(-90deg); }
+.fold.shut { color: var(--accent); }
 .note[hidden] { display: none !important; }
 
 /* Highlight to ask */

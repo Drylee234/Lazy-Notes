@@ -164,7 +164,7 @@
       <button class="btn" type="submit">Log in</button>
       <div class="err" id="key-err">${esc(error)}</div>
       <p class="key-new">New to Q-notes? <a href="/get">Get the extension</a> and make your account there. <a href="/">What's Q-notes?</a></p>
-      <details class="key-alt"><summary>Use the server key instead</summary>
+      <details class="key-alt" ${/[?&]key\b/.test(location.search) ? "" : "hidden"}><summary>Use the server key instead</summary>
         <input id="key-input" type="password" autocomplete="off" placeholder="Server key (LAZYNOTES_KEY)">
         <button class="btn" type="button" id="key-go">Open my notes</button></details></form>`;
     const useKey = (k) => { key = k; store.set("ln-key", key); route(); load(); };
@@ -258,7 +258,7 @@
     try {
       const r = await fetch("/api/ai/status", { headers: { Authorization: `Bearer ${key}` }, cache: "no-store" });
       const j = await r.json().catch(() => ({}));
-      aiState = r.ok && j.ok ? true : (j.reason || "The AI isn't set up on your server.");
+      aiState = r.ok && j.ok ? true : (j.reason || "The AI isn't available right now. Try again later.");
     } catch (_) { return "Needs the internet."; }
     return aiState;
   }
@@ -270,7 +270,7 @@
         body: JSON.stringify({ system: AI_SYSTEM, prompt: AI_JOBS[job].prompt(text, extra), max_tokens: AI_JOBS[job].maxTokens })
       });
       const j = await r.json().catch(() => ({}));
-      return r.ok && j.ok ? { ok: true, text: j.text } : { ok: false, text: `${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}` };
+      return r.ok && j.ok ? { ok: true, text: j.text } : { ok: false, text: j.reason || "The AI isn't available right now. Try again later." };
     } catch (_) { return { ok: false, text: "Couldn't reach your server. The AI needs the internet." }; }
   }
 
@@ -435,7 +435,7 @@
       if (!el || !kids.has(id)) return;
       const b = document.createElement("button");
       b.type = "button"; b.className = "fold";
-      const label = () => { const f = folded.has(id); b.textContent = f ? `▸ ${kids.get(id)}` : "▾"; b.setAttribute("aria-expanded", String(!f)); b.title = f ? "Show what's under it" : "Fold what's under it"; };
+      const label = () => { const f = folded.has(id); b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>${f ? `<span>${kids.get(id)}</span>` : ""}`; b.classList.toggle("shut", f); b.setAttribute("aria-expanded", String(!f)); b.title = f ? "Show what's under it" : "Fold what's under it"; };
       label();
       b.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -488,7 +488,7 @@
         });
         const j = await r.json().catch(() => ({}));
         if (r.ok && j.ok) out.textContent = j.text;
-        else { card.classList.add("failed"); out.textContent = `${j.reason || `The server answered ${r.status}.`}${j.code ? ` [${j.code}]` : ""}`; }
+        else { card.classList.add("failed"); out.textContent = j.reason || "The AI isn't available right now. Try again later."; }
       } catch (_) {
         card.classList.add("failed");
         out.textContent = "Couldn't reach your server. The AI needs the internet.";

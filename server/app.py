@@ -767,10 +767,26 @@ def docs_get(sha):
 #   AI_TIMEOUT          no answer in time
 #   AI_UNREACHABLE      DNS / TLS / network from Render to the service
 #   AI_BAD_REPLY / AI_EMPTY  an answer we couldn't use
+# What testers see: plain words, no server workings (no key names, no Render,
+# no service or model). The full reason goes to the server log, and to the
+# owner (the server key) in the answer.
+FRIENDLY = {
+    "SYNC_KEY_WRONG": "You've been logged out. Log in again.",
+    "EMPTY_PROMPT": "Nothing to ask.",
+    "AI_RATE_LIMIT": "The AI is busy right now. Try again in a few minutes.",
+    "AI_TIMEOUT": "The AI took too long to answer. Try again.",
+}
+AI_DOWN = "The AI isn't available right now. Try again later."
+
+
 def ai_fail(code, reason, status, upstream=None):
-    out = {"ok": False, "code": code, "reason": reason, "provider": AI_PROVIDER}
-    if upstream is not None:
-        out["upstream_status"] = upstream
+    app.logger.warning("AI %s (%s): %s", code, status, reason)
+    if who() == OWNER:
+        out = {"ok": False, "code": code, "reason": reason, "provider": AI_PROVIDER}
+        if upstream is not None:
+            out["upstream_status"] = upstream
+    else:
+        out = {"ok": False, "code": code, "reason": FRIENDLY.get(code, AI_DOWN)}
     return jsonify(out), status
 
 
@@ -790,6 +806,9 @@ def ai_status():
         return ai_fail("SYNC_KEY_WRONG", "Your server refused the sync key (LAZYNOTES_KEY).", 401)
     service = AI_SERVICES.get(AI_PROVIDER) or {}
     problem = ai_config_problem()
+    if who() != OWNER:   # testers: ready or not, nothing about the set-up
+        return jsonify(ok=not problem, code=problem[0] if problem else "READY",
+                       reason=AI_DOWN if problem else "The AI is ready.")
     return jsonify(ok=not problem, code=problem[0] if problem else "READY",
                    reason=problem[1] if problem else "AI is set up on this server.",
                    has_key=bool(AI_KEY), key_length=len(AI_KEY),

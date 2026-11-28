@@ -553,4 +553,7 @@ body.ln-win #brand .brand-name { display: none; }
 #update-note[hidden] { display: none; }
 #update-note .update-text { flex: 1 1 100%; }
 #update-note .update-get { padding: 3px 10px; border-radius: 5px; background: var(--accent); color: var(--on-accent); text-decoration: none; font-weight: 600; }
+#update-note .update-reload { padding: 3px 10px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg); color: var(--pri); font: inherit; font-weight: 600; cursor: pointer; }
+#update-note.ready .update-reload { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+#update-note .update-get[hidden] { display: none; }
 #update-note .update-x { margin-left: auto; border: 0; background: none; color: var(--dim); cursor: pointer; font: inherit; }

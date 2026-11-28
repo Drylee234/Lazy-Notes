@@ -254,7 +254,7 @@ export async function handleAiTest(message) {
       const st = await res.json().catch(() => null);
       if (st && st.ok === false) {
         const extra = st.code === "NO_AI_KEY" ? "" : st.has_key ? ` (key: ${st.key_length} characters, looks like ${st.key_looks_like}${st.key_had_spaces ? ", had spaces around it — trimmed" : ""}; service ${st.provider}, model ${st.model || "?"})` : "";
-        const reason = `${st.reason}${extra} [${st.code}]`;
+        const reason = st.provider ? `${st.reason}${extra} [${st.code}]` : st.reason;   // details only for the server key
         await setState({ lastError: reason, provider: cfg.provider });
         return { ok: false, reason, code: st.code };
       }
@@ -363,7 +363,7 @@ export async function handleAiRun(message) {
   }
   // Say so when we couldn't send the whole document: a summary of half a
   // lecture that claims to be the whole one would be worse than useless.
-  return note && out.ok ? { ...out, note } : out;
+  return note && out.ok ? { ...out, note } : plainWords(out);
 }
 
 // ── Chat (the AI view's threads, shared/ai-chat.js) ──────────────────────────
@@ -403,7 +403,15 @@ export async function handleAiChat(m) {
   if (!out.ok && offlineOn && /\[(UNREACHABLE|OFFLINE|TIMEOUT|SERVER_WAKING)/.test(out.reason || "")) {
     return offline(task, ctx, question, note, "Couldn't reach the AI, so this is the offline helper (no AI).");
   }
-  return note && out.ok ? { ...out, note } : out;
+  return note && out.ok ? { ...out, note } : plainWords(out);
+}
+
+// Someone using an account (a tester) sees plain words only: the codes in
+// brackets ("[SERVER_WAKING · 502]") are for whoever runs the server.
+async function plainWords(out) {
+  if (out?.ok || !out?.reason) return out;
+  const { lnSyncUser } = await chrome.storage.local.get("lnSyncUser");
+  return lnSyncUser ? { ...out, reason: String(out.reason).replace(/\s*\[[A-Z_]+[^\]]*\]/g, "").trim() } : out;
 }
 
 async function offlineHelpers() {

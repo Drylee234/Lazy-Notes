@@ -227,6 +227,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ **Site = landing → download → login → notes** (2026-11-28). **Why:** the server and github.io pages were bare download steps, nothing to show a new student why to use Q-notes. Now one set of pages in `site/` (served by Render and published by Pages): landing with real screenshots, reasons and FAQ (`/`), download (`/get`), login (`/login`) and the notes (`/app`). Installed phone apps and old `/#/course/…` links go straight to `/app`.
 - ✅ **Sync box only when you must act** (2026-11-28). **Why:** owner found the red sync box wordy and alarming for what's usually just being offline. See usage-notes.
 
+- ✅ **Testers never see server workings** (2026-11-28). **Why:** "This server has no AI key: add AI_KEY in Render…" showed on a tester's phone. Plain words for testers; details only for the server key.
+- ✅ **Reload Q-notes from the update notice** (2026-11-28). **Why:** updating meant a trip to chrome://extensions. Still needs the files replaced by hand (Chrome rule for unpacked extensions); the real fix is the Chrome Web Store, which updates by itself. 💡 Publish on the Chrome Web Store.
+- 💡 **The same "less vibe-coded" pass on the extension's own panels** (2026-11-28). **Why:** owner found boxed icons and template-looking UI; the site got the pass first. Candidates: chips and pills, boxed buttons, emoji in labels, too many borders.
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.

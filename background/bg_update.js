@@ -18,7 +18,32 @@ async function own() {
   return null;
 }
 
+// The version running now, kept for this run only (session storage empties
+// when the extension reloads). Chrome reads an unpacked extension's files
+// from disk as they are, so build.json on disk changing while this is unchanged
+// means: the new files are in the folder, a reload will start them.
+async function loadedBuild() {
+  const { lnLoadedBuild } = await chrome.storage.session.get("lnLoadedBuild");
+  if (lnLoadedBuild !== undefined) return lnLoadedBuild;
+  const b = await own();
+  await chrome.storage.session.set({ lnLoadedBuild: b?.sha || "" });
+  return b?.sha || "";
+}
+loadedBuild();
+
+// New files already in the folder, not running yet?
+export async function filesReady() {
+  const [running, disk] = await Promise.all([loadedBuild(), own()]);
+  return !!(running && disk?.sha && disk.sha !== running);
+}
+
 export async function checkUpdate() {
+  if (await filesReady()) {
+    const { lnUpdate } = await chrome.storage.local.get("lnUpdate");
+    const state = { ...(lnUpdate || {}), available: true, ready: true, checkedAt: Date.now() };
+    await chrome.storage.local.set({ lnUpdate: state });
+    return state;
+  }
   const { lnUpdateAlert, lnLoadedAt = 0 } = await chrome.storage.local.get(["lnUpdateAlert", "lnLoadedAt"]);
   if (lnUpdateAlert === false) return null;
   let latest = null;
@@ -32,7 +57,7 @@ export async function checkUpdate() {
   const available = mine?.sha
     ? mine.sha !== latest.sha && latestAt > (Date.parse(mine.time) || 0)
     : latestAt > lnLoadedAt + 60 * 1000;
-  const state = { available, sha: latest.sha, time: latest.time, checkedAt: Date.now() };
+  const state = { available, ready: false, sha: latest.sha, time: latest.time, checkedAt: Date.now() };
   await chrome.storage.local.set({ lnUpdate: state });
   return state;
 }
@@ -45,6 +70,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => chrome.alarms.create(ALARM, { delayInMinutes: 1, periodInMinutes: 6 * 60 }));
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === ALARM) checkUpdate(); });
 chrome.runtime.onMessage.addListener((msg, _s, reply) => {
+  // Start the files in the folder (Chrome's ↻ on chrome://extensions, from
+  // the panel). Notes are kept; open reader tabs close.
+  if (msg?.type === "RELOAD_EXTENSION") { reply({ ok: true }); setTimeout(() => chrome.runtime.reload(), 150); return; }
   if (msg?.type !== "CHECK_UPDATE") return;
   checkUpdate().then(reply, () => reply(null));
   return true;

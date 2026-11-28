@@ -1509,8 +1509,19 @@ document.addEventListener("keydown", (e) => {
     const { lnUpdate: u, lnUpdateDismissed, lnUpdateAlert } = await chrome.storage.local.get(["lnUpdate", "lnUpdateDismissed", "lnUpdateAlert"]);
     const on = lnUpdateAlert !== false && u?.available && u.sha !== lnUpdateDismissed;
     box.hidden = !on;
-    if (on) box.querySelector(".update-text").textContent = `🆕 A newer ${window.LN_NAME || "Q-notes"} is out (changed ${ago(u.time)}). Download it, replace your folder, then reload the extension.`;
+    if (!on) return;
+    const name = window.LN_NAME || "Q-notes";
+    // ready: the new files are already in the folder; one click starts them.
+    box.querySelector(".update-text").textContent = u.ready
+      ? `🆕 The new ${name} is in your folder. Reload to start it.`
+      : `🆕 A newer ${name} is out (${ago(u.time)}). Download it and replace your folder's files, then press Reload.`;
+    box.querySelector(".update-get").hidden = !!u.ready;
+    box.classList.toggle("ready", !!u.ready);
   }
+  box.querySelector(".update-reload").addEventListener("click", (e) => {
+    e.target.textContent = "Reloading…";
+    chrome.runtime.sendMessage({ type: "RELOAD_EXTENSION" }, () => void chrome.runtime.lastError);
+  });
   box.querySelector(".update-x").addEventListener("click", async () => {
     const { lnUpdate } = await chrome.storage.local.get("lnUpdate");
     await chrome.storage.local.set({ lnUpdateDismissed: lnUpdate?.sha || "" });
