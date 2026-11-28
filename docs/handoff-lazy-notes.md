@@ -166,7 +166,16 @@ Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chro
 - [ ] **Google sign-in keys**: Google Cloud Console → APIs & Services → Credentials → OAuth client ID (type Web application), redirect URI `https://lazy-notes-c07b.onrender.com/auth/google/callback` → put `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` on Render › lazy-notes › Environment. Until then "Continue with Google" stays hidden.
 - [ ] **UptimeRobot** (free): sign up, add an HTTP(s) monitor for `https://lazy-notes-c07b.onrender.com/api/health` every 5–10 min, so the free server never sleeps (first sync/login/AI no longer waits up to a minute). One service awake all month ≈ 744 of Render's 750 free hours: keep it the only free web service.
 - [ ] **Database before 2026-12-26**: Render's free Postgres expires then. Plan: move to Supabase free (no expiry; pauses after 7 idle days, testers' syncs keep it awake) by swapping `DATABASE_URL`; Claude can create it and copy the data.
-- [ ] **Gemini keys** (owner getting them, 2026-11-28) → then AI load distribution across providers/models + a per-account daily cap (see roadmap).
+- [ ] **Free AI keys** (one per service, own account, no card): the server routes every question to whichever free model has room (server/ai_router.py). Put each on Render › lazy-notes › Environment under the name shown; a service without a key is just skipped. Check what's in with `GET /api/ai/status` (server key) or Settings › AI › Test connection.
+  - [ ] `GEMINI_KEY`: https://aistudio.google.com/apikey (owner getting it, 2026-11-28)
+  - [ ] `GROQ_KEY`: https://console.groq.com/keys (the old `AI_KEY` still counts; move it here)
+  - [ ] `CEREBRAS_KEY`: https://cloud.cerebras.ai › API keys
+  - [ ] `OPENROUTER_KEY`: https://openrouter.ai/keys (about 50 free questions a day in all)
+  - [ ] `MISTRAL_KEY`: https://console.mistral.ai/api-keys (free "Experiment" plan; needs a phone number)
+  - [ ] `GITHUB_MODELS_KEY`: https://github.com/settings/tokens › fine-grained token with "Models: read"
+  - [ ] `CLOUDFLARE_KEY` + `CLOUDFLARE_ACCOUNT_ID`: dash.cloudflare.com › AI › Workers AI › "Use REST API"
+  - [ ] `SAMBANOVA_KEY`: https://cloud.sambanova.ai/apis
+  - Optional: `AI_DAILY_CAP` (questions per account per day, default 40; the owner has no cap).
 - [ ] **Email for password resets**: SMTP settings on Render (Gmail app password or Brevo free), see server/README.md.
 - [ ] **Chrome Web Store**: $5 developer account, support email, privacy policy (Claude drafts), 30–60s demo video. One listing also serves Edge users.
 

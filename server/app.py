@@ -70,6 +70,12 @@ AI_MODEL = os.environ.get("AI_MODEL", "").strip()
 AI_BASE = os.environ.get("AI_BASE", "").strip().rstrip("/")
 AI_TIMEOUT = 55                 # seconds; the extension waits 60
 
+# Many free AI services at once (GROQ_KEY, GEMINI_KEY, CEREBRAS_KEY, …), each
+# question routed to whichever model has room: see ai_router.py. The old
+# AI_KEY / AI_PROVIDER / AI_MODEL set-up is part of the pool.
+from ai_router import Router as _AiRouter  # noqa: E402
+AI_ROUTER = _AiRouter()
+
 # Must match shared/ai-providers.js.
 AI_SERVICES = {
     "groq":       {"shape": "openai",    "base": "https://api.groq.com/openai/v1",
@@ -977,6 +983,7 @@ FRIENDLY = {
     "EMPTY_PROMPT": "Nothing to ask.",
     "AI_RATE_LIMIT": "The AI is busy right now. Try again in a few minutes.",
     "AI_TIMEOUT": "The AI took too long to answer. Try again.",
+    "AI_DAILY_CAP": f"You've used today's {AI_ROUTER.cap} AI questions. They come back tomorrow; the offline helpers still work.",
 }
 AI_DOWN = "The AI isn't available right now. Try again later."
 
@@ -993,10 +1000,8 @@ def ai_fail(code, reason, status, upstream=None):
 
 
 def ai_config_problem():
-    if not AI_KEY:
-        return ("NO_AI_KEY", "This server has no AI key: add AI_KEY in Render › lazy-notes › Environment.")
-    if AI_PROVIDER not in AI_SERVICES and not AI_BASE:
-        return ("BAD_PROVIDER", f"AI_PROVIDER '{AI_PROVIDER}' isn't one I know (groq, gemini, anthropic, openrouter), and no AI_BASE was given.")
+    if not AI_ROUTER.routes:
+        return ("NO_AI_KEY", "This server has no AI key: add GEMINI_KEY or GROQ_KEY (or another service's key, see server/ai_router.py) in Render › lazy-notes › Environment.")
     return None
 
 
@@ -1018,8 +1023,8 @@ def ai_status():
                                    else "anthropic (sk-ant-…)" if AI_KEY.startswith("sk-ant-") else "openrouter (sk-or-…)" if AI_KEY.startswith("sk-or-")
                                    else "unknown" if AI_KEY else "none"),
                    key_had_spaces=AI_KEY_RAW != AI_KEY,
-                   provider=AI_PROVIDER, model=AI_MODEL or service.get("model", ""),
-                   base=AI_BASE or service.get("base", ""))
+                   provider=", ".join(AI_ROUTER.services()) or AI_PROVIDER, model="auto (routed)",
+                   base=AI_BASE or service.get("base", ""), routing=AI_ROUTER.status(detail=True))
 
 
 @app.post("/api/ai")
@@ -1035,8 +1040,6 @@ def ask_ai():
     problem = ai_config_problem()
     if problem:
         return ai_fail(*problem, 503)
-    service = AI_SERVICES.get(AI_PROVIDER) or {"shape": "openai", "base": AI_BASE, "model": AI_MODEL}
-
     body = request.get_json(silent=True) or {}
     prompt = str(body.get("prompt") or "").strip()
     if not prompt:
@@ -1047,102 +1050,12 @@ def ask_ai():
     except (TypeError, ValueError):
         max_tokens = 1000
 
-    model = AI_MODEL or service["model"]
-    base = AI_BASE or service["base"]
-    shape = service["shape"]
-
-    if shape == "gemini":
-        url = f"{base}/models/{model}:generateContent"
-        headers = {"Content-Type": "application/json", "x-goog-api-key": AI_KEY}
-        payload = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                   "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.2}}
-        if system:
-            payload["systemInstruction"] = {"parts": [{"text": system}]}
-    elif shape == "anthropic":
-        url = f"{base}/messages"
-        headers = {"Content-Type": "application/json", "x-api-key": AI_KEY,
-                   "anthropic-version": "2023-06-01"}
-        payload = {"model": model, "max_tokens": max_tokens,
-                   "messages": [{"role": "user", "content": prompt}]}
-        if system:
-            payload["system"] = system
-    else:
-        url = f"{base}/chat/completions"
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {AI_KEY}"}
-        messages = ([{"role": "system", "content": system}] if system else []) + \
-                   [{"role": "user", "content": prompt}]
-        thinking = re.search(r"gpt-oss|qwen3|deepseek-r1|reason", model, re.I)
-        payload = {"model": model, "max_tokens": max(max_tokens, 400) if thinking else max_tokens,
-                   "temperature": 0.2, "messages": messages}
-        if "gpt-oss" in model.lower():
-            payload["reasoning_effort"] = "low"   # think briefly, or a short answer comes back empty
-
-    # A real User-Agent: Cloudflare in front of some services (Groq) blocks
-    # Python's default "Python-urllib/x" with a 403 "error code: 1010".
-    headers["User-Agent"] = "LazyNotesServer/1.0"
-    headers["Accept"] = "application/json"
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(),
-                                 headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=AI_TIMEOUT) as answer:
-            raw = answer.read().decode("utf-8", "replace")
-        try:
-            data = json.loads(raw or "{}")
-        except ValueError:
-            return ai_fail("AI_BAD_REPLY", f"The AI service answered with something that isn't JSON: {raw[:120]}", 502)
-    except urllib.error.HTTPError as err:
-        raw = err.read().decode("utf-8", "replace")[:400]
-        detail = raw
-        try:
-            j = json.loads(raw)
-            e = j.get("error")
-            detail = (e.get("message") if isinstance(e, dict) else e) or j.get("message") or raw
-        except Exception:
-            pass
-        detail = str(detail).strip()[:300]
-        st = err.code
-        if st in (401, 403) and ("1010" in raw or "cloudflare" in raw.lower()):
-            return ai_fail("AI_BLOCKED", f"The AI service's firewall blocked this server ({st}). {detail}", 502, st)
-        if st == 401:
-            return ai_fail("AI_KEY_REFUSED", f"The AI service refused AI_KEY: check it's complete and still valid. {detail}", 502, st)
-        if st == 403:
-            return ai_fail("AI_FORBIDDEN", f"The AI service won't let this key do that (403). {detail}", 502, st)
-        if st == 404:
-            return ai_fail("AI_MODEL_NOT_FOUND", f"Model '{model}' isn't there: set AI_MODEL on Render. {detail}", 502, st)
-        if st == 429:
-            return ai_fail("AI_RATE_LIMIT", f"The AI service's allowance is used up for now. {detail}", 502, st)
-        if st == 400:
-            return ai_fail("AI_BAD_REQUEST", f"The AI service didn't accept the request. {detail}", 502, st)
-        return ai_fail("AI_SERVICE_ERROR", f"The AI service had a problem ({st}). {detail}", 502, st)
-    except socket.timeout:
-        return ai_fail("AI_TIMEOUT", f"The AI service took over {AI_TIMEOUT}s to answer.", 504)
-    except urllib.error.URLError as err:
-        why = getattr(err, "reason", err)
-        if isinstance(why, socket.timeout):
-            return ai_fail("AI_TIMEOUT", f"The AI service took over {AI_TIMEOUT}s to answer.", 504)
-        return ai_fail("AI_UNREACHABLE", f"This server couldn't reach {urllib.parse.urlsplit(url).hostname} ({why}).", 502)
-    except Exception as err:
-        return ai_fail("AI_UNREACHABLE", f"Couldn't reach the AI service ({type(err).__name__}: {err}).", 502)
-
-    if shape == "gemini":
-        parts = ((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or []
-        text = "".join(p.get("text") or "" for p in parts)
-    elif shape == "anthropic":
-        text = "".join(b.get("text") or "" for b in (data.get("content") or [])
-                       if b.get("type") == "text")
-    else:
-        text = ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
-
-    text = text.strip()
-    if not text:
-        finish = ""
-        if shape == "openai":
-            finish = (data.get("choices") or [{}])[0].get("finish_reason") or ""
-        if finish == "length":
-            return ai_fail("AI_TOO_SHORT", f"Model '{model}' used all its room thinking and wrote no answer. Allow more tokens or pick a non-thinking model (AI_MODEL).", 502)
-        return ai_fail("AI_EMPTY", f"The AI service answered with nothing (model '{model}'{', stop: ' + finish if finish else ''}).", 502)
+    w = who()
+    ok, out = AI_ROUTER.ask(system, prompt, max_tokens, user_key=None if w == OWNER else w)
+    if not ok:
+        return ai_fail(*out)
     # No prompt, no key, no note text is stored or logged here.
-    return jsonify(ok=True, text=text, model=model, provider=AI_PROVIDER)
+    return jsonify(ok=True, **out)
 
 
 @app.errorhandler(413)

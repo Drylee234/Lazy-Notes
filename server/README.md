@@ -101,6 +101,30 @@ whoever gave you Q-notes"):
 
 New Google accounts are only made from the extension; on the phone Google only logs in to an existing account. Email addresses work as usernames too.
 
+## Many free AI services at once (auto-routing)
+
+Put one key per service on Render › lazy-notes › Environment. A service without
+a key is skipped. Every question goes to the best model that still has free
+allowance left today, spread evenly; "too many requests" → the next one is tried
+at once. Full list, models and rules: `ai_router.py` (top of the file).
+
+| Variable | Where to get it |
+|---|---|
+| `GEMINI_KEY` | https://aistudio.google.com/apikey |
+| `GROQ_KEY` | https://console.groq.com/keys |
+| `CEREBRAS_KEY` | https://cloud.cerebras.ai › API keys |
+| `OPENROUTER_KEY` | https://openrouter.ai/keys |
+| `MISTRAL_KEY` | https://console.mistral.ai/api-keys |
+| `GITHUB_MODELS_KEY` | GitHub › Settings › Developer settings › fine-grained token, "Models: read" |
+| `CLOUDFLARE_KEY` + `CLOUDFLARE_ACCOUNT_ID` | dash.cloudflare.com › AI › Workers AI |
+| `SAMBANOVA_KEY` | https://cloud.sambanova.ai/apis |
+| `AI_DAILY_CAP` | questions per account per day (default 40, 0 = no cap; the server key has none) |
+| `AI_MODELS_<SERVICE>` | your own model list, comma-separated, e.g. `AI_MODELS_GROQ` |
+
+`GET /api/ai/status` with the server key shows every route: used today, its
+limit, and whether it's resting and why. Testers only see "ready" or not. The old
+`AI_KEY` / `AI_PROVIDER` / `AI_MODEL` below still work and join the pool.
+
 ## AI key on the server (so it isn't in Chrome)
 
 The extension can ask this server to do its AI jobs instead of holding an AI
