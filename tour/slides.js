@@ -29,7 +29,7 @@ globalThis.LN_TOUR_SLIDES = [
       { sel: ".lazy-notes-text-edit", text: "The words you picked. Fix them here before saving if you like." },
       { sel: ".lazy-notes-chips", text: "The type. Press its number: <b>1</b> Header · <b>2</b> Sub topic · <b>3</b> Definition · <b>4</b> Formula · <b>5</b> List point · <b>6</b> Important · <b>7</b> Summary · <b>8</b> List head · <b>T</b> Table · <b>0</b> Plain. A number saves at once." },
       { sel: ".lazy-notes-btn-primary", text: "<b>Enter</b> saves with the lit type (Q-notes guesses it: big words = Header…)." },
-      { sel: ".lazy-notes-handoff", text: "<b>✎ Note</b> / <b>❝ Quote</b>: write your own note about it instead." },
+      { sel: ".lazy-notes-handoff", text: "<b>Note</b> / <b>Quote</b>: write your own note about it instead." },
     ],
     bullets: ["<b>⤴ Join</b> (or <b>J</b>) shows up when the words carry on your last highlight, e.g. a sentence broken over a page.",
       "<b>Tab</b> jumps from the words to the type chips. <b>Esc</b> or <b>Dismiss</b> closes without saving."] },

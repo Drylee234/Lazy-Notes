@@ -54,6 +54,7 @@ body.ln-embed-open { padding-right: var(--ln-embed-w, 360px); }
 body.ln-embed-open #toolbar { margin-right: 0; }
 
 .ln-embed-btn { display: inline-flex; align-items: center; gap: 5px; }
+.ln-embed-btn[hidden] { display: none; }
 .ln-embed-btn.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 @media (max-width: 760px) { .ln-embed-btn span { display: none; } }
 
@@ -61,16 +62,24 @@ body.ln-embed-open #toolbar { margin-right: 0; }
    then buttons drop to icons, so the middle controls (page, zoom input)
    never get overlapped. */
 #toolbar { container-type: inline-size; }
-body.ln-embed-open #toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
+body.ln-embed-open #toolbar { grid-template-columns: minmax(min-content, 1fr) auto auto; }
 #toolbar .tb-left { overflow: hidden; }
+#toolbar .tb-left > :not(.doc-title) { flex-shrink: 0; }
+/* The status pill opens/closes the notes; a long Course › Topic shortens
+   (full text on hover) so it doesn't push the page controls to a 2nd row. */
+#toolbar .hl-status { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* All notes: icon only (its name is in the tooltip); the logo opens it too. */
+.ln-allnotes-btn span { display: none; }   /* ☰, logo and Open never get cut off; only the name shortens */
 #toolbar .doc-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 @container (max-width: 980px) {
-  .ln-embed-btn span, .snip-btn span { display: none; }
-  .hl-status { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ln-embed-btn span, .snip-btn span, .ln-allnotes-btn span { display: none; }
+  #zoom-label { display: none; }
+  #toolbar .hl-status { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @container (max-width: 760px) {
   .doc-title { display: none; }
-  .hl-status { max-width: 90px; }
+  #toolbar .hl-status { max-width: 90px; }
+  #rotate-btn { display: none; }   /* R still rotates */
 }
 /* Too narrow for one row (embedded-panel.js sets .ln-tb-narrow): page +
    zoom controls move to a second row instead of being overlapped. */

@@ -234,3 +234,12 @@ seen → cause → what changed (commit) or what's still open.
 - Fold arrows had a box around them → just a chevron (folded: › and the count), on the phone and in the extension.
 - Owner asked to apply online tips on avoiding the "vibe-coded" look to the new site: no pill labels, gradients, glows, emoji icon cards or fake window frames; a book serif for headings; concrete copy.
 - Owner asked if the extension can reload itself: Chrome doesn't let an unpacked extension replace its own files, but it can reload itself. The update notice now has "Reload Q-notes", and says "the new version is in your folder" once the files are replaced.
+
+## 2026-11-28 (later) · Reader toolbar, page pictures, Notes vs Saving, "less vibecoded" in the extension
+
+- **Page list had no pictures** (owner screenshot "PAGES / Page 1 / Page 2"): expected page previews like Chrome's viewer. Now page thumbnails (drawn as they scroll into view); with a real outline, Pages | Outline tabs.
+- **Page controls on a second row** with empty space above them. Whose: ours: the "does it fit?" check counted the whole file name and the whole "Saving to Course › Topic" text, so a long lecture name forced two rows. Now the name and the pill shorten with "…"; two rows only when the toolbar truly can't fit (e.g. ~600px beside the docked panel). Also fixed: ☰/logo/Open could be cut off when the panel was docked.
+- **Notes button and "Saving to …" did the same thing**, and Saving didn't close the panel → one button: the pill opens and closes the notes.
+- **"I said I don't want a bottom bar or a separate window"**: the Bottom and ⧉ buttons are gone from the panel bar (Bottom stays in Settings only).
+- Extension "less vibecoded" pass, part 1 (no colour change yet): no green halo or purple outline on the Highlighter switch and pill, plain green dot on the toolbar icon (no ring), no ✨/🆕/✎/❝ in labels, AI quick buttons as plain words in one row, no "AI" badge on every answer, quiet failed answers, plain footer buttons.
+- Colour + new logo: the main colour #4f46e5 is Tailwind's indigo-600, the default the articles name as the AI tell. Three directions shown (Ink / Library green / Red pen) for the owner to pick.

@@ -1513,8 +1513,8 @@ document.addEventListener("keydown", (e) => {
     const name = window.LN_NAME || "Q-notes";
     // ready: the new files are already in the folder; one click starts them.
     box.querySelector(".update-text").textContent = u.ready
-      ? `🆕 The new ${name} is in your folder. Reload to start it.`
-      : `🆕 A newer ${name} is out (${ago(u.time)}). Download it and replace your folder's files, then press Reload.`;
+      ? `The new ${name} is in your folder. Reload to start it.`
+      : `A newer ${name} is out (${ago(u.time)}). Download it and replace your folder's files, then press Reload.`;
     box.querySelector(".update-get").hidden = !!u.ready;
     box.classList.toggle("ready", !!u.ready);
   }

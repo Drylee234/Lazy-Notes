@@ -231,6 +231,9 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 - ✅ **Reload Q-notes from the update notice** (2026-11-28). **Why:** updating meant a trip to chrome://extensions. Still needs the files replaced by hand (Chrome rule for unpacked extensions); the real fix is the Chrome Web Store, which updates by itself. 💡 Publish on the Chrome Web Store.
 - 💡 **The same "less vibe-coded" pass on the extension's own panels** (2026-11-28). **Why:** owner found boxed icons and template-looking UI; the site got the pass first. Candidates: chips and pills, boxed buttons, emoji in labels, too many borders.
 
+- 💡 **Edge users** (owner, 2026-11-28). **Why:** some classmates use Edge. Edge runs the same extension (Load unpacked works there too); needs a test of the side panel and the PDF prompt in Edge. Best route later: publish once on the Chrome Web Store ($5), which Edge can install from; Edge Add-ons is free but slower to review. Store IDs differ from the unpacked one, so notes need moving (sync/export) when switching.
+- 💡 **PDF editing** (owner, 2026-11-28). **Why:** asked how it would fit. Chrome and Edge's own viewers now draw/highlight/save; what Q-notes adds is notes organised by course. Fits: drawing/typed comments kept as notes on the page, plus "Download an annotated copy". Avoid: saving into the original file, form filling, a full editor.
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.

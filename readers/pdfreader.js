@@ -355,15 +355,12 @@ async function buildOutline() {
   }
 
   if (outline?.length) {
-    outlineEl.querySelector(".outline-head").textContent = "Outline";
     await addLevel(outline, outlineList, 0);
     // Top level opens by default, like Chrome's viewer.
     outlineList.querySelectorAll(":scope > .ol-item").forEach((r) => r.classList.add("open"));
-  } else {
-    outlineEl.querySelector(".outline-head").textContent = "Pages";
-    for (let n = 1; n <= pdfDoc.numPages; n++) outlineList.appendChild(makeItem(`Page ${n}`, n, 0, 0));
   }
   outlineItems.sort((a, b) => a.page - b.page);
+  buildThumbs(!!outline?.length);
   // The section a page is in, for the save pop-up's "Add heading" (only
   // when the PDF has a real outline, not the Pages fallback):
   // { title, depth } of the last outline entry starting on or before it.
@@ -393,8 +390,80 @@ function setOutlineOpen(open, { refit: doRefit = true } = {}) {
 
 outlineBtn.addEventListener("click", () => setOutlineOpen(outlineEl.hidden));
 
+// Page pictures, like Chrome's own viewer: each page drawn small, only when
+// it scrolls into view in the panel. With a real outline, "Pages | Outline"
+// tabs switch between the two (the choice is remembered).
+let thumbsEl = null, thumbsHasOutline = false;
+function buildThumbs(hasOutline = thumbsHasOutline) {
+  thumbsHasOutline = hasOutline;
+  const head = outlineEl.querySelector(".outline-head");
+  thumbsEl?.remove();
+  thumbsEl = document.createElement("div");
+  thumbsEl.id = "thumbs";
+  outlineList.before(thumbsEl);
+  const TW = 132;   // CSS px wide
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(async (en) => {
+      if (!en.isIntersecting || en.target.dataset.drawn) return;
+      en.target.dataset.drawn = "1";
+      observer.unobserve(en.target);
+      try {
+        const page = await pdfDoc.getPage(Number(en.target.dataset.page));
+        const base = page.getViewport({ scale: 1, rotation });
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const vp = page.getViewport({ scale: (TW / base.width) * dpr, rotation });   // turned the same way as the pages
+        const c = en.target.querySelector("canvas");
+        c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+        c.style.aspectRatio = `${vp.width} / ${vp.height}`;
+        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+      } catch (_) { delete en.target.dataset.drawn; }
+    });
+  }, { root: outlineEl, rootMargin: "300px 0px" });
+  const first = pages[0]?.baseViewport;   // placeholder shape until drawn
+  const ratio = first ? first.height / first.width : 1.414;
+  for (let n = 1; n <= Math.min(pdfDoc.numPages, 1000); n++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "thumb";
+    b.dataset.page = String(n);
+    b.setAttribute("aria-label", `Page ${n}`);
+    b.innerHTML = `<canvas style="aspect-ratio:1 / ${ratio}"></canvas><span>${n}</span>`;
+    b.addEventListener("click", () => goToPage(n));
+    thumbsEl.appendChild(b);
+    observer.observe(b);
+  }
+  let tab = "pages";
+  try { tab = localStorage.getItem("ln-pdf-sidetab") || "pages"; } catch (_) {}
+  if (!hasOutline) tab = "pages";
+  head.replaceChildren();
+  const show = (t) => {
+    tab = t;
+    thumbsEl.hidden = t !== "pages";
+    outlineList.hidden = t !== "outline";
+    head.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.tab === t));
+    try { localStorage.setItem("ln-pdf-sidetab", t); } catch (_) {}
+    markOutline(currentPage);
+  };
+  if (hasOutline) {
+    head.innerHTML = `<button type="button" data-tab="pages">Pages</button><button type="button" data-tab="outline">Outline</button>`;
+    head.querySelectorAll("button").forEach((x) => x.addEventListener("click", () => show(x.dataset.tab)));
+  } else head.textContent = "Pages";
+  show(tab);
+}
+
 // The last entry starting at or before this page; its parents open so it shows.
 function markOutline(num) {
+  if (thumbsEl) {
+    thumbsEl.querySelectorAll(".thumb.current").forEach((el) => el.classList.remove("current"));
+    const t = thumbsEl.querySelector(`.thumb[data-page="${num}"]`);
+    if (t) {
+      t.classList.add("current");
+      if (!outlineEl.hidden && !thumbsEl.hidden) {
+        const r = t.getBoundingClientRect(), box = outlineEl.getBoundingClientRect();
+        if (r.top < box.top + 30 || r.bottom > box.bottom - 10) t.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }
   if (!outlineItems.length) return;
   let hit = null;
   for (const it of outlineItems) { if (it.page <= num) hit = it; else break; }
@@ -540,6 +609,7 @@ function rotatePages(step = 90) {
   const old = scale;
   scale = 0;   // force a full re-render even if the zoom stays the same
   setScale(fitMode ? fitScale(fitMode) : keep ?? old, { fit: fitMode });
+  buildThumbs();
 }
 
 function setScale(newScale, { fit = null } = {}) {
