@@ -130,6 +130,10 @@ class Store:
             # its copy here is deleted and a mark remembers "delivered" (so
             # the extension doesn't send it again) or "wanted" (a phone lost
             # it: the extension sends it again from the computer).
+            # Usage reports (no notes: counts, settings, errors), kept apart from
+            # the notes with a short history, so the owner (and Claude) can read
+            # every tester's: GET /api/reports, /api/reports/summary.
+            c.execute(f"CREATE TABLE IF NOT EXISTS reports (id {serial}, user_key TEXT NOT NULL, saved_at TEXT NOT NULL, body {js} NOT NULL)")
             c.execute("CREATE TABLE IF NOT EXISTS doc_marks (sha TEXT NOT NULL, user_key TEXT NOT NULL, state TEXT NOT NULL, "
                       "name TEXT, kind TEXT, at TEXT NOT NULL, PRIMARY KEY (sha, user_key))")
 
@@ -193,6 +197,24 @@ class Store:
     def drop_token(self, token_hash):
         with self._conn() as c:
             c.execute(self.q("DELETE FROM tokens WHERE hash = ?"), (token_hash,))
+
+    # ── usage reports ──
+    REPORTS_KEEP = 30
+
+    def report_add(self, user_key, body):
+        with self._conn() as c:
+            c.execute(self.q("INSERT INTO reports (user_key, saved_at, body) VALUES (?, ?, ?)"),
+                      (user_key, now_iso(), json.dumps(body, separators=(",", ":"))))
+            c.execute(self.q(f"DELETE FROM reports WHERE user_key = ? AND id NOT IN "
+                             f"(SELECT id FROM reports WHERE user_key = ? ORDER BY id DESC LIMIT {self.REPORTS_KEEP})"), (user_key, user_key))
+
+    def reports_latest(self):
+        """[(user_key, saved_at, body, how_many_kept)] — each tester's newest."""
+        with self._conn() as c:
+            rows = c.execute("SELECT r.user_key, r.saved_at, r.body, (SELECT COUNT(*) FROM reports x WHERE x.user_key = r.user_key) "
+                             "FROM reports r WHERE r.id = (SELECT MAX(id) FROM reports y WHERE y.user_key = r.user_key) "
+                             "ORDER BY r.saved_at DESC").fetchall()
+        return [(u, at, b if isinstance(b, dict) else json.loads(b), n) for (u, at, b, n) in rows]
 
     # ── documents ── (user_key: "owner" or the account id, as text)
     def doc_list(self, user_key):
@@ -353,7 +375,14 @@ def put_snapshot():
             or not isinstance(payload.get("data"), dict) \
             or not isinstance(payload["data"].get("lazynotes"), dict):
         return jsonify(ok=False, reason="not a Q-notes snapshot"), 400
-    saved_at = store.save(payload["data"], user_id_of(who()))
+    w = who()
+    saved_at = store.save(payload["data"], user_id_of(w))
+    rep_body = payload["data"].get("lnReport")
+    if isinstance(rep_body, dict):
+        try:
+            store.report_add("owner" if w == OWNER else str(w), rep_body)
+        except Exception:
+            pass   # a report must never stop the notes from saving
     return jsonify(ok=True, savedAt=saved_at)
 
 
@@ -378,6 +407,68 @@ def get_report():
         return jsonify(ok=False, reason="nothing synced yet"), 404
     saved_at, data = latest
     return jsonify(savedAt=saved_at, report=(data or {}).get("lnReport"))
+
+
+# --------------------------------------------------------------------------
+# Testers' usage reports, for the owner (and Claude) — server key only.
+#   GET /api/reports           each tester's latest report
+#   GET /api/reports/summary   all of them added up: what's used, never used,
+#                              struggle signs, the commonest errors
+# Reports hold counts, settings and errors: never note text or keys.
+# --------------------------------------------------------------------------
+
+def _owner_only():
+    return who() == OWNER
+
+
+def _who_name(user_key):
+    if user_key == "owner":
+        return "owner"
+    try:
+        return store.username(int(user_key)) or f"account {user_key}"
+    except ValueError:
+        return user_key
+
+
+@app.get("/api/reports")
+def reports_all():
+    if not _owner_only():
+        return jsonify(ok=False, reason="only the server key can read everyone's reports"), 403
+    out = [{"tester": _who_name(u), "savedAt": at, "reportsKept": n, "report": body} for (u, at, body, n) in store.reports_latest()]
+    return jsonify(ok=True, testers=len(out), reports=out)
+
+
+@app.get("/api/reports/summary")
+def reports_summary():
+    if not _owner_only():
+        return jsonify(ok=False, reason="only the server key can read everyone's reports"), 403
+    rows = store.reports_latest()
+    usage, habits, never, errors = {}, {}, {}, {}
+    testers = []
+    for (u, at, body, _n) in rows:
+        name = _who_name(u)
+        counts = body.get("counts") or {}
+        testers.append({"tester": name, "lastReport": at, "version": body.get("version"), "notes": counts,
+                        "browser": (body.get("browser") or "")[:120]})
+        for bucket, src in ((usage, body.get("usage") or {}), (habits, body.get("habits") or {})):
+            for day in src.values():
+                for k, v in (day or {}).items():
+                    e = bucket.setdefault(k, {"total": 0, "testers": set()})
+                    e["total"] += int(v or 0)
+                    e["testers"].add(name)
+        for f in body.get("neverUsed") or []:
+            never.setdefault(f, set()).add(name)
+        for err in body.get("errors") or []:
+            key = f"{err.get('where', '')}: {err.get('msg', '')}"[:200]
+            e = errors.setdefault(key, {"count": 0, "testers": set()})
+            e["count"] += 1
+            e["testers"].add(name)
+    top = lambda d, k: sorted(({"what": w, **{kk: (len(vv) if isinstance(vv, set) else vv) for kk, vv in v.items()}} for w, v in d.items()),
+                              key=lambda x: -x[k])
+    return jsonify(ok=True, testers=testers,
+                   used=top(usage, "total")[:60], habits=top(habits, "total")[:60],
+                   neverUsed=sorted(({"feature": f, "testers": len(t)} for f, t in never.items()), key=lambda x: -x["testers"]),
+                   errors=top(errors, "count")[:40])
 
 
 # --------------------------------------------------------------------------
