@@ -217,3 +217,9 @@ seen → cause → what changed (commit) or what's still open.
 
 - Owner: "the main type of times I use Plain is: heading : then definition" (screenshot: "Passive Transport:" then, indented, "means the transport without usage of ATP"). Not a slip, a habit: that's a definition split in two notes. Told them the existing ways (highlight both + 2 → "Split into heading + Definition", or 3 for the meaning line); logged an idea to guess Definition there.
 - Owner asked to move the panel's own bar (AI ▾ ? Float Dock Bottom ⧉ ✕) up into the icon row → done (one bar).
+
+## 2026-11-28 · The red "Sync isn't working" box was too much
+
+- Owner screenshot (phone, side panel): a big red box "Sync isn't working: the server had a problem (is its database connected? check DATABASE_URL on Render). Next try 08:23 AM. [Retry] [Fix]". Owner: if sync fails it's most likely just being offline; users don't need all that.
+- Whose: ours. The box spoke server-owner language to everyone and showed for problems that fix themselves.
+- Now: no box for offline / asleep / server errors (it retries by itself; the online pill shows "Waiting"). The box only shows, as one line, when the user must act: "Sync paused: you're logged out. [Log in]" or "Sync paused: notes are over 30 MB. [Fix]".

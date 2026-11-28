@@ -946,9 +946,52 @@ def _named(filename, mimetype):
     return r
 
 
+# The site: / (what Q-notes is) → /get (download) → /login → /app (your
+# notes). The landing and download pages live in ../site, the same files
+# GitHub Pages publishes, so the two sites never drift apart.
+SITE = os.path.join(os.path.dirname(HERE), "site")
+
+
+def _site(filename, mimetype):
+    with open(os.path.join(SITE, filename), encoding="utf-8") as f:
+        text = f.read().replace("Q-notes", APP_NAME.replace('"', "'"))
+    r = Response(text, mimetype=mimetype)
+    r.headers["Cache-Control"] = "no-cache"
+    return r
+
+
 @app.get("/")
 def index():
+    return _site("index.html", "text/html")
+
+
+@app.get("/login")
+@app.get("/app")
+def phone_app():
+    # The notes reader (static/app.js): /login shows the login form, /app your notes.
     return _named("index.html", "text/html")
+
+
+@app.get("/site.css")
+def site_css():
+    return send_from_directory(SITE, "site.css", mimetype="text/css")
+
+
+@app.get("/site.js")
+def site_js():
+    return send_from_directory(SITE, "site.js", mimetype="text/javascript")
+
+
+@app.get("/logo.svg")
+def site_logo():
+    return send_from_directory(SITE, "logo.svg", mimetype="image/svg+xml")
+
+
+@app.get("/img/<path:name>")
+def site_img(name):
+    r = send_from_directory(os.path.join(SITE, "img"), name)
+    r.headers["Cache-Control"] = "public, max-age=86400"
+    return r
 
 
 # --------------------------------------------------------------------------
@@ -959,7 +1002,7 @@ def index():
 # --------------------------------------------------------------------------
 
 EXT_ROOT = os.path.dirname(HERE)
-SKIP_TOP = {"server", "docs", "tools", ".git", ".github", "node_modules", "test-bench-out"}
+SKIP_TOP = {"server", "docs", "tools", "site", ".git", ".github", "node_modules", "test-bench-out"}
 _zip_cache = None
 
 
@@ -989,10 +1032,12 @@ def extension_zip():
 
 
 @app.get("/get")
+@app.get("/get.html")
 def get_page():
-    return _named("get.html", "text/html")
+    return _site("get.html", "text/html")
 
 
+@app.get("/qnotes.zip")                # the download page links it next to itself (as on GitHub Pages)
 @app.get("/download/qnotes.zip")
 @app.get("/download/lazy-notes.zip")   # the old name: links already sent keep working
 def download_zip():

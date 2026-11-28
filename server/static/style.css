@@ -185,3 +185,9 @@ main { padding: 12px 16px 24px; }
 
 .btn-google { display: block; text-align: center; text-decoration: none; margin-bottom: 14px; background: var(--bg); color: var(--pri); border: 1px solid var(--border-strong); }
 .btn-google[hidden] { display: none; }
+
+/* Login (/login) */
+.key-logo { width: 56px; height: 56px; border-radius: 14px; display: block; margin: 8px 0 14px; }
+.key-h { font-size: 26px; letter-spacing: -.02em; margin: 0 0 4px; color: var(--pri); }
+.key-new { font-size: 14px; margin-top: 22px; }
+.key-new a { color: var(--accent); }

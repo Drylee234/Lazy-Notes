@@ -18,7 +18,7 @@
   else if (q.get("from") === "phone") {
     try { localStorage.setItem("ln-key", q.get("token")); localStorage.setItem("ln-user", q.get("user")); } catch (_) {}
     history.replaceState(null, "", "/auth/done");
-    location.replace("/");
+    location.replace("/app");
   } else {
     t.textContent = "You're signed in";
     m.textContent = `as ${q.get("user")}. Q-notes has it: you can close this tab.`;

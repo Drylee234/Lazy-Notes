@@ -151,16 +151,19 @@
   }
 
   function keyScreen(error = "") {
-    setBar("Q-notes");
+    setBar("Log in");
     searchWrap.hidden = true;
     status.textContent = "";
     view.innerHTML = `<form class="key-card" id="login-form">
+      <img class="key-logo" src="/static/icon-192.png" alt="">
+      <h2 class="key-h">Read your notes</h2>
       <p>Log in with the account you made in the extension (Settings › Account &amp; sync).</p>
       <a class="btn btn-google" id="google-go" href="/auth/google?from=phone" hidden>Continue with Google</a>
       <input id="login-user" type="text" autocomplete="username" autocapitalize="none" placeholder="Email or username" required>
       <input id="login-pass" type="password" autocomplete="current-password" placeholder="Password" required>
       <button class="btn" type="submit">Log in</button>
       <div class="err" id="key-err">${esc(error)}</div>
+      <p class="key-new">New to Q-notes? <a href="/get">Get the extension</a> and make your account there. <a href="/">What's Q-notes?</a></p>
       <details class="key-alt"><summary>Use the server key instead</summary>
         <input id="key-input" type="password" autocomplete="off" placeholder="Server key (LAZYNOTES_KEY)">
         <button class="btn" type="button" id="key-go">Open my notes</button></details></form>`;
@@ -543,6 +546,10 @@
     selCtx = null; askBtn.hidden = true; sheet.hidden = true;
     const shared = location.pathname.match(/^\/s\/([\w-]+)/);
     if (shared) { sharedScreen(shared[1]); return; }
+    // /login when logged out, /app when logged in (the address follows, so
+    // Back and bookmarks make sense). "/" is the site's front page.
+    const want = key ? "/app" : "/login";
+    if (location.pathname !== want) history.replaceState(null, "", want + (key ? location.hash : ""));
     if (!key) { keyScreen(); return; }
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(dec);
     if (parts[0] === "course" && parts[2] === "topic") topicScreen(parts[1], parts[3]);

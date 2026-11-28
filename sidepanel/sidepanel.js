@@ -1374,42 +1374,32 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
 })();
 
 // ---------------------------------------------------------------------------
-// Sync not working? Say so, in plain words, with what to do (bg_sync.js
-// keeps lnSyncState). Shown after 2 failed tries in a row, or at once for a
-// wrong key / too big; ✕ hides it until the problem changes.
+// Sync needs you? Say so in one short line (bg_sync.js keeps lnSyncState).
+// Only for what you must fix yourself: logged out, or notes too big. Being
+// offline, a sleeping or failing server: it keeps retrying on its own, and the
+// online pill in the header shows it ("Waiting"), so no box for those.
+// ✕ hides it until the problem changes.
 // ---------------------------------------------------------------------------
 (function syncWarning() {
   const box = document.getElementById("sync-warn");
   if (!box) return;
   const text = box.querySelector(".sync-warn-text");
-  // Someone using an account didn't set the server up: no server jargon for them.
-  let account = false;
-  const why = (err) => {
-    if (/wrong sync key/i.test(err)) return account ? "you've been logged out. Log in again in Settings › Account & sync." : "the sync key in Settings doesn't match LAZYNOTES_KEY on your server.";
-    if (/too big/i.test(err)) return "your notes are over the server's 30 MB limit (big figures?).";
-    if (/server error \(5/i.test(err)) return account ? "the server had a problem. Your notes are safe on this computer; it will try again." : "the server had a problem (is its database connected? check DATABASE_URL on Render).";
-    if (/server error/i.test(err)) return `the server refused it (${err.replace(/ —.*$/, "")}).`;
-    if (/not reachable/i.test(err)) return navigator.onLine === false
-      ? "you're offline. It'll sync when you're back."
-      : "the server didn't answer (it may be asleep or down, or the address in Settings is wrong).";
-    return err.replace(/ —.*$/, "") + ".";
-  };
+  const fix = box.querySelector(".sync-warn-fix");
+  const needsYou = (err) =>
+    /wrong sync key/i.test(err) ? { say: "Sync paused: you're logged out.", btn: "Log in" }
+    : /too big/i.test(err) ? { say: "Sync paused: notes are over 30 MB.", btn: "Fix" }
+    : null;
   let hiddenFor = null;
   async function show() {
-    const { lnSyncState: st = {}, lnSyncUrl, lnSyncKey, lnSyncUser } = await chrome.storage.local.get(["lnSyncState", "lnSyncUrl", "lnSyncKey", "lnSyncUser"]);
-    account = !!lnSyncUser;
+    const { lnSyncState: st = {}, lnSyncUrl, lnSyncKey } = await chrome.storage.local.get(["lnSyncState", "lnSyncUrl", "lnSyncKey"]);
     const err = st.lastError || "";
-    const bad = lnSyncUrl && lnSyncKey && err && !/isn't set up/.test(err) && (st.stopped || (st.failures || 0) >= 2);
-    if (!bad || hiddenFor === err.replace(/ —.*$/, "")) { box.hidden = true; return; }
-    const retry = err.match(/will retry at (.+)$/)?.[1];
-    text.textContent = `⚠ Sync isn't working: ${why(err)}${retry ? ` Next try ${retry}.` : ""}`;
+    const need = lnSyncUrl && lnSyncKey ? needsYou(err) : null;
+    if (!need || hiddenFor === err.replace(/ —.*$/, "")) { box.hidden = true; return; }
+    text.textContent = need.say;
+    fix.textContent = need.btn;
     box.hidden = false;
   }
-  box.querySelector(".sync-warn-retry").addEventListener("click", () => {
-    text.textContent = "Syncing… (a sleeping server can take a minute)";
-    chrome.runtime.sendMessage({ type: "SYNC_NOW" }, () => { void chrome.runtime.lastError; show(); });
-  });
-  box.querySelector(".sync-warn-fix").addEventListener("click", () => {
+  fix.addEventListener("click", () => {
     const settings = document.getElementById("settings");
     settings.open = true;
     const sync = settings.querySelector(".set-sync:has(.set-account)");
@@ -1421,8 +1411,6 @@ if (new URLSearchParams(location.search).has("window")) document.body.classList.
     box.hidden = true;
   });
   chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && (c.lnSyncState || c.lnSyncUrl || c.lnSyncKey)) show(); });
-  addEventListener("online", show);
-  addEventListener("offline", show);
   show();
 })();
 

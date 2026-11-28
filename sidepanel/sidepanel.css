@@ -440,14 +440,14 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
 #settings-menu { max-height: calc(100vh - 60px); overflow-y: auto; }
 
 /* Sync not working (sidepanel.js syncWarning) */
-#sync-warn { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; padding: 7px 9px;
+#sync-warn { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 5px 6px 5px 10px;
   border-radius: var(--radius-sm); background: color-mix(in srgb, var(--danger) 10%, var(--bg)); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   color: var(--pri); font-size: 12px; line-height: 1.35; }
 #sync-warn[hidden] { display: none; }
-.sync-warn-text { flex: 1 1 100%; }
+.sync-warn-text { flex: 1 1 auto; min-width: 0; }
 #sync-warn button { border: 1px solid var(--border); background: var(--bg); color: var(--pri); border-radius: 5px; padding: 3px 9px; font: inherit; cursor: pointer; }
 #sync-warn button:hover { background: var(--hover); }
-#sync-warn .sync-warn-x { margin-left: auto; border: 0; background: none; color: var(--dim); }
+#sync-warn .sync-warn-x { border: 0; background: none; color: var(--dim); }
 
 /* Documents in this course (Home) */
 #course-docs { margin-top: 14px; }

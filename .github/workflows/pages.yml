@@ -1,6 +1,6 @@
-# Q-notes download page: https://drylee234.github.io/Lazy-Notes/
+# Q-notes site (landing + download): https://drylee234.github.io/Lazy-Notes/
 # On every push to main: zip the extension (without the server, docs and
-# tools) next to site/index.html and publish both with GitHub Pages.
+# tools) next to the site/ pages and publish them with GitHub Pages.
 # One-time setup on GitHub: Settings › Pages › Source: "GitHub Actions".
 name: Download page
 
@@ -39,8 +39,8 @@ jobs:
           zip -q _site/qnotes.zip build.json
           cp build.json _site/version.json
           cp _site/qnotes.zip _site/lazy-notes.zip   # the old name, for links already sent
-          cp site/index.html _site/index.html
-          cp icons/logo.svg _site/logo.svg
+          # The landing and download pages (the Render server serves the same files).
+          cp -r site/. _site/
           echo "built $(date -u +%Y-%m-%d), ${GITHUB_SHA::7}" > _site/version.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
