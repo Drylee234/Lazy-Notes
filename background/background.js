@@ -145,3 +145,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, info) => {
   } catch (_) { /* the offline helpers stay */ }
   chrome.runtime.sendMessage({ type: "SYNC_NOW" }).catch(() => {});
 });
+
+
+// Autocorrect used to be one Off / Mild / Strong / Toxic slider; now each fix
+// is its own switch. Turn the old level into those switches, once.
+chrome.storage.local.get(["lnAcMigrated", "lnAutocorrectLevel", "lnAutocorrect"], (r) => {
+  if (r?.lnAcMigrated) return;
+  const lvl = typeof r?.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r?.lnAutocorrect === false ? 0 : 1;
+  const set = { lnAcMigrated: true };
+  if (lvl === 0) ["lnAcTypos", "lnAcCaps", "lnAcAllCaps", "lnAcApos", "lnAcRepeats", "lnAcSplit", "lnAcLearned", "lnPunctFix"].forEach((k) => { set[k] = false; });
+  if (lvl >= 2) Object.assign(set, { lnAcGuess: true, lnAcSentence: true });
+  if (lvl >= 3) set.lnAcBolder = true;
+  chrome.storage.local.set(set);
+});

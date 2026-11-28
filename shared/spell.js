@@ -23,9 +23,28 @@
 (() => {
   let speller = null;
   let loading = null;
-  // Autocorrect strength (side panel ⚙ slider, "lnAutocorrectLevel"):
-  // 0 off · 1 mild (one clear one-slip fix) · 2 strong · 3 toxic.
-  let level = 1;
+  // Autocorrect: each fix is its own switch (Settings › Autocorrect), not a
+  // strength slider. Off unless said: lnAcGuess, lnAcSentence, lnAcBolder.
+  //   lnAcTypos     a clear one-slip typo (teh → the)
+  //   lnAcGuess     also the likeliest word when it's less clear
+  //   lnAcBolder    even bolder: 2-letter words, rarer words (old "Toxic")
+  //   lnAcSentence  a capital at the start of each sentence
+  //   lnAcCaps      stuck capitals (THe → The, caps lock, i → I)
+  //   lnAcAllCaps   ALL-CAPS ordinary words → lower case
+  //   lnAcApos      missing apostrophes (didnt → didn't)
+  //   lnAcRepeats   held-down letters (helllo → hello)
+  //   lnAcSplit     joined words (thecell → the cell)
+  //   lnAcLearned   fixes you've picked before, applied again
+  //   lnPunctFix    stray punctuation (its own switch since before)
+  // The old slider level is turned into these once (background.js).
+  const feat = { typos: true, guess: false, bolder: false, sentence: false, caps: true, allcaps: true, apos: true, repeats: true, split: true, learned: true };
+  const FEAT_KEYS = { lnAcTypos: "typos", lnAcGuess: "guess", lnAcBolder: "bolder", lnAcSentence: "sentence", lnAcCaps: "caps",
+    lnAcAllCaps: "allcaps", lnAcApos: "apos", lnAcRepeats: "repeats", lnAcSplit: "split", lnAcLearned: "learned" };
+  const OFF_BY_DEFAULT = new Set(["guess", "bolder", "sentence"]);
+  const setFeat = (k, v) => { const f = FEAT_KEYS[k]; if (f) feat[f] = OFF_BY_DEFAULT.has(f) ? v === true : v !== false; };
+  // How bold the typo fixer is: 1 one clear slip · 2 likeliest word · 3 bolder.
+  const lvlNow = () => (feat.bolder ? 3 : feat.guess ? 2 : 1);
+  const wordFixesOn = () => ["typos", "sentence", "caps", "allcaps", "apos", "repeats", "learned"].some((f) => feat[f]);
   let ignore = new Set();
   let docOn = true, hintsOn = true;
   let punctOn = true;   // lnPunctFix: tidy stray punctuation while typing
@@ -40,8 +59,8 @@
   };
 
   if (globalThis.chrome?.storage?.local) {
-    chrome.storage.local.get(["lnAutocorrect", "lnAutocorrectLevel", "lnSpellIgnore"], (r) => {
-      level = typeof r.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r.lnAutocorrect === false ? 0 : 1;
+    chrome.storage.local.get(["lnSpellIgnore", ...Object.keys(FEAT_KEYS)], (r) => {
+      Object.keys(FEAT_KEYS).forEach((k) => setFeat(k, r[k]));
       ignore = new Set(r.lnSpellIgnore || []);
       ignore.forEach((w) => speller?.add(w));
     });
@@ -55,7 +74,7 @@
     chrome.storage.onChanged.addListener((c, area) => {
       if (area === "session" && c.lnDocWords) { setDocWords(c.lnDocWords.newValue); return; }
       if (area !== "local") return;
-      if (c.lnAutocorrectLevel) level = Number(c.lnAutocorrectLevel.newValue ?? 1);
+      Object.keys(FEAT_KEYS).forEach((k) => { if (k in c) setFeat(k, c[k].newValue); });
       if (c.lnDocWordsOn) docOn = c.lnDocWordsOn.newValue !== false;
       if (c.lnSpellLearned) learned = c.lnSpellLearned.newValue || {};
       if (c.lnTypingHints) hintsOn = c.lnTypingHints.newValue !== false;
@@ -364,7 +383,7 @@
   //    undoes a fix like any typing. Off: lnPunctFix = false. ──
   const STRAY = /([A-Za-z]{2,})[\[\]{}|\\`^~]([A-Za-z]{2,})$/;
   function punctFix(e, field) {
-    if (!punctOn || !level || e.inputType !== "insertText") return false;
+    if (!punctOn || e.inputType !== "insertText") return false;
     const ch = e.data;
     if (!ch || ch.length !== 1) return false;
     const v = view(field);
@@ -415,7 +434,8 @@
     const field = e.target;
     lastFix = null;
     if (punctFix(e, field)) return;
-    if (!level || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
+    if (!wordFixesOn() || !speller || e.inputType !== "insertText" || !/^[\s.,;:!?)\]]$/.test(e.data || "")) return;
+    const level = lvlNow();
     const v = view(field);
     if (!v || v.empty) return;
     const caret = v.caret;
@@ -435,21 +455,21 @@
     const mixed = /[a-z]/.test(word) && /[A-Z]/.test(word.slice(1));
     const base = mixed ? (atStart ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word.toLowerCase()) : word;
     // Letters held down ("helllo"): runs of 3+ count as one or two.
-    const runFix = /(.)\1\1/i.test(word)
+    const runFix = feat.repeats && /(.)\1\1/i.test(word)
       ? [word.replace(/(.)\1{2,}/gi, "$1$1"), word.replace(/(.)\1{2,}/gi, "$1")].find((c) => speller.correct(c) || speller.correct(c.toLowerCase()))
       : null;
-    const learnedFix = learned[word.toLowerCase()] ? keepCase(word, learned[word.toLowerCase()]) : null;
-    let fixed = learnedFix || runFix || apostropheFix(base, atStart) || capsFix(word, atStart) || midCapFix(word, atStart, level) ||
-                allCapsFix(word, atStart, level);
+    const learnedFix = feat.learned && learned[word.toLowerCase()] ? keepCase(word, learned[word.toLowerCase()]) : null;
+    let fixed = learnedFix || runFix || (feat.apos && apostropheFix(base, atStart)) || (feat.caps && capsFix(word, atStart)) ||
+                (feat.caps && midCapFix(word, atStart, level)) || (feat.allcaps && allCapsFix(word, atStart, level)) || null;
     if (!fixed) {
-      if (checkable(word, atStart, level) && misspelled(word)) {
-        fixed = (level >= 2 ? bestFix(word, level) : clearFix(word)) || splitFix(word);
-      } else if (level >= 2 && atStart && /^[a-z]/.test(word) && word.length > 1 && speller.correct(word)) {
+      if (feat.typos && checkable(word, atStart, level) && misspelled(word)) {
+        fixed = (level >= 2 ? bestFix(word, level) : clearFix(word)) || (feat.split ? splitFix(word) : null);
+      } else if (feat.sentence && atStart && /^[a-z]/.test(word) && word.length > 1 && speller.correct(word)) {
         fixed = word[0].toUpperCase() + word.slice(1);   // capitalise a sentence's first word
       }
     }
-    // Strong+: a misspelled word at a sentence start also gets its capital.
-    if (fixed && level >= 2 && atStart && /^[a-z]/.test(fixed)) fixed = fixed[0].toUpperCase() + fixed.slice(1);
+    // A fixed word at a sentence start also gets its capital.
+    if (fixed && feat.sentence && atStart && /^[a-z]/.test(fixed)) fixed = fixed[0].toUpperCase() + fixed.slice(1);
     if (!fixed || fixed === word) return;
     replace(field, v, start, start + word.length, fixed, 1);
     lastFix = { field, original: word, fixed, sep: e.data };

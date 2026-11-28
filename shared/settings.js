@@ -3,7 +3,8 @@
 // follows changes made elsewhere, so both places always agree:
 //   lnTheme            "auto" | "light" | "dark"        (applied by theme.js)
 //   lnPopupSide        "above" | "below" | "left" | "right" | "split"
-//   lnAutocorrectLevel 0 Off · 1 Mild · 2 Strong · 3 Toxic   (old lnAutocorrect === false → 0)
+//   Autocorrect: one switch per fix (lnAcTypos, lnAcGuess, … lnPunctFix); the old
+//   lnAutocorrectLevel slider is turned into them once (background.js)
 //   lnDocAutoSelect    false = opening a document doesn't switch course/topic
 //   pptxAutoOpen       false = .pptx downloads aren't opened in Lazy Notes
 //   More options: lnPanelMode "tab" | "docked"; lnQuickDblClick, lnQuickSelButtons,
@@ -17,9 +18,8 @@
 // Needs shared/settings.css.
 
 globalThis.LazySettings = (() => {
-  const LEVELS = ["Off", "Mild", "Strong", "Toxic"];
   // "More options": on unless switched off (lnPanelMode: "tab" | "docked").
-  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus", "lnHabits", "lnEditLastInList", "lnEditCard", "lnSaveToast", "lnEdgeStyle", "lnAiView", "lnDocBackup", "lnStudyAnywhere", "lnSettingsSmall"];
+  const MORE_KEYS = ["lnPanelMode", "lnQuickDblClick", "lnQuickWhenFolded", "lnQuickSelButtons", "lnQuickMenu", "lnQuickFloat", "lnDocCaret", "lnDocSnap", "lnDocWordsOn", "lnTypingHints", "lnPunctFix", "lnListHeadType", "lnDropPageNums", "lnDupWarn", "lnHeadSplit", "lnGroupIndent", "lnSendReports", "lnBoldItalic", "lnPlainInBoxes", "lnDropPlain", "lnPanelFade", "lnEmbedHome", "lnPanelHover", "lnPanelHoverMs", "lnPanelHoverCloseMs", "lnReaderFullscreen", "lnPagePanelOwn", "lnPagePanelMode", "lnReaderNativePanel", "lnAiOn", "lnAskPlace", "lnNoteGap", "lnToolsSize", "lnTourOnReload", "lnIndentAlone", "lnIndentFollowLists", "lnAiOffline", "lnOnlineStatus", "lnHabits", "lnEditLastInList", "lnEditCard", "lnSaveToast", "lnEdgeStyle", "lnAiView", "lnDocBackup", "lnStudyAnywhere", "lnSettingsSmall", "lnAcTypos", "lnAcGuess", "lnAcBolder", "lnAcSentence", "lnAcCaps", "lnAcAllCaps", "lnAcApos", "lnAcRepeats", "lnAcSplit", "lnAcLearned"];
 
   const MARKUP = `
     <input type="search" class="set-find" placeholder="Find a setting…" aria-label="Find a setting" spellcheck="false" />
@@ -45,11 +45,21 @@ globalThis.LazySettings = (() => {
       <button type="button" data-value="off" role="radio" title="Nothing shows; Ctrl+Z still undoes for a few seconds">Off</button>
       <button type="button" data-value="full" role="radio" title="The old bar: “Saved to Course › Topic · Undo”">Full</button>
     </div></div>
-    <div class="set-item"><label class="set-range">
-      <span class="set-range-head"><span>Autocorrect</span><b class="set-level-name">Mild</b></span>
-      <input type="range" class="set-level" min="0" max="3" step="1" value="1" aria-label="Autocorrect strength" />
-      <span class="set-range-ticks"><span>Off</span><span>Mild</span><span>Strong</span><span>Toxic</span></span>
-    </label></div>
+    <details class="set-sync set-item set-ac">
+      <summary class="set-label set-sync-head">Autocorrect <span class="set-ac-count"></span></summary>
+      <div class="set-group-note">Tick the fixes you want while you type. Each one is undone with Backspace or Ctrl+Z right after it happens.</div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcTypos" /> Typos: fix a clear one-letter slip (teh → the, recieve → receive)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcGuess" data-off /> Bolder typo fixes: pick the likeliest word even when it's less clear</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcBolder" data-off /> Boldest: also 2-letter words and rarer words (the old “Toxic”)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcSentence" data-off /> A capital letter at the start of each sentence</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcCaps" /> Stuck capitals: THe → The, caps-lock words, i → I</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcAllCaps" /> ALL-CAPS everyday words → lower case (acronyms like ATP stay)</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcApos" /> Missing apostrophes: didnt → didn't, im → I'm</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcRepeats" /> Held-down letters: helllo → hello</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcSplit" /> Joined words: thecell → the cell</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAcLearned" /> Fixes I've picked before (from the suggestions) are used again</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPunctFix" /> Stray punctuation: “word ,next” → “word, next”, “(1791)discovered”, “produc[tion”</label></div>
+    </details>
     <div class="set-item"><div class="set-label">Notes panel in the readers</div>
     <div class="seg" data-key="lnPanelMode" data-default="float" role="radiogroup" aria-label="Notes panel in the readers">
       <button type="button" data-value="float" role="radio" title="A box over the page: drag it anywhere, fold it to its title bar">Floating</button>
@@ -104,7 +114,6 @@ globalThis.LazySettings = (() => {
       <div class="set-label set-sub">Typing</div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocWordsOn" /> Words from the document you're reading count as spelled right</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnTypingHints" /> Typing hints: finish a word from the document or your notes (→ accepts)</label></div>
-      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPunctFix" /> Fix stray punctuation as you type (“word ,next” → “word, next”, “(1791)discovered”, “produc[tion”)</label></div>
       <div class="set-label set-sub">Notes &amp; PDFs</div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnGroupIndent" /> Indent notes under sub topics</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocCaret" /> Keyboard cursor in PDFs (click text, then arrows move it, Shift+arrows select)</label></div>
@@ -245,12 +254,16 @@ globalThis.LazySettings = (() => {
 
     const segs   = [...root.querySelectorAll(".seg")];
     const checks = [...root.querySelectorAll("input[type=checkbox][data-key]")];
-    const level  = root.querySelector(".set-level");
-    const levelName = root.querySelector(".set-level-name");
+    // "Autocorrect (7 of 11 on)" on its folded line.
+    const acCount = () => {
+      const box = root.querySelector(".set-ac");
+      if (!box) return;
+      const cs = [...box.querySelectorAll("input[type=checkbox]")];
+      box.querySelector(".set-ac-count").textContent = `${cs.filter((c) => c.checked).length} of ${cs.length} on`;
+    };
 
     const markSeg = (seg, v) => seg.querySelectorAll("button").forEach((b) =>
       b.setAttribute("aria-checked", String(b.dataset.value === (v || seg.dataset.default))));
-    const showLevel = () => { levelName.textContent = LEVELS[level.value]; };
 
     // A checkbox's stored value. data-off: off unless switched on; data-on:
     // a text setting ("roomy" when ticked, data-off-value when not);
@@ -294,7 +307,6 @@ globalThis.LazySettings = (() => {
     function resetItem(item) {
       const keys = new Set();
       item.querySelectorAll("[data-key]").forEach((x) => keys.add(x.dataset.key));
-      if (item.contains(level)) { keys.add("lnAutocorrectLevel"); keys.add("lnAutocorrect"); }
       chrome.storage.local.remove([...keys]);
     }
 
@@ -304,8 +316,7 @@ globalThis.LazySettings = (() => {
         (r) => {
           segs.forEach((seg) => markSeg(seg, r[seg.dataset.key]));
           checks.forEach((c) => { c.checked = checkedFrom(c, r[c.dataset.key]); });
-          level.value = String(typeof r.lnAutocorrectLevel === "number" ? r.lnAutocorrectLevel : r.lnAutocorrect === false ? 0 : 1);
-          showLevel();
+          acCount();
           markChanged();
         });
     }
@@ -342,7 +353,7 @@ globalThis.LazySettings = (() => {
       chrome.storage.local.set({ [seg.dataset.key]: v });
     }));
     checks.forEach((c) => c.addEventListener("change", () => chrome.storage.local.set({ [c.dataset.key]: valueOf(c) })));
-    level.addEventListener("input", () => { showLevel(); chrome.storage.local.set({ lnAutocorrectLevel: Number(level.value) }); });
+    root.querySelector(".set-ac")?.addEventListener("change", acCount);
 
     // ── Backup: everything (notes, courses, recent documents, settings) in
     //    one .json file; restoring either adds to what's here or replaces it.
