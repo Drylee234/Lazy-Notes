@@ -239,3 +239,15 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.
+
+## 8. From the owner's ChatGPT review (2026-11-28), checked against the code by Claude
+Not built; ideas with their Why. ✔ = ChatGPT was right, ✘ = wrong about the code.
+- 💡 **Material-only highlights** (owner's own idea, ChatGPT agreed): a highlight that stays on the PDF/slides/Word page but doesn't enter the notes. **Why:** notes are rewritten in the student's own words, so not every marked line belongs in the notes, but it's still worth marking in the material. Today every saved highlight is a note and the readers paint them back (pdfreader "Show saved highlights", CSS highlights in pptx/docx). Claude: no 3-way "material / notes / both" question on every capture (an extra decision each time, against Enter-to-save); instead one key or chip in the save pop-up ("on page only"), default = today's (both). Web pages: owner said no coloured highlights on web pages (2026-11-28), so readers only.
+- 💡 **Phone "Share to Q-notes"** (Android share target on the phone site). **Why:** extensions don't run in phone Chrome; competitors capture on phones through share menus. Text from any app → a topic's notes.
+- 💡 **Anki / CSV export** of definitions (term → meaning). **Why:** medical/physiology students revise with Anki; cheap; fits flashcards (incoming).
+- 💡 **Citation line** (title, site, date, page, URL → APA/MLA) for research later. **Why:** students also write assignments; the source data is already saved with each note.
+- 📘 **Cross-browser order:** one Chrome Web Store listing first (Edge, Brave, Opera install from it too) → Firefox port (needs sidebar_action instead of sidePanel, background scripts instead of a service worker) → Safari last (needs a Mac, Xcode, $99/yr Apple developer). **Why:** the audience is mostly Chrome on Windows; store listing is the biggest win for the least work.
+- ✘ ChatGPT said there's no "anyone with the link" sharing: there is (/s/<id>, read-only, from the Share button). Keep it: links in class WhatsApp groups are the cheapest way Q-notes spreads. "View and comment" would need comments, which don't exist.
+- ✘ "Add global search": exists (All notes › Search all notes). "Show Saving to … in the reader": the owner had it merged into the one notes button on purpose (2026-11-28).
+- ✘ It cited "bottom" panel mode as a feature; the owner rejected a bottom bar. Still in the code as an option (embedded-panel.js) — fine as long as it's off by default.
+- 📘 Rejected for now (agreed with ChatGPT): video/YouTube capture, public social discovery, RSS/read-later, fixed colour = meaning (note type carries the meaning).
