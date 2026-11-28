@@ -196,3 +196,5 @@ main { padding: 12px 16px 24px; }
 .key-h { font-size: 26px; letter-spacing: -.02em; margin: 0 0 4px; color: var(--pri); }
 .key-new { font-size: 14px; margin-top: 22px; }
 .key-new a { color: var(--accent); }
+.key-forgot { font-size: 14px; margin: 4px 0 0; }
+.key-forgot a { color: var(--accent); }

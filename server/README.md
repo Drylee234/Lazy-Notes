@@ -68,6 +68,31 @@ read-only copy anyone with the link can open (`GET /api/share/<id>`); with
 `to`, it also lands in that account's inbox (`GET /api/inbox`). Accounts can use
 the server's AI too.
 
+### Forgot password
+
+`/reset` is the "Forgot your password?" page (linked from the phone login and
+the extension's Account & sync). Routes: `POST /api/forgot {username}` (emails a
+30-minute, one-use link `…/reset#t=…` when the username is an email; always the
+same answer, 5 an hour per IP and per username), `POST /api/reset {token, password}`
+(sets it, logs the account out everywhere, returns a new login token), and
+`POST /api/reset-link {username}` with the server key → `{link}` valid 24 h, to
+send a tester by hand when there's no email:
+
+    curl -X POST https://<server>/api/reset-link -H "Authorization: Bearer $LAZYNOTES_KEY" \
+         -H "Content-Type: application/json" -d '{"username":"friend@gmail.com"}'
+
+Email is off until `SMTP_HOST` is set (without it `/api/forgot` says "ask
+whoever gave you Q-notes"):
+
+| Variable | Meaning |
+|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` (Gmail) or `smtp-relay.brevo.com` (Brevo, free) |
+| `SMTP_PORT` | `587` (default, STARTTLS) or `465` (SSL) |
+| `SMTP_USER` | Gmail address / Brevo SMTP login |
+| `SMTP_PASS` | Gmail **App password** (needs 2-step verification) / Brevo SMTP key |
+| `MAIL_FROM` | sender address (default `SMTP_USER`; on Brevo a verified sender) |
+| `PUBLIC_URL` | optional: the address links point to (Render's own address is used by default) |
+
 ### Sign in with Google (optional)
 
 1. [Google Cloud Console](https://console.cloud.google.com/) › APIs & Services › **OAuth consent screen**: External, app name "Lazy Notes", your email; add yourself (and testers) under Test users, or publish it.

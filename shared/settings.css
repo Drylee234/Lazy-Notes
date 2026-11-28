@@ -105,6 +105,7 @@
 .ln-settings .set-old .set-sync-head { color: var(--dim); }
 .ln-settings .set-link { display: inline-block; margin: 3px 0 0 22px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 11.5px; cursor: pointer; }
 .ln-settings .set-link:hover { text-decoration: underline; }
+.ln-settings .set-acc-forgot { margin: 4px 0 0; }
 
 /* Changed from how it came: a dot in the margin, which puts it back (↺). */
 .ln-settings .set-item.is-changed { box-shadow: -8px 0 0 -6px var(--accent); }

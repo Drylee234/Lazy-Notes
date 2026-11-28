@@ -163,6 +163,7 @@
       <input id="login-pass" type="password" autocomplete="current-password" placeholder="Password" required>
       <button class="btn" type="submit">Log in</button>
       <div class="err" id="key-err">${esc(error)}</div>
+      <p class="key-forgot"><a href="/reset">Forgot password?</a></p>
       <p class="key-new">New to Q-notes? <a href="/get">Get the extension</a> and make your account there. <a href="/">What's Q-notes?</a></p>
       <details class="key-alt" ${/[?&]key\b/.test(location.search) ? "" : "hidden"}><summary>Use the server key instead</summary>
         <input id="key-input" type="password" autocomplete="off" placeholder="Server key (LAZYNOTES_KEY)">

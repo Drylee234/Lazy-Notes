@@ -216,6 +216,7 @@ globalThis.LazySettings = (() => {
             <button type="button" class="set-btn set-acc-login">Log in</button>
             <button type="button" class="set-btn set-acc-signup">Create account</button>
           </div>
+          <button type="button" class="set-link set-acc-forgot">Forgot password?</button>
           <div class="set-acc-status"></div>
         </div>
       </div>
@@ -572,6 +573,12 @@ globalThis.LazySettings = (() => {
     acc(".set-acc-google").addEventListener("click", () => {
       accStatus.textContent = "Finish signing in with Google in the new tab…";
       chrome.tabs.create({ url: `${serverUrl()}/auth/google?from=ext` });
+    });
+    // Forgot password: the server's /reset page (emails a link, or says to ask
+    // whoever gave you Q-notes when the server has no email set up).
+    acc(".set-acc-forgot").addEventListener("click", () => {
+      if (!serverUrl()) { accStatus.textContent = "Type your server's address first."; return; }
+      chrome.tabs.create({ url: `${serverUrl()}/reset` });
     });
     acc(".set-acc-out").addEventListener("click", async () => {
       api("/api/logout", { method: "POST", headers: await authed() }).catch(() => {});

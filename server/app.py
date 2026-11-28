@@ -25,12 +25,16 @@ import re
 import os
 import secrets
 import socket
+import smtplib
 import sqlite3
+import ssl
 import sys
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
@@ -134,6 +138,8 @@ class Store:
             # the notes with a short history, so the owner (and Claude) can read
             # every tester's: GET /api/reports, /api/reports/summary.
             c.execute(f"CREATE TABLE IF NOT EXISTS reports (id {serial}, user_key TEXT NOT NULL, saved_at TEXT NOT NULL, body {js} NOT NULL)")
+            # Password resets: only the link's hash is kept; one use, then gone.
+            c.execute("CREATE TABLE IF NOT EXISTS resets (hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, expires TEXT NOT NULL)")
             c.execute("CREATE TABLE IF NOT EXISTS doc_marks (sha TEXT NOT NULL, user_key TEXT NOT NULL, state TEXT NOT NULL, "
                       "name TEXT, kind TEXT, at TEXT NOT NULL, PRIMARY KEY (sha, user_key))")
 
@@ -197,6 +203,34 @@ class Store:
     def drop_token(self, token_hash):
         with self._conn() as c:
             c.execute(self.q("DELETE FROM tokens WHERE hash = ?"), (token_hash,))
+
+    def drop_user_tokens(self, user_id):
+        """Logs the account out everywhere (after a password reset)."""
+        with self._conn() as c:
+            c.execute(self.q("DELETE FROM tokens WHERE user_id = ?"), (user_id,))
+
+    def set_password(self, user_id, pass_hash):
+        with self._conn() as c:
+            c.execute(self.q("UPDATE users SET pass_hash = ? WHERE id = ?"), (pass_hash, user_id))
+
+    # ── password resets ── (expires: now_iso() text, so it sorts as time)
+    def add_reset(self, reset_hash, user_id, expires):
+        with self._conn() as c:
+            c.execute(self.q("DELETE FROM resets WHERE expires < ?"), (now_iso(),))   # tidy old ones
+            c.execute(self.q("INSERT INTO resets (hash, user_id, expires) VALUES (?, ?, ?)"), (reset_hash, user_id, expires))
+
+    def take_reset(self, reset_hash):
+        """The account id for a reset link, once: the link is deleted. None if
+        it's unknown, already used or expired."""
+        with self._conn() as c:
+            row = c.execute(self.q("SELECT user_id, expires FROM resets WHERE hash = ?"), (reset_hash,)).fetchone()
+            if not row:
+                return None
+            gone = c.execute(self.q("DELETE FROM resets WHERE hash = ?"), (reset_hash,))
+            if gone.rowcount != 1:   # someone else used it at the same moment
+                return None
+        user_id, expires = row
+        return user_id if expires > now_iso() else None
 
     # ── usage reports ──
     REPORTS_KEEP = 30
@@ -535,6 +569,168 @@ def me():
 
 
 # --------------------------------------------------------------------------
+# Forgot password. A reset link (/reset#t=<token>) sets a new password once.
+# By email when SMTP is set up (off until then):
+#   SMTP_HOST   e.g. smtp.gmail.com or smtp-relay.brevo.com
+#   SMTP_PORT   587 (default, STARTTLS) or 465 (SSL)
+#   SMTP_USER   the login (Gmail address / Brevo login)
+#   SMTP_PASS   its password (Gmail: an App password)
+#   MAIL_FROM   who the email is from (default SMTP_USER)
+# Without email, the owner makes a link with POST /api/reset-link (server key)
+# and sends it to the tester (WhatsApp…). Links hold only a hash here.
+# --------------------------------------------------------------------------
+SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587").strip() or 587)
+SMTP_USER = os.environ.get("SMTP_USER", "").strip()
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", "").strip() or SMTP_USER
+# Where reset links point. Never taken from the request alone when Render
+# says its address, so a faked Host header can't send someone a link elsewhere.
+PUBLIC_URL = (os.environ.get("PUBLIC_URL", "") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
+RESET_MINUTES = 30          # emailed links
+RESET_LINK_HOURS = 24       # links the owner makes by hand
+
+NO_MAIL = "Password reset by email isn't set up on this server yet. Ask whoever gave you Q-notes for a reset link."
+FORGOT_SENT = ("If that account has an email address, a reset link is on its way. Check spam too. "
+               "No email on the account? Ask whoever gave you Q-notes for a reset link.")
+RESET_EXPIRED = "That reset link has expired or was already used. Ask for a new one."
+
+
+def mail_on():
+    return bool(SMTP_HOST and MAIL_FROM)
+
+
+def send_mail(to, subject, text):
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["From"] = f"{APP_NAME} <{MAIL_FROM}>"
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.set_content(text)
+    tls = ssl.create_default_context()
+    if SMTP_PORT == 465:
+        s = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30, context=tls)
+    else:
+        s = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
+        s.ehlo()
+        if s.has_extn("starttls"):
+            s.starttls(context=tls)
+            s.ehlo()
+        elif SMTP_USER:
+            s.quit()
+            raise RuntimeError("the mail server doesn't offer STARTTLS; not sending the password in the clear")
+    try:
+        if SMTP_USER:
+            s.login(SMTP_USER, SMTP_PASS)
+        s.send_message(msg)
+    finally:
+        try:
+            s.quit()
+        except Exception:
+            pass
+
+
+def _send_in_background(to, subject, text):
+    def run():
+        try:
+            send_mail(to, subject, text)
+        except Exception as e:   # never the link or the password in the log
+            print(f"  reset email not sent: {type(e).__name__}: {e}", flush=True)
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _base_url():
+    return PUBLIC_URL or request.host_url.rstrip("/")
+
+
+def _new_reset(user_id, minutes):
+    token = secrets.token_urlsafe(32)
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    store.add_reset(token_hash(token), user_id, expires)
+    return f"{_base_url()}/reset#t={token}"   # a fragment: never in server logs
+
+
+# A small rate limit (memory; one worker): 5 an hour per IP and per username,
+# 60 an hour in all (free email plans allow a few hundred a day).
+_forgot_hits = {}
+_forgot_lock = threading.Lock()
+
+
+def _rate_ok(keys, limits):
+    now = time.time()
+    with _forgot_lock:
+        for k in list(_forgot_hits):
+            _forgot_hits[k] = [t for t in _forgot_hits[k] if now - t < 3600]
+            if not _forgot_hits[k]:
+                del _forgot_hits[k]
+        if any(len(_forgot_hits.get(k, [])) >= n for k, n in zip(keys, limits)):
+            return False
+        for k in keys:
+            _forgot_hits.setdefault(k, []).append(now)
+        return True
+
+
+def _client_ip():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[0].strip() if fwd else "") or request.remote_addr or "?"
+
+
+@app.post("/api/forgot")
+def forgot():
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username") or "").strip().lower()[:260]
+    if not mail_on():
+        return jsonify(ok=False, code="NO_MAIL", reason=NO_MAIL)
+    if not username:
+        return jsonify(ok=False, code="NO_USERNAME", reason="Type the email address of your account."), 400
+    if not _rate_ok(["ip:" + _client_ip(), "user:" + username, "all"], [5, 5, 60]):
+        return jsonify(ok=False, code="TOO_MANY", reason="Too many reset requests. Try again in an hour."), 429
+    # The same answer whether or not the account exists (and the email is
+    # sent in the background, so the answer takes the same time too).
+    row = store.user_by_name(username)
+    if row and "@" in username and USERNAME_RE.match(username):
+        link = _new_reset(row[0], RESET_MINUTES)
+        _send_in_background(username, f"Reset your {APP_NAME} password", (
+            f"Hi,\n\n"
+            f"Someone (hopefully you) asked to reset the password of your {APP_NAME} account, {username}.\n\n"
+            f"Choose a new password here (the link works once, for {RESET_MINUTES} minutes):\n\n{link}\n\n"
+            f"Didn't ask? Just ignore this email: your password stays as it is.\n\n"
+            f"{APP_NAME}\n"))
+    return jsonify(ok=True, reason=FORGOT_SENT)
+
+
+@app.post("/api/reset")
+def reset_password():
+    body = request.get_json(silent=True) or {}
+    token = str(body.get("token") or "").strip()
+    password = str(body.get("password") or "")
+    if len(password) < 8:   # checked first, so a short one doesn't use up the link
+        return jsonify(ok=False, code="SHORT_PASSWORD", reason="Use a password of at least 8 characters."), 400
+    user_id = store.take_reset(token_hash(token)) if token else None
+    username = store.username(user_id) if user_id is not None else None
+    if not username:
+        return jsonify(ok=False, code="RESET_EXPIRED", reason=RESET_EXPIRED), 400
+    store.set_password(user_id, hash_password(password))
+    store.drop_user_tokens(user_id)   # logged out everywhere (a lost phone too)
+    login_token = secrets.token_urlsafe(32)
+    store.add_token(token_hash(login_token), user_id)
+    return jsonify(ok=True, token=login_token, username=username)
+
+
+@app.post("/api/reset-link")
+def reset_link():
+    """The owner (server key) makes a 24-hour link to send a tester by hand."""
+    if not _owner_only():
+        return jsonify(ok=False, reason="only the server key can make reset links"), 403
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username") or "").strip().lower()
+    row = store.user_by_name(username) if username else None
+    if not row:
+        return jsonify(ok=False, code="NO_ACCOUNT", reason=f"There's no account called '{username}'."), 404
+    return jsonify(ok=True, link=_new_reset(row[0], RESET_LINK_HOURS * 60), username=username, validHours=RESET_LINK_HOURS)
+
+
+# --------------------------------------------------------------------------
 # Sign in with Google (optional: GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET from a
 # Google Cloud "OAuth client ID" of type Web application, with this redirect
 # URI: https://<your server>/auth/google/callback). The account is the Google
@@ -610,6 +806,12 @@ def google_callback():
 @app.get("/auth/done")
 def auth_done():
     return _named("auth-done.html", "text/html")
+
+
+@app.get("/reset")
+def reset_page():
+    # Forgot password (no #t=) or choose a new one (#t=<token> from the link).
+    return _named("reset.html", "text/html")
 
 
 # --------------------------------------------------------------------------

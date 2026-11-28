@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q-notes · Reset password</title>
+<link rel="icon" href="/static/icon-192.png">
+<style>
+  :root { --bg: #fff; --pri: #16161a; --sec: #55555f; --line: #d4d4d8; --field: #fff; --accent: #4f46e5; --on-accent: #fff; --danger: #b91c1c; --ok: #15803d; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #18181b; --pri: #ececf0; --sec: #a1a1aa; --line: #3f3f46; --field: #232327; --accent: #818cf8; --on-accent: #111; --danger: #f87171; --ok: #4ade80; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--pri); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; padding: 24px 16px; }
+  main { width: 100%; max-width: 400px; }
+  .logo { width: 56px; height: 56px; border-radius: 14px; display: block; margin: 0 auto 8px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-align: center; }
+  p { color: var(--sec); margin: 0 0 14px; }
+  .lead { text-align: center; }
+  label { display: block; font-size: 14px; color: var(--sec); margin: 0 0 4px; }
+  input { display: block; width: 100%; font: inherit; padding: 11px 12px; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--pri); }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  button { width: 100%; font: inherit; font-weight: 600; padding: 11px 12px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  .msg { font-size: 15px; min-height: 22px; margin-top: 12px; }
+  .msg.bad { color: var(--danger); }
+  .msg.good { color: var(--ok); }
+  .foot { font-size: 14px; text-align: center; margin-top: 22px; }
+  a { color: var(--accent); }
+  .done-go { display: block; text-align: center; text-decoration: none; font-weight: 600; padding: 11px 12px; border-radius: 10px; background: var(--accent); color: var(--on-accent); margin: 4px 0 14px; }
+  [hidden] { display: none !important; }
+</style></head>
+<body><main>
+  <img class="logo" src="/static/icon-192.png" alt="">
+
+  <!-- 1. No link yet: ask for one -->
+  <form id="ask" hidden>
+    <h1>Forgot your password?</h1>
+    <p class="lead">Type the email address of your Q-notes account and we'll email you a link to choose a new password.</p>
+    <label for="ask-user">Email or username</label>
+    <input id="ask-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you@gmail.com" required>
+    <button type="submit" id="ask-go">Send me a reset link</button>
+    <div class="msg" id="ask-msg" role="status"></div>
+  </form>
+
+  <!-- 2. From the link: choose a new password -->
+  <form id="set" hidden>
+    <h1>Choose a new password</h1>
+    <p class="lead">At least 8 characters. You'll be logged out everywhere else.</p>
+    <label for="set-pass">New password</label>
+    <input id="set-pass" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="set-pass2">Type it again</label>
+    <input id="set-pass2" type="password" autocomplete="new-password" minlength="8" required>
+    <button type="submit" id="set-go">Change password</button>
+    <div class="msg" id="set-msg" role="status"></div>
+    <p class="foot" id="set-again" hidden><a href="/reset">Ask for a new link</a></p>
+  </form>
+
+  <!-- 3. Done -->
+  <section id="done" hidden>
+    <h1>Password changed. You're logged in.</h1>
+    <p class="lead" id="done-who"></p>
+    <a class="done-go" href="/app">Open my notes</a>
+    <p class="lead">In the extension, log in again with the new password (Settings › Account &amp; sync).</p>
+  </section>
+
+  <p class="foot" id="foot"><a href="/login">Back to log in</a></p>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // The link's token is in the address after # (never sent to the server's
+  // logs); read it once and take it out of the address bar and history.
+  const token = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+  if (token) history.replaceState(null, "", "/reset");
+  // A link opened in this same tab only changes the part after #: start over.
+  addEventListener("hashchange", () => { if (/[#&]t=/.test(location.hash)) location.reload(); });
+  const say = (el, text, kind = "") => { el.textContent = text; el.className = "msg" + (kind ? " " + kind : ""); };
+  async function post(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok && j.ok !== false, j, status: r.status };
+  }
+
+  if (!token) {
+    $("ask").hidden = false;
+    $("ask").onsubmit = async (e) => {
+      e.preventDefault();
+      const user = $("ask-user").value.trim();
+      if (!user) return;
+      $("ask-go").disabled = true;
+      say($("ask-msg"), "Sending… (a sleeping server can take a minute)");
+      try {
+        const { ok, j, status } = await post("/api/forgot", { username: user });
+        say($("ask-msg"), j.reason || (ok ? "Done." : `The server answered ${status}.`), ok ? "good" : "bad");
+      } catch (_) { say($("ask-msg"), "Couldn't reach the server. Check your internet.", "bad"); }
+      $("ask-go").disabled = false;
+    };
+  } else {
+    $("set").hidden = false;
+    $("set-pass").focus();
+    $("set").onsubmit = async (e) => {
+      e.preventDefault();
+      const p1 = $("set-pass").value, p2 = $("set-pass2").value;
+      if (p1.length < 8) { say($("set-msg"), "Use a password of at least 8 characters.", "bad"); return; }
+      if (p1 !== p2) { say($("set-msg"), "The two passwords aren't the same.", "bad"); return; }
+      $("set-go").disabled = true;
+      say($("set-msg"), "Changing it…");
+      try {
+        const { ok, j, status } = await post("/api/reset", { token, password: p1 });
+        if (!ok) {
+          say($("set-msg"), j.reason || `The server answered ${status}.`, "bad");
+          if (j.code === "RESET_EXPIRED") { $("set-go").hidden = true; $("set-again").hidden = false; }
+          else $("set-go").disabled = false;
+          return;
+        }
+        // Same keys as the phone site (static/app.js), so /app opens logged in.
+        // A different account's copy of notes on this phone isn't shown to this one.
+        try {
+          if (localStorage.getItem("ln-user") !== j.username) localStorage.removeItem("ln-snapshot");
+          localStorage.setItem("ln-key", j.token); localStorage.setItem("ln-user", j.username);
+        } catch (_) {}
+        $("set").hidden = true;
+        $("done-who").textContent = `as ${j.username}`;
+        $("done").hidden = false;
+        $("foot").hidden = true;
+      } catch (_) { say($("set-msg"), "Couldn't reach the server. Check your internet.", "bad"); $("set-go").disabled = false; }
+    };
+  }
+</script></body></html>
