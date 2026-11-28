@@ -1,4 +1,4 @@
-/* QNotes — the AI view as a chat with threads (shared/ai-chat.js). */
+/* Q-notes — the AI view as a chat with threads (shared/ai-chat.js). */
 .ln-ai-chat { --aic-purple: #d8b4fe; display: flex; flex-direction: column; min-height: 0; flex: 1; position: relative; font-size: 13px; color: var(--pri); }
 .aic-head { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .aic-list-btn, .aic-new { border: 1px solid var(--border); background: var(--surface); color: var(--sec); border-radius: var(--radius-sm); font: inherit; font-size: 12px; padding: 3px 8px; cursor: pointer; }

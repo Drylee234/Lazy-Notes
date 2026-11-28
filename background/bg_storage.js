@@ -1,4 +1,4 @@
-// QNotes — Storage Module
+// Q-notes — Storage Module
 // Every other file imports from here. Nothing outside this file touches
 // chrome.storage directly.
 //

@@ -1,4 +1,4 @@
-// QNotes — "Join to last": add a highlight's words onto the end of the
+// Q-notes — "Join to last": add a highlight's words onto the end of the
 // previous highlight in the same topic (a sentence broken across PDF
 // columns, lines or pages). Replies { ok, ... } so the pop-up can say so.
 

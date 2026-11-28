@@ -1,4 +1,4 @@
-// QNotes — talking to an AI service.
+// Q-notes — talking to an AI service.
 //
 // All of it happens here, in the service worker, for three reasons: the key
 // never touches a web page, the extension's host permissions let it reach any
@@ -132,7 +132,7 @@ async function config(override = {}) {
   const p = AI.get(provider);
   const models = s.lnAiModel || {};
 
-  // "My QNotes server": the AI key lives on Render, not in Chrome. The
+  // "My Q-notes server": the AI key lives on Render, not in Chrome. The
   // extension just talks to its own server with the sync key it already has.
   if (p.needsServer) {
     return {

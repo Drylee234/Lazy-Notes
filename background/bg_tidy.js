@@ -1,4 +1,4 @@
-// QNotes — bring old notes up to date with what new saves get.
+// Q-notes — bring old notes up to date with what new saves get.
 //
 // Highlights saved before 2.0 kept PDF line breaks in the middle of
 // sentences ("…the concentration\ngradients that…"). New saves join them

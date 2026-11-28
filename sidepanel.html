@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>QNotes</title>
+<title>Q-notes</title>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
 <link rel="stylesheet" href="shared/theme.css" />
 <link rel="stylesheet" href="sidepanel/hover-select.css" />
@@ -29,7 +29,7 @@
     <button type="button" class="sync-warn-x" aria-label="Hide" title="Hide until it changes">✕</button>
   </div>
   <div id="brand-row">
-    <span id="brand"><img class="logo" src="icons/logo.svg" alt="" width="20" height="20" /><span class="brand-name">QNotes</span></span>
+    <span id="brand"><img class="logo" src="icons/logo.svg" alt="" width="20" height="20" /><span class="brand-name">Q-notes</span></span>
     <button id="online" type="button" hidden><span class="online-dot" aria-hidden="true"></span><span class="online-label"></span></button>
     <button id="toggle-btn" type="button" aria-pressed="false">
       <span class="switch" aria-hidden="true"></span>
@@ -50,7 +50,7 @@
 </header>
 
 <!-- Shown when the active tab is a PDF: Chrome's PDF viewer blocks
-     extensions, so offer to reopen it in the QNotes reader. -->
+     extensions, so offer to reopen it in the Q-notes reader. -->
 <div id="pdf-banner" hidden>
   <span>This tab is a PDF. Open it in the reader to take notes.</span>
   <button id="pdf-banner-open" type="button">Open in reader</button>
@@ -66,7 +66,7 @@
   <!-- HOME VIEW -->
   <section id="home-view" class="visible">
 
-    <!-- On a QNotes PDF/slides tab: what's open. -->
+    <!-- On a Q-notes PDF/slides tab: what's open. -->
     <div id="reading-now" hidden>
       <div class="rn-label">Now reading</div>
       <div class="rn-doc">

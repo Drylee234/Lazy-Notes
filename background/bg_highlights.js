@@ -1,4 +1,4 @@
-// QNotes — Highlight Workflow Handlers
+// Q-notes — Highlight Workflow Handlers
 
 import { storageGet, storageSet, insertHighlight } from './bg_storage.js';
 import { validateHighlight } from './bg_validators.js';
@@ -37,7 +37,7 @@ export async function setHighlighterActive(active) {
     activeTopic: active ? activeTopic : null
   });
 
-  // The "Exit QNotes" item only exists while the highlighter is on.
+  // The "Exit Q-notes" item only exists while the highlighter is on.
   await refreshCourseContextMenuItems();
 }
 
@@ -61,7 +61,7 @@ export function updateBadge(active) {
   // drawn as a dot); off: no badge.
   chrome.action.setBadgeText({ text: active ? " " : "" });
   if (active) chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
-  chrome.action.setTitle({ title: active ? "QNotes · highlighter on" : "QNotes · highlighter off" });
+  chrome.action.setTitle({ title: active ? "Q-notes · highlighter on" : "Q-notes · highlighter off" });
 }
 
 export async function restoreBadge() {

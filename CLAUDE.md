@@ -1,6 +1,6 @@
-# QNotes (formerly Lazy Notes) — instructions for Claude
+# Q-notes (formerly Lazy Notes) — instructions for Claude
 
-The app's visible name is **QNotes**; internal names (storage keys, sync format, repo, Render service) still say lazy-notes on purpose: don't rename them.
+The app's visible name is **Q-notes**; internal names (storage keys, sync format, repo, Render service) still say lazy-notes on purpose: don't rename them.
 
 ## Git: push to main
 The owner's standing instruction: **after testing a change (in Chromium/Playwright), push it to `main`**, and also to the session's working branch. This is explicit, durable permission. No need to ask first, and no pull request unless asked.

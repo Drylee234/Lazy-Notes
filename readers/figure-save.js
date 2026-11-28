@@ -1,4 +1,4 @@
-// QNotes — save a picture as a note ("figure"), shared by the readers.
+// Q-notes — save a picture as a note ("figure"), shared by the readers.
 //
 //   LazyFigure.ask({ canvas | img, rect, el, page })
 //     A small pop-up by `rect` (viewport coordinates): preview, a caption box
@@ -83,7 +83,7 @@ globalThis.LazyFigure = (() => {
     pop.setAttribute("aria-label", "Save figure");
     pop.innerHTML = `<img alt=""><input type="text" placeholder="Caption (optional)" aria-label="Caption">
       <div class="lnf-hint">Saved as a Figure · Enter saves · Esc cancels</div>
-      <div class="lnf-warn" hidden>Pick a course and topic in the QNotes side panel first.</div>
+      <div class="lnf-warn" hidden>Pick a course and topic in the Q-notes side panel first.</div>
       <div class="lnf-row"><button type="button" class="lnf-cancel">Cancel</button><button type="button" class="lnf-save">Save</button></div>`;
     pop.querySelector("img").src = dataUrl;
     const input = pop.querySelector("input");

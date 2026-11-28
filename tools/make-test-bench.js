@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds the QNotes test bench: the extension's real files plus a
+// Builds the Q-notes test bench: the extension's real files plus a
 // stand-in for Chrome's extension APIs (tools/test-bench/shim.js), as one
 // folder that runs in any browser (published as a Claude artifact so the
 // owner can try changes without reloading the extension).

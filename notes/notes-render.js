@@ -1,4 +1,4 @@
-// QNotes — shared note rendering for the side panel and the viewer.
+// Q-notes — shared note rendering for the side panel and the viewer.
 // Plain script (no modules on these pages). Styles live in notes.css.
 //
 // Each category renders as what it is in a set of notes — a heading, a

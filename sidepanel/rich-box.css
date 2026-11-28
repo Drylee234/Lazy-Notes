@@ -1,4 +1,4 @@
-/* QNotes — the rich note box + formatting bar (rich-box.js). Used by the
+/* Q-notes — the rich note box + formatting bar (rich-box.js). Used by the
    Study tab and the All notes page. Needs theme.css. */
 .rich-box { position: relative; outline: none; line-height: 1.5; overflow-wrap: anywhere; cursor: text; color: var(--pri); }
 .rich-box.is-empty::before { content: attr(data-placeholder); color: var(--dim); pointer-events: none; position: absolute; }

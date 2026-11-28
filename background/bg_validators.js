@@ -1,4 +1,4 @@
-// QNotes — Validators
+// Q-notes — Validators
 // Called by handlers before any storage write. Returns { valid: true }
 // or { valid: false, reason: "..." }.
 

@@ -1,4 +1,4 @@
-// QNotes — Course + Topic Workflow Handlers
+// Q-notes — Course + Topic Workflow Handlers
 
 import {
   storageGet, storageSet, createCourse, createTopic,

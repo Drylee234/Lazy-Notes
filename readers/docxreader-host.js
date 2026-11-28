@@ -1,4 +1,4 @@
-// QNotes — Word reader ↔ highlighter bridge.
+// Q-notes — Word reader ↔ highlighter bridge.
 // Loaded before content.js on docxreader.html, as pptxreader-host.js is for
 // slides: notes taken here say which document and page they came from
 // ("notes.docx, page 2"), and their link opens this reader at that page,

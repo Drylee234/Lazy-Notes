@@ -1,4 +1,4 @@
-// QNotes — "Ask the AI" bar at the top of the AI view.
+// Q-notes — "Ask the AI" bar at the top of the AI view.
 //
 // Why: the AI jobs for a whole document, one page or a topic's notes
 // (background/bg_ai.js: askDoc, summariseDoc, quizDoc, ask, summarise, quiz)
@@ -21,8 +21,8 @@ globalThis.LazyAIAsk = (() => {
 
   const send = (msg) => new Promise((resolve) => {
     try {
-      chrome.runtime.sendMessage(msg, (r) => { void chrome.runtime.lastError; resolve(r || { ok: false, reason: "QNotes didn't answer. Reload the panel." }); });
-    } catch (_) { resolve({ ok: false, reason: "QNotes didn't answer. Reload the panel." }); }
+      chrome.runtime.sendMessage(msg, (r) => { void chrome.runtime.lastError; resolve(r || { ok: false, reason: "Q-notes didn't answer. Reload the panel." }); });
+    } catch (_) { resolve({ ok: false, reason: "Q-notes didn't answer. Reload the panel." }); }
   });
 
   // What can be read right now.

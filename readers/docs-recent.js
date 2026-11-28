@@ -1,4 +1,4 @@
-// QNotes — recent documents and where each one saves its notes.
+// Q-notes — recent documents and where each one saves its notes.
 // Loaded by every reader (pdfreader.html, pptxreader.html, docxreader.html).
 //
 // chrome.storage.local.lnDocs = { [key]: { key, name, kind, page, pages,

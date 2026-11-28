@@ -1,4 +1,4 @@
-// QNotes — New Tab Viewer
+// Q-notes — New Tab Viewer
 // Branches on document.body.dataset.page. Navigation is via URL query params.
 // Reads/writes chrome.storage.local directly (this is a plain page script,
 // not a module, so it keeps its own small storage helpers rather than
@@ -138,7 +138,7 @@ async function renderCourses() {
 
     if (names.length === 0) {
       listEl.innerHTML =
-        '<div class="empty-state">No courses yet. Create one from the QNotes side panel.</div>';
+        '<div class="empty-state">No courses yet. Create one from the Q-notes side panel.</div>';
       return;
     }
 
@@ -447,7 +447,7 @@ async function renderTopics() {
   const courseName = params.get("course");
 
   document.getElementById("course-heading").textContent = courseName || "Unknown course";
-  document.title = `${courseName} — QNotes`;
+  document.title = `${courseName} — Q-notes`;
   setCrumbs([{ label: "Courses", href: coursesHref() }, { label: courseName || "Unknown course" }]);
 
   let course = (await getCourseTree())[courseName];
@@ -579,7 +579,7 @@ async function renderDisplay() {
   const topicName  = params.get("topic");
 
   document.getElementById("topic-heading").textContent = topicName || "Unknown topic";
-  document.title = `${topicName} — QNotes`;
+  document.title = `${topicName} — Q-notes`;
   setCrumbs([
     { label: "Courses", href: coursesHref() },
     { label: courseName || "Unknown course", href: topicsHref(courseName || "") },

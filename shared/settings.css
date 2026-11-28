@@ -1,4 +1,4 @@
-/* QNotes — settings controls (shared/settings.js). Colours from theme.css. */
+/* Q-notes — settings controls (shared/settings.js). Colours from theme.css. */
 .ln-settings { font-size: 12.5px; color: var(--pri); }
 .ln-settings .set-label { margin-bottom: 6px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
 .ln-settings .seg { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; }

@@ -1,4 +1,4 @@
-// QNotes — the AI services we can talk to, and how.
+// Q-notes — the AI services we can talk to, and how.
 //
 // One table, so adding a new service is one entry here and nothing else.
 // Loaded two ways, so it must work as both: a plain <script> on a page (for
@@ -80,7 +80,7 @@ globalThis.LazyAIProviders = (() => {
     },
 
     server: {
-      label: "My QNotes server",
+      label: "My Q-notes server",
       shape: "relay",
       base: "",                     // uses your sync address
       needsServer: true,
@@ -210,9 +210,9 @@ globalThis.LazyAIProviders = (() => {
       // Our server says exactly what went wrong: { code, reason } (server/app.py).
       if (data?.code) return `${data.reason || "Your server's AI failed."} [${data.code}${data.upstream_status ? ` · AI said ${data.upstream_status}` : ""}]`;
       if (status === 401 || status === 403) return "You're not logged in (or were logged out): log in again in Settings › Account & sync. [SYNC_KEY_WRONG]";
-      if (status === 404) return "The QNotes server needs an update before the AI works. [SERVER_OLD]";
-      if (status === 502 || status === 503) return `The QNotes server is waking up (it sleeps when nobody uses it). Try again in a minute. [SERVER_WAKING · ${status}]`;
-      if (status >= 500) return `The QNotes server had a problem with that. Try again in a minute. [SERVER_ERROR]`;
+      if (status === 404) return "The Q-notes server needs an update before the AI works. [SERVER_OLD]";
+      if (status === 502 || status === 503) return `The Q-notes server is waking up (it sleeps when nobody uses it). Try again in a minute. [SERVER_WAKING · ${status}]`;
+      if (status >= 500) return `The Q-notes server had a problem with that. Try again in a minute. [SERVER_ERROR]`;
     }
     if (status === 401) return `The key was refused — check you pasted all of it, with no spaces. [KEY_REFUSED · 401]${raw ? ` (${raw})` : ""}`;
     if (status === 403) return `This key isn't allowed to do that (403): wrong key for this service, or blocked. [FORBIDDEN · 403]${raw ? ` (${raw})` : ""}`;
@@ -239,7 +239,7 @@ globalThis.LazyAIProviders = (() => {
 
   // { ok, text } | { ok: false, reason }
   const ask = (task, text, extra) =>
-    message({ type: "AI_RUN", task, text, extra }, { ok: false, reason: "QNotes didn't answer. Reload the page." });
+    message({ type: "AI_RUN", task, text, extra }, { ok: false, reason: "Q-notes didn't answer. Reload the page." });
 
   return { PROVIDERS, ORDER, DEFAULT: "groq", get, buildRequest, readReply, readError, ready, ask };
 })();

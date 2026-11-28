@@ -1,4 +1,4 @@
-// QNotes — mild spell checking for the note boxes (side panel, All notes).
+// Q-notes — mild spell checking for the note boxes (side panel, All notes).
 //
 // • Autocorrect: when a word is finished (space or punctuation), an obvious
 //   typo is fixed: only when there's one clear fix, one slip away (a swapped,
@@ -9,7 +9,7 @@
 //   ("lnAutocorrect" === false).
 // • Suggestions: with the caret on a misspelled word, a small bar under the
 //   box offers fixes and "Add to dictionary".
-// • Words from the document you're reading (any open QNotes reader
+// • Words from the document you're reading (any open Q-notes reader
 //   publishes them in storage.session "lnDocWords") count as spelled right
 //   and are preferred as fixes (lnDocWordsOn === false turns it off).
 // • Typing hints: while typing a word, a hint offers the full word from the

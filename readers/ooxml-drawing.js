@@ -1,4 +1,4 @@
-// QNotes — Office drawings (lines, connectors with arrowheads, shapes,
+// Q-notes — Office drawings (lines, connectors with arrowheads, shapes,
 // text boxes, groups, drawing canvases) as SVG, for the Word and slides
 // readers.
 //

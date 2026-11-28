@@ -1,4 +1,4 @@
-// QNotes — the AI answers panel.
+// Q-notes — the AI answers panel.
 //
 // Why it exists: the AI already answers in small boxes (the save pop-up's
 // text box, the editor's Annotation field). Some answers are long — an

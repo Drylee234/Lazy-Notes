@@ -1,5 +1,5 @@
 import { FEATURES } from './bg_habits.js';
-// QNotes — usage and error reports, so problems show up without the
+// Q-notes — usage and error reports, so problems show up without the
 // user having to describe them.
 //
 // Kept in chrome.storage.local "lnDiag":

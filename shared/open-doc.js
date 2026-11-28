@@ -1,4 +1,4 @@
-// QNotes — "+ Open a document…": the computer's file picker, then the
+// Q-notes — "+ Open a document…": the computer's file picker, then the
 // file opens in its reader in a new tab. The file goes to the reader through
 // that reader's IndexedDB store (same scheme as readers/pdfreader.js).
 //

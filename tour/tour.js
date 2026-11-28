@@ -1,4 +1,4 @@
-// QNotes — the How-to-use tour: one slide at a time, numbered markers on
+// Q-notes — the How-to-use tour: one slide at a time, numbered markers on
 // real screenshots (tour/slides.js says what; tour/positions.js says where).
 // Opens by itself each time the extension is reloaded or updated, unless
 // switched off (lnTourOnReload; background/background.js opens it).

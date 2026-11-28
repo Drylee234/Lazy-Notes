@@ -1,4 +1,4 @@
-// QNotes — Context Menus
+// Q-notes — Context Menus
 
 import { getCourses, storageGet } from './bg_storage.js';
 import { setHighlighterActive } from './bg_highlights.js';
@@ -51,14 +51,14 @@ function createMenuItem(props) {
 export function createStaticMenuItems(highlighterActive) {
   createMenuItem({
     id:    "lazy-notes-root",
-    title: "QNotes"
+    title: "Q-notes"
   });
 
   if (highlighterActive) {
     createMenuItem({
       id:       "lazy-notes-exit",
       parentId: "lazy-notes-root",
-      title:    "Exit QNotes"
+      title:    "Exit Q-notes"
     });
 
     createMenuItem({
@@ -72,7 +72,7 @@ export function createStaticMenuItems(highlighterActive) {
   createMenuItem({
     id:       "lazy-notes-open-pdf-link",
     parentId: "lazy-notes-root",
-    title:    "Open PDF in QNotes reader",
+    title:    "Open PDF in Q-notes reader",
     contexts: ["link"],
     targetUrlPatterns: ["*://*/*.pdf", "*://*/*.PDF", "*://*/*.pdf?*", "*://*/*.pdf#*"]
   });
@@ -82,7 +82,7 @@ export function createStaticMenuItems(highlighterActive) {
   createMenuItem({
     id:       "lazy-notes-open-pptx-link",
     parentId: "lazy-notes-root",
-    title:    "Open slides in QNotes reader",
+    title:    "Open slides in Q-notes reader",
     contexts: ["link"],
     targetUrlPatterns: ["*://*/*.pptx", "*://*/*.PPTX", "*://*/*.pptx?*", "*://*/*.pptx#*"]
   });

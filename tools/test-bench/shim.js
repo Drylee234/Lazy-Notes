@@ -1,4 +1,4 @@
-// QNotes test bench — a stand-in for the Chrome extension APIs.
+// Q-notes test bench — a stand-in for the Chrome extension APIs.
 //
 // The bench runs the extension's real files in frames of one web page:
 //   bg.html       the background (background/background.js, as a module)

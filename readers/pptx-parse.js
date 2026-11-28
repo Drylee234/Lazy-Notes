@@ -1,4 +1,4 @@
-// QNotes — reads a .pptx into plain slides for the slides reader:
+// Q-notes — reads a .pptx into plain slides for the slides reader:
 // titles, text, bullets, tables, pictures and speaker notes, in reading
 // order. Not a renderer: charts, SmartArt and animations are left out on
 // purpose; lines, arrows and plain shapes are drawn (ooxml-drawing.js). The point is text that can be selected and saved as notes.

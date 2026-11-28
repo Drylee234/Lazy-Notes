@@ -1,4 +1,4 @@
-// QNotes — zoom in the slides and Word readers: trackpad pinch (Chrome
+// Q-notes — zoom in the slides and Word readers: trackpad pinch (Chrome
 // sends it as Ctrl+wheel), Ctrl/⌘ + / − / 0. Only the pages zoom; the
 // toolbar, the Notes panel and pop-ups stay their normal size (Chrome's own
 // page zoom would blow those up too). Remembered per reader.

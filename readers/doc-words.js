@@ -1,4 +1,4 @@
-// QNotes — the words of the document you're reading, for spell check and
+// Q-notes — the words of the document you're reading, for spell check and
 // typing hints in every note box (shared/spell.js reads them).
 // Kept in chrome.storage.session "lnDocWords" = { title, words: [[form, count], …] }
 // (gone when Chrome closes). The reader you used last wins: it publishes

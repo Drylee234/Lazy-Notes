@@ -1,4 +1,4 @@
-// QNotes — slides reader ↔ highlighter bridge.
+// Q-notes — slides reader ↔ highlighter bridge.
 // Loaded before content.js on pptxreader.html, as pdfreader-host.js is for
 // PDFs: notes taken here say which deck and slide they came from
 // ("lecture3.pptx, slide 4"), and their link opens this reader at that

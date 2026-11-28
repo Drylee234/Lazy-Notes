@@ -1,4 +1,4 @@
-"""QNotes — sync server + read-only mobile site.
+"""Q-notes — sync server + read-only mobile site.
 
 The extension sends its whole notes snapshot here (PUT /api/snapshot); the
 site at / shows it on a phone. Every /api call needs
@@ -352,7 +352,7 @@ def put_snapshot():
     if not isinstance(payload, dict) or payload.get("app") != "lazy-notes" \
             or not isinstance(payload.get("data"), dict) \
             or not isinstance(payload["data"].get("lazynotes"), dict):
-        return jsonify(ok=False, reason="not a QNotes snapshot"), 400
+        return jsonify(ok=False, reason="not a Q-notes snapshot"), 400
     saved_at = store.save(payload["data"], user_id_of(who()))
     return jsonify(ok=True, savedAt=saved_at)
 
@@ -397,7 +397,7 @@ def signup():
     # Accounts are made in the extension (a computer): the phone site only logs in.
     if not request.headers.get("Origin", "").startswith("chrome-extension://"):
         return jsonify(ok=False, code="SIGNUP_IN_EXTENSION",
-                       reason="Create your account in the QNotes extension on your computer (Settings › Sync), then log in here."), 403
+                       reason="Create your account in the Q-notes extension on your computer (Settings › Sync), then log in here."), 403
     if SIGNUPS == "closed":
         return jsonify(ok=False, code="SIGNUPS_CLOSED", reason="This server isn't taking new accounts."), 403
     if SIGNUPS != "open":
@@ -506,7 +506,7 @@ def google_callback():
     if row:
         user_id = row[0]
     elif src != "ext":
-        return _done({"error": "No account for that email yet: create it in the QNotes extension on your computer first.", "from": src})
+        return _done({"error": "No account for that email yet: create it in the Q-notes extension on your computer first.", "from": src})
     elif SIGNUPS != "open":
         return _done({"error": "This server only takes new accounts with an invite code: create yours with email + password in the extension.", "from": src})
     else:
@@ -843,13 +843,13 @@ def too_big(_e):
 # --------------------------------------------------------------------------
 
 # The name shown on the phone site (and when installed). Change it any time
-# with the APP_NAME environment variable; default "QNotes".
-APP_NAME = os.environ.get("APP_NAME", "QNotes").strip() or "QNotes"
+# with the APP_NAME environment variable; default "Q-notes".
+APP_NAME = os.environ.get("APP_NAME", "Q-notes").strip() or "Q-notes"
 
 
 def _named(filename, mimetype):
     with open(os.path.join(HERE, "static", filename), encoding="utf-8") as f:
-        text = f.read().replace("QNotes", APP_NAME.replace('"', "'"))
+        text = f.read().replace("Q-notes", APP_NAME.replace('"', "'"))
     r = Response(text, mimetype=mimetype)
     r.headers["Cache-Control"] = "no-cache"
     return r
@@ -952,7 +952,7 @@ def setup():
 if __name__ == "__main__":
     setup()
     port = int(os.environ.get("PORT", "8787"))
-    print(f"  QNotes server on http://0.0.0.0:{port}  (open http://<this computer's IP>:{port} on your phone)")
+    print(f"  Q-notes server on http://0.0.0.0:{port}  (open http://<this computer's IP>:{port} on your phone)")
     app.run(host="0.0.0.0", port=port)
 else:
     # gunicorn app:app

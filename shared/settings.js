@@ -1,4 +1,4 @@
-// QNotes — the settings, built into any container (side panel ⚙ menu,
+// Q-notes — the settings, built into any container (side panel ⚙ menu,
 // All notes Settings dialog). Reads and writes chrome.storage.local and
 // follows changes made elsewhere, so both places always agree:
 //   lnTheme            "auto" | "light" | "dark"        (applied by theme.js)
@@ -6,7 +6,7 @@
 //   Autocorrect: one switch per fix (lnAcTypos, lnAcGuess, … lnPunctFix); the old
 //   lnAutocorrectLevel slider is turned into them once (background.js)
 //   lnDocAutoSelect    false = opening a document doesn't switch course/topic
-//   pptxAutoOpen       false = .pptx downloads aren't opened in QNotes
+//   pptxAutoOpen       false = .pptx downloads aren't opened in Q-notes
 //   More options: lnPanelMode "tab" | "docked"; lnQuickDblClick, lnQuickSelButtons,
 //   lnQuickMenu, lnQuickFloat (ways to open the readers' pop-up note box);
 //   lnDocCaret (keyboard cursor in PDFs). false = off.
@@ -74,7 +74,7 @@ globalThis.LazySettings = (() => {
     </div></div>
     <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnAskPlace" /> Ask which course &amp; topic a new document's notes go to (suggests one)</label></div>
     <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDocAutoSelect" /> Opening a document switches to the course &amp; topic it saved to last</label></div>
-    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="pptxAutoOpen" /> Open PowerPoint (.pptx) downloads in QNotes</label></div>
+    <div class="set-item"><label class="set-check"><input type="checkbox" data-key="pptxAutoOpen" /> Open PowerPoint (.pptx) downloads in Q-notes</label></div>
     <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnTourOnReload" /> Show the How-to-use tour each time the extension is reloaded or updated</label>
       <button type="button" class="set-link set-tour-open">Open the tour now</button></div>
     </div>
@@ -145,12 +145,12 @@ globalThis.LazySettings = (() => {
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnEmbedHome" data-off /> Home / Study / AI tab row inside the in-page / reader panel (the title bar switches views anyway)</label></div>
-      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" data-invert /> Chrome's own side panel on web pages, instead of QNotes' panel</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" data-invert /> Chrome's own side panel on web pages, instead of Q-notes' panel</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Chrome's side panel inside readers too</label></div>
     </details>
     <details class="set-sync set-ai set-item">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
-      <div class="set-ai-intro">The AI works through your QNotes account: once you're logged in (Account &amp; sync), it's on, with nothing to set up. Without an account, or offline, simple offline helpers answer from your own notes and document.</div>
+      <div class="set-ai-intro">The AI works through your Q-notes account: once you're logged in (Account &amp; sync), it's on, with nothing to set up. Without an account, or offline, simple offline helpers answer from your own notes and document.</div>
       <label class="set-check"><input type="checkbox" data-key="lnAiOn" data-off /> <b>Use AI help</b></label>
       <label class="set-check"><input type="checkbox" data-key="lnAiOffline" /> Offline helpers when the AI can't be reached or isn't set up (marked “Offline”)</label>
       <details class="set-adv">
@@ -210,7 +210,7 @@ globalThis.LazySettings = (() => {
           <button type="button" class="set-btn set-acc-google" hidden><span aria-hidden="true">G</span> Continue with Google</button>
           <label class="set-field"><span>Email or username</span><input type="text" class="set-acc-user" autocomplete="username" spellcheck="false" placeholder="you@gmail.com" /></label>
           <label class="set-field"><span>Password</span><input type="password" class="set-acc-pass" autocomplete="current-password" /></label>
-          <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="from the person who gave you QNotes" /></label>
+          <label class="set-field set-acc-invite-row" hidden><span>Invite code</span><input type="text" class="set-acc-invite" spellcheck="false" placeholder="from the person who gave you Q-notes" /></label>
           <div class="set-backup">
             <button type="button" class="set-btn set-acc-login">Log in</button>
             <button type="button" class="set-btn set-acc-signup">Create account</button>
@@ -402,7 +402,7 @@ globalThis.LazySettings = (() => {
       if (!f) return;
       try {
         const parsed = JSON.parse(await f.text());
-        if (parsed?.app !== "lazy-notes" || !parsed.data?.lazynotes) throw new Error("not a QNotes backup");
+        if (parsed?.app !== "lazy-notes" || !parsed.data?.lazynotes) throw new Error("not a Q-notes backup");
         pending = parsed.data;
         const n = count(pending);
         root.querySelector(".set-restore-what").textContent =

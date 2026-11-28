@@ -1,4 +1,4 @@
-/* QNotes — pop-up note box in the readers (quick-note.js). */
+/* Q-notes — pop-up note box in the readers (quick-note.js). */
 .lnq-box {
   position: fixed; z-index: 2147483000; width: 330px; max-width: calc(100vw - 20px);
   background: var(--bg); color: var(--pri); border: 1px solid var(--border);

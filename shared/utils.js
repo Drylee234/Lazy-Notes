@@ -1,4 +1,4 @@
-// QNotes — Shared sort/filter helpers.
+// Q-notes — Shared sort/filter helpers.
 // Used by both sidepanel.js and viewer.js — do not duplicate this logic
 // elsewhere.
 

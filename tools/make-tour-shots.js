@@ -1,4 +1,4 @@
-// QNotes — makes the How-to-use tour's pictures (tour/*.png) and the
+// Q-notes — makes the How-to-use tour's pictures (tour/*.png) and the
 // marker positions (tour/positions.js) from the real extension, so the tour
 // never drifts from what's on screen. Run it after changing the UI:
 //   node tools/make-tour-shots.js

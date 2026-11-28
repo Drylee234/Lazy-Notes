@@ -1,4 +1,4 @@
-// QNotes — "How to use": every shortcut in one place.
+// Q-notes — "How to use": every shortcut in one place.
 // Used by howto.html (a page), the Notes panel's ? button in the readers
 // (an overlay) and the side panel's footer link. Edit the list here only.
 (() => {

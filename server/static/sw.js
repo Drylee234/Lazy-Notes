@@ -1,4 +1,4 @@
-// QNotes phone site — makes it installable and keeps the app shell
+// Q-notes phone site — makes it installable and keeps the app shell
 // available offline. Notes themselves always come from the network (/api/*),
 // and the page keeps its own last copy.
 const CACHE = "lazy-notes-shell-v1";

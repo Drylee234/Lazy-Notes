@@ -1,7 +1,7 @@
 {
-  "name": "QNotes",
-  "short_name": "QNotes",
-  "description": "Your QNotes, read-only on your phone.",
+  "name": "Q-notes",
+  "short_name": "Q-notes",
+  "description": "Your Q-notes, read-only on your phone.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

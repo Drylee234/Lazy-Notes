@@ -1,4 +1,4 @@
-// QNotes — Messaging
+// Q-notes — Messaging
 
 import { handleNewHighlight, handleToggleTrigger } from './bg_highlights.js';
 import {

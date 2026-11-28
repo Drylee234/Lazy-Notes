@@ -1,4 +1,4 @@
-// QNotes — Highlighter Content Script
+// Q-notes — Highlighter Content Script
 // Courses and topics are plain name strings (no numeric ids — those only
 // existed for the old Flask backend). All data comes from chrome.storage.local.
 
@@ -1280,7 +1280,7 @@
     if (whereEl) {
       whereEl.textContent = selectedCourse && selectedTopic
         ? `Saving to ${selectedCourse} › ${selectedTopic}`
-        : "Pick a course and topic in the QNotes side panel first";
+        : "Pick a course and topic in the Q-notes side panel first";
       whereEl.classList.toggle("none", !(selectedCourse && selectedTopic));
       // Only shown when something's missing; the side panel says where notes go.
       whereEl.style.display = selectedCourse && selectedTopic ? "none" : "";

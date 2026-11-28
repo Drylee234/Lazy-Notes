@@ -1,4 +1,4 @@
-// QNotes — mobile reader (read-only). Shows the last snapshot the
+// Q-notes — mobile reader (read-only). Shows the last snapshot the
 // extension synced: Courses → Topics → a topic's notes, plus search.
 // The key lives in localStorage; the last snapshot is cached there too, so
 // the page shows something at once (and offline), then refreshes.
@@ -151,7 +151,7 @@
   }
 
   function keyScreen(error = "") {
-    setBar("QNotes");
+    setBar("Q-notes");
     searchWrap.hidden = true;
     status.textContent = "";
     view.innerHTML = `<form class="key-card" id="login-form">
@@ -196,7 +196,7 @@
       const notes = topicNotes(j.notes || {});
       mixedSources = false;
       view.innerHTML = `<div class="notes">${notes.map((n, i) => noteHtml(n, notes[i + 1], notes[i - 1])).join("")}</div>
-        <p class="shared-foot">A copy, as it was when it was shared. To keep it, paste this link in the QNotes extension: Settings › Sync › Add shared notes.</p>`;
+        <p class="shared-foot">A copy, as it was when it was shared. To keep it, paste this link in the Q-notes extension: Settings › Sync › Add shared notes.</p>`;
       status.textContent = `Shared ${ago(j.createdAt)}`;
     } catch (_) { view.innerHTML = `<div class="empty">Couldn't reach the server.</div>`; }
   }
@@ -372,7 +372,7 @@
           // this one: ask the computer to send it again.
           fetch(`/api/docs/${d.sha}/want`, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({ name: d.name, kind: d.kind }) }).catch(() => {});
-          meta.textContent = "Not on this phone: asked your computer to send it again. It arrives after QNotes next syncs there (open Chrome on your computer).";
+          meta.textContent = "Not on this phone: asked your computer to send it again. It arrives after Q-notes next syncs there (open Chrome on your computer).";
           return;
         }
         if (!r.ok) { const j = await r.json().catch(() => ({})); meta.textContent = j.reason || `Couldn't download it (${r.status}).`; return; }

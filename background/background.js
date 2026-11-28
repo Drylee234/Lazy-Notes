@@ -1,4 +1,4 @@
-// QNotes — Background Service Worker (thin entry point)
+// Q-notes — Background Service Worker (thin entry point)
 
 import './bg_diag.js';
 import { togglePanelFor } from './bg_sidepanel.js';
@@ -112,7 +112,7 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 
-// Someone given QNotes shouldn't have to find a server: the owner's one
+// Someone given Q-notes shouldn't have to find a server: the owner's one
 // is filled in (once; changing it in Settings › Account & sync › Advanced
 // sticks). They only log in or create an account.
 const HOME_SERVER = "https://lazy-notes-c07b.onrender.com";
