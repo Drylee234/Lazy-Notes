@@ -1,7 +1,7 @@
-<title>Lazy Notes Test Bench</title>
+<title>QNotes Test Bench</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* Layout: a thin bar on top; the page you read on the left, the Lazy Notes
+  /* Layout: a thin bar on top; the page you read on the left, the QNotes
      panel on the right at its real width (stacked on a phone). */
   :root {
     --bg: #eef0f5; --bar: #ffffff; --fg: #1f2330; --muted: #5d6475; --rule: #d9dce6;
@@ -50,7 +50,7 @@
 </style>
 
 <div class="bar">
-  <span class="name">Lazy Notes</span><span class="tag">Test bench</span>
+  <span class="name">QNotes</span><span class="tag">Test bench</span>
   <button type="button" id="open-all">All notes</button>
   <button type="button" id="open-article">Lecture page</button>
   <span class="spacer"></span>
@@ -77,12 +77,12 @@
     <div class="pane-head"><span class="where" id="where">lecture.example/bme213/membrane-transport</span><button type="button" id="back" hidden>← Back to the lecture page</button></div>
     <iframe id="left" title="Page you're reading"></iframe>
   </section>
-  <section class="pane" aria-label="Lazy Notes panel">
-    <div class="pane-head"><span class="where">Lazy Notes side panel</span></div>
-    <iframe id="panel" title="Lazy Notes side panel"></iframe>
+  <section class="pane" aria-label="QNotes panel">
+    <div class="pane-head"><span class="where">QNotes side panel</span></div>
+    <iframe id="panel" title="QNotes side panel"></iframe>
   </section>
 </div>
-<iframe id="bg" title="Lazy Notes background" hidden></iframe>
+<iframe id="bg" title="QNotes background" hidden></iframe>
 
 <script src="bench/shim.js" data-hub-only></script>
 <script>

@@ -1,4 +1,4 @@
-// Lazy Notes — Light / Dark / Auto for every extension page.
+// QNotes — Light / Dark / Auto for every extension page.
 // The choice lives in chrome.storage.local.lnTheme ("auto" | "light" | "dark")
 // and is copied to localStorage so the page gets it before first paint.
 // theme.css reads <html data-theme>; no attribute = follow the computer.

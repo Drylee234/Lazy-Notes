@@ -1,4 +1,4 @@
-/* Lazy Notes — the side panel built into the readers (embedded-panel.js). */
+/* QNotes — the side panel built into the readers (embedded-panel.js). */
 #ln-embed {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 120;
   width: var(--ln-embed-w, 360px);

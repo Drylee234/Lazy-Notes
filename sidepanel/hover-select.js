@@ -1,4 +1,4 @@
-// Lazy Notes — dropdowns that open on hover (side panel course/topic pickers)
+// QNotes — dropdowns that open on hover (side panel course/topic pickers)
 //
 // A native <select> can't be opened from script without a click
 // (showPicker() needs a user gesture), so enhanceSelect() puts a button and

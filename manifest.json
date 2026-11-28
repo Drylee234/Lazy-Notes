@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Lazy Notes",
+  "name": "QNotes",
   "version": "2.0",
   "description": "Highlight text on any page, tag it by category, save it as a structured note.",
 
@@ -51,13 +51,13 @@
       "suggested_key": {
         "default": "Alt+Shift+H"
       },
-      "description": "Toggle the Lazy Notes highlighter on or off"
+      "description": "Toggle the QNotes highlighter on or off"
     },
     "toggle-panel": {
       "suggested_key": {
         "default": "Alt+Shift+L"
       },
-      "description": "Show or hide the Lazy Notes panel"
+      "description": "Show or hide the QNotes panel"
     },
     "create-course": {
       "suggested_key": {
@@ -86,7 +86,7 @@
   },
 
   "action": {
-    "default_title": "Lazy Notes",
+    "default_title": "QNotes",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"

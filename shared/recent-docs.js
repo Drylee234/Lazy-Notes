@@ -1,4 +1,4 @@
-// Lazy Notes — "Continue reading" on the All notes home (courses.html).
+// QNotes — "Continue reading" on the All notes home (courses.html).
 // Same data as the side panel's Home: chrome.storage.local.lnDocs (kept by
 // readers/docs-recent.js) plus files the readers keep in IndexedDB.
 // Show the first 3 cards of a grid, with "See more (N)" / "Show less" under

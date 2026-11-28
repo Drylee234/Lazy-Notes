@@ -1,4 +1,4 @@
-// Lazy Notes — the note box that shows formatting while you type (Study tab).
+// QNotes — the note box that shows formatting while you type (Study tab).
 //
 // It looks like the saved note (headings, bold, lists, highlight, quotes) but
 // reads and writes the same plain text as before (see typedNoteHtml in

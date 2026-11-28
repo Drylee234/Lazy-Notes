@@ -1,4 +1,4 @@
-// Lazy Notes — PDF Reader
+// QNotes — PDF Reader
 // Renders a PDF with PDF.js: a canvas per page plus PDF.js's transparent text
 // layer on top, so text can be selected. content.js (loaded by the page) does
 // the highlighting exactly as on websites; pdfreader-host.js tells it which
@@ -151,7 +151,7 @@ async function openFromUrl(url) {
     if (url.startsWith("file:")) {
       showMessage(
         "Chrome blocked this local file. Either choose it with Open, or turn on " +
-        "“Allow access to file URLs” for Lazy Notes in chrome://extensions.",
+        "“Allow access to file URLs” for QNotes in chrome://extensions.",
         true
       );
     } else {
@@ -240,7 +240,7 @@ async function loadDocument(data, name) {
     if (t && !/\.(docx?|pptx?|tex|dvi)$/i.test(t) && !/^untitled/i.test(t)) title = t;
   } catch (_) { /* no metadata */ }
 
-  document.title = `${title} — Lazy Notes`;
+  document.title = `${title} — QNotes`;
   docTitleEl.textContent = title;
   docTitleEl.title = name;
 

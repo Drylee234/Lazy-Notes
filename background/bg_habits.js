@@ -1,4 +1,4 @@
-// Lazy Notes — habits: which features and shortcuts get used, and signs of
+// QNotes — habits: which features and shortcuts get used, and signs of
 // struggle, so a tester's report shows what's unknown or awkward without
 // them describing it. Counts only: never note text, never keys typed.
 //

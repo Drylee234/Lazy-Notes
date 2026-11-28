@@ -1,4 +1,4 @@
-// Lazy Notes — the Study tab as a written page you can type in.
+// QNotes — the Study tab as a written page you can type in.
 //
 // sidepanel.js draws the course/topic pickers and calls StudyPage.render()
 // with the open topic, or StudyPage.clear() when there is none. This file

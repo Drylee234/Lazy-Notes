@@ -1,4 +1,4 @@
-/* Lazy Notes — the How-to-use tour (tour.html). Colours from theme.css. */
+/* QNotes — the How-to-use tour (tour.html). Colours from theme.css. */
 html, body { margin: 0; height: 100%; }
 body { background: var(--surface, #f4f4f5); color: var(--pri); font: 14.5px/1.5 var(--font, system-ui, sans-serif); }
 #tour { max-width: 1180px; height: 100%; margin: 0 auto; padding: 0 20px; box-sizing: border-box; display: flex; flex-direction: column; }

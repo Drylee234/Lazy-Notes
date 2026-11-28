@@ -1,11 +1,11 @@
-// Lazy Notes — the How-to-use tour: what each slide says. One place to edit.
+// QNotes — the How-to-use tour: what each slide says. One place to edit.
 // Each slide: id, title, lead (one line), shot (tour/<id>.png, made by
 // tools/make-tour-shots.js) and spots: numbered markers on the picture.
 // spot.sel / spot.frame tell the shot maker where the marker goes (frame
 // "panel" = inside the Notes panel); spot.text is what the number means.
 // Positions land in tour/positions.js. No picture = a text-only slide.
 globalThis.LN_TOUR_SLIDES = [
-  { id: "welcome", title: "Welcome to Lazy Notes",
+  { id: "welcome", title: "Welcome to QNotes",
     lead: "Read a PDF, select the words that matter, and they become tidy study notes.",
     bullets: [
       "<b>→ / ←</b> (or the buttons) move through this tour. <b>Esc</b> closes it.",
@@ -28,7 +28,7 @@ globalThis.LN_TOUR_SLIDES = [
     spots: [
       { sel: ".lazy-notes-text-edit", text: "The words you picked. Fix them here before saving if you like." },
       { sel: ".lazy-notes-chips", text: "The type. Press its number: <b>1</b> Header · <b>2</b> Sub topic · <b>3</b> Definition · <b>4</b> Formula · <b>5</b> List point · <b>6</b> Important · <b>7</b> Summary · <b>8</b> List head · <b>T</b> Table · <b>0</b> Plain. A number saves at once." },
-      { sel: ".lazy-notes-btn-primary", text: "<b>Enter</b> saves with the lit type (Lazy Notes guesses it: big words = Header…)." },
+      { sel: ".lazy-notes-btn-primary", text: "<b>Enter</b> saves with the lit type (QNotes guesses it: big words = Header…)." },
       { sel: ".lazy-notes-handoff", text: "<b>✎ Note</b> / <b>❝ Quote</b>: write your own note about it instead." },
     ],
     bullets: ["<b>⤴ Join</b> (or <b>J</b>) shows up when the words carry on your last highlight, e.g. a sentence broken over a page.",

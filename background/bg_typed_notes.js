@@ -1,4 +1,4 @@
-// Lazy Notes — Typed notes (written in the side panel's Study tab)
+// QNotes — Typed notes (written in the side panel's Study tab)
 // Replies { ok, reason?, id? } so the panel can keep the text and say so if a
 // save fails, instead of losing what was typed.
 

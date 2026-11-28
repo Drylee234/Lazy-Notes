@@ -1,4 +1,4 @@
-// Lazy Notes — our own side panel on web pages (instead of Chrome's).
+// QNotes — our own side panel on web pages (instead of Chrome's).
 // The same sidepanel.html as the readers' built-in panel, in an iframe.
 // Two looks (Settings › More options › Panel on web pages):
 //   docked   — on the right edge, the page makes room for it

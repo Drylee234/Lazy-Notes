@@ -1,4 +1,4 @@
-// Lazy Notes — Side Panel Notifications + Requests
+// QNotes — Side Panel Notifications + Requests
 
 import { storageSet } from './bg_storage.js';
 
@@ -36,7 +36,7 @@ export function cannotHere(tab) {
   chrome.action.setTitle({ tabId, title: "Chrome doesn't let extensions open a panel on this page" }).catch?.(() => {});
   setTimeout(() => {
     chrome.action.setBadgeText({ tabId, text: "" }).catch?.(() => {});
-    chrome.action.setTitle({ tabId, title: "Lazy Notes" }).catch?.(() => {});
+    chrome.action.setTitle({ tabId, title: "QNotes" }).catch?.(() => {});
   }, 2500);
 }
 

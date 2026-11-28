@@ -1,4 +1,4 @@
-// Lazy Notes — Side Panel (rebuilt against local-storage schema)
+// QNotes — Side Panel (rebuilt against local-storage schema)
 
 // ---------------------------------------------------------------------------
 // State
@@ -1047,7 +1047,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
 // ---------------------------------------------------------------------------
 // PDF tabs — Chrome's built-in PDF viewer doesn't let extensions in, so when
-// the active tab is a PDF offer to reopen it in the Lazy Notes reader.
+// the active tab is a PDF offer to reopen it in the QNotes reader.
 // ---------------------------------------------------------------------------
 
 const pdfBanner     = document.getElementById("pdf-banner");
@@ -1147,7 +1147,7 @@ async function updateReading() {
     const kind = doc?.kind ?? (key.startsWith("/pptx") ? "pptx" : key.startsWith("/docx") ? "docx" : "pdf");
     icon.textContent = kind === "pptx" ? "PPT" : kind === "docx" ? "DOC" : "PDF";
     icon.className = `doc-icon ${kind}`;
-    document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — Lazy Notes$/, "");
+    document.getElementById("rn-name").textContent = doc?.name ?? tab.title.replace(/ — QNotes$/, "");
     document.getElementById("rn-meta").textContent = doc
       ? `${unitName(doc)} ${doc.page || 1}${doc.pages ? ` of ${doc.pages}` : ""}` : "";
   }

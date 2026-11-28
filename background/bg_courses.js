@@ -1,4 +1,4 @@
-// Lazy Notes — Course + Topic Workflow Handlers
+// QNotes — Course + Topic Workflow Handlers
 
 import {
   storageGet, storageSet, createCourse, createTopic,

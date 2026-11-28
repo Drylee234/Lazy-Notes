@@ -1,4 +1,4 @@
-// Lazy Notes — Shared sort/filter helpers.
+// QNotes — Shared sort/filter helpers.
 // Used by both sidepanel.js and viewer.js — do not duplicate this logic
 // elsewhere.
 

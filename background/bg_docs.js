@@ -1,4 +1,4 @@
-// Lazy Notes — sending a document again when a phone asks for it.
+// QNotes — sending a document again when a phone asks for it.
 //
 // The server only passes documents on to the phone (server/app.py /api/docs):
 // once a phone keeps one, the server deletes its copy. If a phone loses it

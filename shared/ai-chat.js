@@ -1,4 +1,4 @@
-// Lazy Notes — the AI view as a chat with threads.
+// QNotes — the AI view as a chat with threads.
 //
 // Like any AI chat: each conversation is a thread; every message goes to the
 // open thread; you can keep many threads and come back to them. A thread
@@ -20,8 +20,8 @@ globalThis.LazyAIChat = (() => {
   "use strict";
   const KEY = "lnAiThreads", MAX_THREADS = 60, MAX_MSGS = 80;
   const send = (msg) => new Promise((resolve) => {
-    try { chrome.runtime.sendMessage(msg, (r) => { void chrome.runtime.lastError; resolve(r || { ok: false, reason: "Lazy Notes didn't answer. Reload the panel." }); }); }
-    catch (_) { resolve({ ok: false, reason: "Lazy Notes didn't answer. Reload the panel." }); }
+    try { chrome.runtime.sendMessage(msg, (r) => { void chrome.runtime.lastError; resolve(r || { ok: false, reason: "QNotes didn't answer. Reload the panel." }); }); }
+    catch (_) { resolve({ ok: false, reason: "QNotes didn't answer. Reload the panel." }); }
   });
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const ago = (ms) => {

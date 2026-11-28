@@ -1,4 +1,4 @@
-// Lazy Notes — the pop-up note box in the readers (PDF, slides, Word).
+// QNotes — the pop-up note box in the readers (PDF, slides, Word).
 // A small box that opens where you're reading, takes a note, and goes away:
 // no panel needed.
 //

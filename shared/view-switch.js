@@ -1,4 +1,4 @@
-// Lazy Notes — the view switcher in a built-in panel's title bar
+// QNotes — the view switcher in a built-in panel's title bar
 // (readers' panel and the web-page panel). The title names the view you're
 // in (Study / AI / Home); resting on it (~0.5s) or clicking it shows the list
 // to pick from; a list opened by hovering closes 0.4s after the mouse leaves

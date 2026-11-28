@@ -1,4 +1,4 @@
-// Lazy Notes — errors on this extension page go to the problem report
+// QNotes — errors on this extension page go to the problem report
 // (background/bg_diag.js). Load first on every page.
 (() => {
   if (!globalThis.chrome?.runtime?.sendMessage) return;

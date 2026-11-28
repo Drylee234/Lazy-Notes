@@ -1,4 +1,4 @@
-// Lazy Notes — Opening PDFs in the Lazy Notes reader
+// QNotes — Opening PDFs in the QNotes reader
 
 // The reader's link for a PDF. A #page=N on the PDF's link is carried over
 // so the reader opens on the same page Chrome's viewer did.

@@ -1,8 +1,8 @@
-// Lazy Notes — "Highlight this PDF" prompt
+// QNotes — "Highlight this PDF" prompt
 // Chrome's built-in PDF viewer doesn't let extensions into the PDF itself,
 // but content scripts still run in the page that holds it. When that page is
 // a PDF, show a small button over the viewer that reopens the PDF in the
-// Lazy Notes reader, where selecting text saves notes as on any website.
+// QNotes reader, where selecting text saves notes as on any website.
 //
 // Shows on every PDF opened in a tab (also local files, if "Allow access to
 // file URLs" is on). "Highlight this PDF" opens the reader in this tab; the
@@ -98,9 +98,9 @@
       }
     </style>
 
-    <aside class="toast" aria-label="Lazy Notes">
+    <aside class="toast" aria-label="QNotes">
       <button class="open" type="button"
-              title="Open here in the Lazy Notes reader, where selecting text saves it as a note">
+              title="Open here in the QNotes reader, where selecting text saves it as a note">
         <svg class="logo" viewBox="0 0 128 128" aria-hidden="true">
           <rect width="128" height="128" rx="28" fill="#4f46e5"/>
           <rect x="26" y="30" width="76" height="11" rx="5.5" fill="#ffffff" opacity="0.92"/>

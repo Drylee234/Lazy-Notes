@@ -1,7 +1,7 @@
-// Lazy Notes — open PowerPoint and Word downloads in their readers.
+// QNotes — open PowerPoint and Word downloads in their readers.
 // (Word .docx files go to docxreader.html the same way.)
 // Chrome can't show a .pptx, so clicking one just downloads it. When
-// "Open PowerPoint (.pptx) downloads in Lazy Notes" is on (side panel ⚙,
+// "Open PowerPoint (.pptx) downloads in QNotes" is on (side panel ⚙,
 // default on), a web .pptx download is cancelled and the deck opens in
 // pptxreader.html instead, which fetches the same link itself.
 

@@ -1,4 +1,4 @@
-// Lazy Notes — the Notes panel built into our readers (PDF, slides, Word).
+// QNotes — the Notes panel built into our readers (PDF, slides, Word).
 // The same sidepanel.html, in an iframe (?embedded=1), so the keyboard stays
 // in one page: no clicking between the document and Chrome's own side panel.
 //
@@ -389,7 +389,7 @@
       await chrome.storage.session.set({ lnPanelWindow: win.id });
       hideAfterPop();
     } catch (err) {
-      console.warn("Lazy Notes: couldn't open the notes window", err);
+      console.warn("QNotes: couldn't open the notes window", err);
     }
   }
   function hideAfterPop() {

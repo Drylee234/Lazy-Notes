@@ -1,4 +1,4 @@
-// Lazy Notes — Word (.docx) reader
+// QNotes — Word (.docx) reader
 // Shows a Word document as white pages of text: headings, paragraphs with
 // light formatting, lists, tables and pictures (docx-parse.js reads the
 // file). Pages follow the document's own page breaks. content.js, loaded by
@@ -104,7 +104,7 @@ async function openFromUrl(url) {
   } catch (err) {
     showMessage(url.startsWith("file:")
       ? "Chrome blocked this local file. Either choose it with Open, or turn on " +
-        "“Allow access to file URLs” for Lazy Notes in chrome://extensions."
+        "“Allow access to file URLs” for QNotes in chrome://extensions."
       : `Couldn't download the document (${err.message}).`, true);
     return showStartScreen();
   }
@@ -147,7 +147,7 @@ async function loadDoc(data, name) {
     return showStartScreen();
   }
 
-  document.title = `${name} — Lazy Notes`;
+  document.title = `${name} — QNotes`;
   docTitleEl.textContent = name;
   docTitleEl.title = name;
   D.pageCount = doc.pages.length;

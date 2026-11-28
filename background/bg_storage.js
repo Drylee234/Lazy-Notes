@@ -1,4 +1,4 @@
-// Lazy Notes — Storage Module
+// QNotes — Storage Module
 // Every other file imports from here. Nothing outside this file touches
 // chrome.storage directly.
 //

@@ -1,4 +1,4 @@
-// Lazy Notes — arranging a topic's notes (Study tab: drag to reorder,
+// QNotes — arranging a topic's notes (Study tab: drag to reorder,
 // Tab / Shift+Tab to indent).
 //
 // SET_ARRANGEMENT { courseName, topicName, items: [{ kind: "highlight" |

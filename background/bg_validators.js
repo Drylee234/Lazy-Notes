@@ -1,4 +1,4 @@
-// Lazy Notes — Validators
+// QNotes — Validators
 // Called by handlers before any storage write. Returns { valid: true }
 // or { valid: false, reason: "..." }.
 

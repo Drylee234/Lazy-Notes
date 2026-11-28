@@ -1,4 +1,4 @@
-# Lazy Notes download page: https://drylee234.github.io/Lazy-Notes/
+# QNotes download page: https://drylee234.github.io/Lazy-Notes/
 # On every push to main: zip the extension (without the server, docs and
 # tools) next to site/index.html and publish both with GitHub Pages.
 # One-time setup on GitHub: Settings › Pages › Source: "GitHub Actions".
@@ -28,11 +28,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Zip the extension
         # Committed files only, at the top of the zip: Windows "Extract All"
-        # then gives a lazy-notes folder with manifest.json straight inside.
+        # then gives a qnotes folder with manifest.json straight inside.
         run: |
           mkdir -p _site
-          git archive --format=zip -o _site/lazy-notes.zip HEAD -- . \
+          git archive --format=zip -o _site/qnotes.zip HEAD -- . \
             ':!server' ':!docs' ':!tools' ':!site' ':!.github' ':!*.md' ':!render.yaml'
+          cp _site/qnotes.zip _site/lazy-notes.zip   # the old name, for links already sent
           cp site/index.html _site/index.html
           cp icons/logo.svg _site/logo.svg
           echo "built $(date -u +%Y-%m-%d), ${GITHUB_SHA::7}" > _site/version.txt

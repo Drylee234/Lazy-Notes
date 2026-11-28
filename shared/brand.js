@@ -1,8 +1,8 @@
-// Lazy Notes — the app's name lives in ONE place: "name" in manifest.json.
+// QNotes — the app's name lives in ONE place: "name" in manifest.json.
 // Change it there and every page picks it up (this swaps the default name in
 // titles, labels and text when a page loads). Scripts can read window.LN_NAME.
 (() => {
-  const DEFAULT = "Lazy Notes";
+  const DEFAULT = "QNotes";
   const name = (chrome.runtime?.getManifest?.().name || DEFAULT).trim() || DEFAULT;
   window.LN_NAME = name;
   if (name === DEFAULT) return;

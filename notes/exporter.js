@@ -1,4 +1,4 @@
-// Lazy Notes — Export helpers (Markdown + HTML).
+// QNotes — Export helpers (Markdown + HTML).
 // Plain script shared by sidepanel.js and viewer.js. Load after utils.js
 // (uses sortHighlights / sortTopics).
 //

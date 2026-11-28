@@ -1,4 +1,4 @@
-// Lazy Notes — PDF reader ↔ highlighter bridge.
+// QNotes — PDF reader ↔ highlighter bridge.
 // Loaded before content.js on pdfreader.html. content.js checks
 // globalThis.LazyNotesHost when saving a note, so notes taken in the reader
 // point at the PDF and page instead of the reader's own extension URL.

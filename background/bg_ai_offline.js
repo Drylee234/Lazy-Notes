@@ -1,4 +1,4 @@
-// Lazy Notes — offline helpers: what we can do without an AI.
+// QNotes — offline helpers: what we can do without an AI.
 //
 // When the AI isn't set up, or can't be reached (no internet, server asleep),
 // these stand in for the AI jobs, working only from your own text: the open

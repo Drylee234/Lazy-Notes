@@ -1,4 +1,4 @@
-// Lazy Notes — reads a Word document (.docx) for the document reader.
+// QNotes — reads a Word document (.docx) for the document reader.
 // Headings, paragraphs with light formatting (bold, italic, underline),
 // bulleted and numbered lists with their levels, links (as text), tables,
 // pictures, and page breaks. Not a renderer: fonts, colours, columns,

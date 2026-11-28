@@ -1,4 +1,4 @@
-// Lazy Notes — the editor for a saved highlight, shared by the All notes
+// QNotes — the editor for a saved highlight, shared by the All notes
 // viewer and the side panel's Study tab. Plain script; needs notes-render.js
 // (CATEGORY_LABELS). Styles live in notes.css.
 //

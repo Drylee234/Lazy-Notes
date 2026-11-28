@@ -1,4 +1,4 @@
-// Lazy Notes — Slides reader
+// QNotes — Slides reader
 // Shows a PowerPoint (.pptx) deck as text: one card per slide with its
 // title, bullets, tables, pictures and speaker notes (pptx-parse.js reads
 // the file). content.js, loaded by the page, does the highlighting exactly
@@ -119,7 +119,7 @@ async function openFromUrl(url) {
   } catch (err) {
     showMessage(url.startsWith("file:")
       ? "Chrome blocked this local file. Either choose it with Open, or turn on " +
-        "“Allow access to file URLs” for Lazy Notes in chrome://extensions."
+        "“Allow access to file URLs” for QNotes in chrome://extensions."
       : `Couldn't download the slides (${err.message}).`, true);
     await showStartScreen();
     return;
@@ -161,7 +161,7 @@ async function loadDeck(data, name) {
     return;
   }
 
-  document.title = `${name} — Lazy Notes`;
+  document.title = `${name} — QNotes`;
   docTitleEl.textContent = name;
   docTitleEl.title = name;
 
