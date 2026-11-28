@@ -59,7 +59,7 @@ globalThis.LazyAIChat = (() => {
           <button type="submit" class="aic-send" title="Send (Enter)">↑</button>
         </div>
         <div class="aic-quick"><button type="button" data-job="summarise">Summarise</button><button type="button" data-job="quiz">Quiz me</button><button type="button" data-job="mnemonic" title="Memory aids: acronyms, catchy sentences, little images">Mnemonics</button><button type="button" data-job="topics" class="aic-doc-only" title="The separate topics in this document, with their pages">Find topics</button>
-          <span class="aic-hint">Enter sends · Shift+Enter new line</span></div>
+          </div>
       </form>`;
     const $ = (c) => container.querySelector(c);
     const msgsEl = $(".aic-msgs"), input = $(".aic-input"), drawer = $(".aic-drawer");
@@ -106,8 +106,9 @@ globalThis.LazyAIChat = (() => {
     }
     function bubble(t, m, i) {
       const b = el("div", `aic-msg aic-${m.role}${m.failed ? " aic-failed" : ""}`);
-      if (m.role === "ai") {
-        const tag = el("span", "aic-badge", m.offline ? "Offline" : "AI");
+      // Only the offline helper gets a label: answers on the left are the AI's.
+      if (m.role === "ai" && m.offline) {
+        const tag = el("span", "aic-badge", "Offline");
         tag.title = m.offline ? "Picked from your own text by the offline helper (no AI)" : "Written by AI, not by you";
         b.append(tag);
       }

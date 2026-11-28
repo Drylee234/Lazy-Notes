@@ -612,15 +612,16 @@
          label (↩ Undo) never pushes Save onto its own row. */
       .lazy-notes-popup-tools { display: flex; gap: 6px; width: 100%; }
 
+      /* Plain text buttons: no boxes, no symbols (owner, 2026-11-28). */
       .lazy-notes-handoff {
-        padding: 5px 7px; border-radius: 4px; font-size: 10.5px;
-        font-weight: 600; cursor: pointer; border: 1px solid #45456a;
-        background: transparent; color: #a5b4fc;
+        padding: 5px 6px; border-radius: 4px; font-size: 11.5px;
+        font-weight: 500; cursor: pointer; border: 0;
+        background: transparent; color: #c9c9d4;
       }
-      .lazy-notes-tidy { border-color: #5b4a7a; color: #d8b4fe; white-space: nowrap; }
-      .lazy-notes-tidy:hover:not(:disabled) { background: #332a44; color: #e9d5ff; }
+      .lazy-notes-tidy { white-space: nowrap; }
+      .lazy-notes-tidy:hover:not(:disabled) { background: #2c2c33; color: #fff; }
       .lazy-notes-tidy:disabled { opacity: .6; cursor: default; }
-      .lazy-notes-handoff:hover { background: #2a2a44; color: #c7d2fe; }
+      .lazy-notes-handoff:hover { background: #2c2c33; color: #fff; }
 
       .lazy-notes-btn {
         padding: 5px 10px;
@@ -955,8 +956,8 @@
     tools.className = "lazy-notes-popup-tools";
     row5.appendChild(tools);
 
-    const handoffBtns = [["note", "✎ Note", "Write your own note from these words"],
-                         ["quote", "❝ Quote", "Keep these words as a quote and add your note (Ctrl+.)"]].map(([mode, label, tip]) => {
+    const handoffBtns = [["note", "Note", "Write your own note from these words"],
+                         ["quote", "Quote", "Keep these words as a quote and add your note (Ctrl+.)"]].map(([mode, label, tip]) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "lazy-notes-handoff";
@@ -976,7 +977,7 @@
     const tidyBtn = document.createElement("button");
     tidyBtn.type = "button";
     tidyBtn.className = "lazy-notes-handoff lazy-notes-tidy";
-    tidyBtn.textContent = "✨ Tidy";
+    tidyBtn.textContent = "Tidy";
     tidyBtn.title = "Ask the AI to fix broken lines and typing in these words (Alt+T)";
     tidyBtn.style.display = "none";
     tidyBtn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -1633,7 +1634,7 @@
     if (title) tidyBtnEl.title = title;
     if (ms) setTimeout(() => {
       if (!tidyBtnEl) return;
-      tidyBtnEl.textContent = "✨ Tidy";
+      tidyBtnEl.textContent = "Tidy";
       tidyBtnEl.title = "Ask the AI to fix broken lines and typing in these words (Alt+T)";
       tidyBtnEl.disabled = false;
     }, ms);
@@ -1647,14 +1648,14 @@
       currentSelectedText = tidyBefore;
       tidyBefore = null;
       fitTextEdit();
-      setTidyLabel("✨ Tidy", "Ask the AI to fix broken lines and typing in these words (Alt+T)");
+      setTidyLabel("Tidy", "Ask the AI to fix broken lines and typing in these words (Alt+T)");
       return;
     }
     const text = textEditEl.value.trim();
     if (!text) return;
     const before = textEditEl.value;
     tidyBtnEl.disabled = true;
-    setTidyLabel("✨ …", "Asking the AI…");
+    setTidyLabel("Tidying…", "Asking the AI…");
     chrome.runtime.sendMessage({ type: "AI_RUN", task: "tidy", text }, (r) => {
       void chrome.runtime.lastError;
       tidyBtnEl.disabled = false;
@@ -1666,7 +1667,7 @@
         if (popupAnchor) positionPopup();
         setTidyLabel("↩ Undo", "Put the original words back");
       } else {
-        setTidyLabel("✨ failed", r?.reason || "The AI couldn't be reached.", 5000);
+        setTidyLabel("Tidy failed", r?.reason || "The AI couldn't be reached.", 5000);
       }
     });
   }
@@ -1688,7 +1689,7 @@
     if (tidyBtnEl) {
       tidyBtnEl.style.display = aiOn ? "" : "none";
       tidyBtnEl.disabled = false;
-      tidyBtnEl.textContent = "✨ Tidy";
+      tidyBtnEl.textContent = "Tidy";
     }
     // The tools row disappears entirely when it has nothing in it.
     if (toolsRowEl) toolsRowEl.style.display = (aiOn || canHandOff) ? "" : "none";

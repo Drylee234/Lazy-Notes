@@ -159,7 +159,7 @@ function noteEditor(note, { onSave, onCancel, onDelete, onConvert, onAiNote }) {
   }
 
   // ✨ Tidy — clean the highlighted words up, in place.
-  aiRow.appendChild(aiButton("✨ Tidy", "Fix broken lines and typing in the text above", async (words) => {
+  aiRow.appendChild(aiButton("Tidy", "Fix broken lines and typing in the text above", async (words) => {
     const r = await AIP.ask("tidy", words);
     if (!r.ok) return r;
     const was = text.value;

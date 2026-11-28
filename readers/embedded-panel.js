@@ -60,7 +60,7 @@
     <button type="button" class="ln-bar-btn ln-bar-mode" data-to=""></button>
     <button type="button" class="ln-bar-btn ln-bar-mode2" data-to=""></button>
     <button type="button" class="ln-bar-btn ln-bar-mode3" data-to=""></button>
-    <button type="button" class="ln-bar-btn ln-bar-pop" title="Pop out into its own window">⧉</button>
+    <button type="button" class="ln-bar-btn ln-bar-pop" title="Pop out into its own window" hidden>⧉</button>
     <button type="button" class="ln-bar-btn ln-bar-close" title="Hide (Ctrl+/)" aria-label="Hide">✕</button>`;
   const frame = document.createElement("iframe");
   frame.src = chrome.runtime.getURL("sidepanel.html?embedded=1");
@@ -98,6 +98,9 @@
   btn.className = "tb-btn ln-embed-btn";
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2" width="13" height="12" rx="2"/><path d="M10 2v12"/></svg><span>Notes</span>`;
   document.querySelector("#toolbar .tb-right")?.prepend(btn);
+  // One button, not two (owner, 2026-11-28): "Saving to …" opens and closes
+  // the notes, so the Notes button only shows where there's no such pill.
+  if (document.getElementById("hl-status")) btn.hidden = true;
   // All notes, one click from the reader (no panel needed).
   const allBtn = document.createElement("a");
   allBtn.className = "tb-btn ln-allnotes-btn";
@@ -120,7 +123,7 @@
         chrome.runtime.sendMessage({ type: "TOGGLE_HIGHLIGHTER_REQUEST" }).catch(() => {});
         return;
       }
-      if (!native && !shown()) togglePanel();
+      if (!native) togglePanel();   // opens and closes, like the old Notes button
     }, true);
     if (!native) document.getElementById("hl-status")?.addEventListener("click", (e) => e.stopImmediatePropagation(), true);
   });
@@ -177,6 +180,8 @@
     penBtn.hidden = !floatBtnOn;
     btn.setAttribute("aria-pressed", String(on));
     btn.classList.toggle("on", on);
+    // The status pill now opens and closes the notes: it shows whether they're open.
+    document.getElementById("hl-status")?.classList.toggle("panel-open", on);
     btn.title = (mode === "docked" && chromePanelOpen && !forced
       ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
       : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (!slides() ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
@@ -184,8 +189,11 @@
     // Icons only; the name is in the tooltip.
     const LABEL = { float: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M2.5 6h11"/></svg>', "Float: a box you can drag anywhere"], tab: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M10 6.5 8.5 8l1.5 1.5"/><path d="M12 2.5v11"/></svg>', "Edge tab: hide it behind a tab on the edge"],
                     docked: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M10 2.5v11"/></svg>', "Dock: keep it beside the document"], bottom: ['<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 10h11"/></svg>', "Bottom: a wide panel that slides up from the bottom"] };
-    const others = ["float", "tab", "docked", "bottom"].filter((m) => m !== mode);
+    // No Bottom button (owner: no bottom bar; it stays in Settings only).
+    const others = ["float", "tab", "docked"].filter((m) => m !== mode);
     [bar.querySelector(".ln-bar-mode"), bar.querySelector(".ln-bar-mode2"), bar.querySelector(".ln-bar-mode3")].forEach((b, i) => {
+      b.hidden = !others[i];
+      if (!others[i]) return;
       b.dataset.to = others[i];
       b.innerHTML = LABEL[others[i]][0];
       b.setAttribute("aria-label", LABEL[others[i]][1]);
@@ -495,12 +503,21 @@
   // row (see embedded-panel.css), so nothing overlaps.
   const toolbar = document.getElementById("toolbar");
   if (toolbar && window.ResizeObserver) {
-    const need = () => [...toolbar.children].reduce((w, c) => w + c.scrollWidth, 0) + 48;
+    // The file name can shorten with "…" (up to ~90px left), so it doesn't
+    // count in full: a long lecture name alone shouldn't push the page
+    // controls onto a second row (owner, 2026-11-28).
+    // Measured from the buttons inside, not the group: on two rows the
+    // middle group spans the whole row and would never fit back on one.
+    const widthOf = (c) => [...c.children].reduce((w, x) => {
+      if (x.hidden || getComputedStyle(x).display === "none") return w;
+      return w + 6 + (x.classList.contains("doc-title") ? Math.min(x.scrollWidth, 90) : x.offsetWidth);
+    }, 0);
+    const need = () => [...toolbar.children].reduce((w, c) => w + widthOf(c), 0) + 48;
     // Changed on the next frame, not inside the callback: changing the
     // toolbar's layout while it's being observed makes Chrome log
     // "ResizeObserver loop completed with undelivered notifications".
     let raf = 0;
-    new ResizeObserver(() => {
+    const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const narrow = toolbar.clientWidth < need();
@@ -509,7 +526,11 @@
           document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`);
         }
       });
-    }).observe(toolbar);
+    });
+    ro.observe(toolbar);
+    // Also when what's in it changes size (the file name arrives, the status
+    // pill's text changes), not only when the window does.
+    [...toolbar.children].forEach((c) => ro.observe(c));
   }
 
   // Hover to open (lnPanelHover): resting on the edge tab shows the panel,

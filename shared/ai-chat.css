@@ -26,7 +26,7 @@
 .aic-msg { max-width: 92%; padding: 7px 10px; border-radius: 12px; line-height: 1.45; }
 .aic-user { align-self: flex-end; background: var(--accent); color: var(--on-accent, #fff); border-bottom-right-radius: 4px; }
 .aic-ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-.aic-ai.aic-failed { border-color: var(--danger, #c0392b); color: var(--danger, #c0392b); }
+.aic-ai.aic-failed { color: var(--sec); }   /* a quiet "couldn't answer", not an alarm */
 .aic-text { white-space: pre-wrap; word-wrap: break-word; }
 .aic-badge { display: inline-block; font-size: 10px; font-weight: 700; color: #6b21a8; background: #f3e8ff; border-radius: 4px; padding: 0 4px; margin-bottom: 3px; }
 :root[data-theme="dark"] .aic-badge { color: #e9d5ff; background: #3b2a55; }
@@ -36,16 +36,18 @@
 .aic-acts button:hover:not(:disabled) { color: var(--pri); border-color: var(--border-strong); }
 .aic-form { border-top: 1px solid var(--border); padding-top: 8px; display: grid; gap: 6px; }
 .aic-scopes { display: flex; gap: 4px; }
-.aic-scopes button { flex: 1 1 0; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--sec); font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.aic-scopes button.on { border-color: var(--accent); color: var(--pri); background: var(--accent-soft); }
+.aic-scopes { background: var(--surface); border-radius: var(--radius-sm); padding: 2px; }
+.aic-scopes button { flex: 1 1 0; min-width: 0; padding: 3px 6px; border: 0; border-radius: calc(var(--radius-sm) - 1px); background: none; color: var(--sec); font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-scopes button.on { color: var(--pri); background: var(--bg); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 600; }
 .aic-scopes button:disabled { opacity: .45; cursor: default; }
 .aic-row { display: flex; gap: 6px; align-items: flex-end; }
 .aic-input { flex: 1; min-width: 0; resize: none; min-height: 34px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--pri); font: inherit; font-size: 13px; line-height: 1.35; }
 .aic-input:focus { outline: none; border-color: var(--accent); }
 .aic-send { width: 34px; height: 34px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent, #fff); font-size: 16px; font-weight: 700; cursor: pointer; }
-.aic-quick { display: flex; align-items: center; gap: 4px; }
-.aic-quick button { border: 1px solid var(--border); background: var(--surface); color: var(--sec); border-radius: 999px; padding: 2px 10px; font: inherit; font-size: 11.5px; cursor: pointer; }
-.aic-quick button:hover { color: var(--pri); border-color: var(--border-strong); }
+/* Quick jobs: plain words in one row, no pills. */
+.aic-quick { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.aic-quick button { border: 0; background: none; color: var(--sec); border-radius: var(--radius-sm); padding: 3px 7px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.aic-quick button:hover { color: var(--pri); background: var(--hover); }
 .aic-hint { margin-left: auto; font-size: 10.5px; color: var(--dim); }
 /* The chat fills the panel: only its messages scroll, the box stays at the bottom. */
 #body:has(> #ai-view.visible.ln-ai-chat) { display: flex; flex-direction: column; overflow: hidden; min-height: 0; padding-bottom: 8px; }
