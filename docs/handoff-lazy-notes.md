@@ -162,6 +162,14 @@ You are continuing work from a previous chat. That chat is gone; this file is th
 Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chromium.launchPersistentContext(dir,{channel:'chromium',headless:true,args:['--disable-extensions-except=<repo>','--load-extension=<repo>']})`; seed `lazynotes:{courses:{C:{topics:{T:{highlights:{},notes:{}}}}}}` + activeCourse/activeTopic via the service worker; remove the `#ln-place` dialog in readers; `python3 -m http.server 8765` for test pages; test PDF via reportlab.
 
 ## 11. Next steps
+**⏰ Owner's to-do (remind the owner at the start of each session until done):**
+- [ ] **Google sign-in keys**: Google Cloud Console → APIs & Services → Credentials → OAuth client ID (type Web application), redirect URI `https://lazy-notes-c07b.onrender.com/auth/google/callback` → put `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` on Render › lazy-notes › Environment. Until then "Continue with Google" stays hidden.
+- [ ] **UptimeRobot** (free): sign up, add an HTTP(s) monitor for `https://lazy-notes-c07b.onrender.com/api/health` every 5–10 min, so the free server never sleeps (first sync/login/AI no longer waits up to a minute). One service awake all month ≈ 744 of Render's 750 free hours: keep it the only free web service.
+- [ ] **Database before 2026-12-26**: Render's free Postgres expires then. Plan: move to Supabase free (no expiry; pauses after 7 idle days, testers' syncs keep it awake) by swapping `DATABASE_URL`; Claude can create it and copy the data.
+- [ ] **Gemini keys** (owner getting them, 2026-11-28) → then AI load distribution across providers/models + a per-account daily cap (see roadmap).
+- [ ] **Email for password resets**: SMTP settings on Render (Gmail app password or Brevo free), see server/README.md.
+- [ ] **Chrome Web Store**: $5 developer account, support email, privacy policy (Claude drafts), 30–60s demo video. One listing also serves Edge users.
+
 0. **Since #6:** show the owner the designs in `docs/roadmap.md` section 0 (A–J) with labelled images before building any; J (two-ways simulation) last. Check Render redeployed fine (accounts migrate the snapshots table; tested on SQLite only).
 1. **Next action (Tuesday):** greet with "Scholar", ask what the owner wants to pick from `docs/roadmap.md`. Their direction last session: the **AI layer** (connection now works) and making notes **feel like one note**.
 2. Open bugs to check first (roadmap): list points that wouldn't delete until refresh; clicking away after a highlight counts as a new highlight; PDF caret ↓ / ←→ at word edges; blank lines squashed in typed notes; new highlights not keeping the indent.
