@@ -177,6 +177,7 @@ Tests: Playwright scripts lived in the session scratchpad (gone). Pattern: `chro
   - [ ] `SAMBANOVA_KEY`: https://cloud.sambanova.ai/apis
   - Optional: `AI_DAILY_CAP` (questions per account per day, default 40; the owner has no cap).
 - [ ] **Email for password resets**: SMTP settings on Render (Gmail app password or Brevo free), see server/README.md.
+- [ ] **Gmail connector for Claude** (owner asked, 2026-11-28): note a Gmail connector already showed up in Claude's tools on 2026-11-28; check it's the Q-notes/support Gmail. It lets Claude read/draft mail in chats (e.g. testers' replies, Web Store emails). It does NOT send the server's reset emails: those need the SMTP settings above.
 - [ ] **Chrome Web Store**: $5 developer account, support email, privacy policy (Claude drafts), 30–60s demo video. One listing also serves Edge users.
 
 0. **Since #6:** show the owner the designs in `docs/roadmap.md` section 0 (A–J) with labelled images before building any; J (two-ways simulation) last. Check Render redeployed fine (accounts migrate the snapshots table; tested on SQLite only).
