@@ -71,10 +71,10 @@ async function iconsWithDot() {
     const c = new OffscreenCanvas(size, size);
     const g = c.getContext("2d");
     g.drawImage(bmp, 0, 0, size, size);
-    // Bottom-right, about half the icon wide, with a white ring so it shows
-    // on the purple icon and on dark toolbars.
-    const r = size * 0.25, cx = size - r - size * 0.03, cy = size - r - size * 0.03;
-    g.beginPath(); g.arc(cx, cy, r + size * 0.07, 0, Math.PI * 2); g.fillStyle = "#ffffff"; g.fill();
+    // Bottom-right, about a third of the icon wide (owner: smaller than half),
+    // with a white ring so it shows on the purple icon and on dark toolbars.
+    const r = size * 0.17, cx = size - r - size * 0.06, cy = size - r - size * 0.06;
+    g.beginPath(); g.arc(cx, cy, r + size * 0.06, 0, Math.PI * 2); g.fillStyle = "#ffffff"; g.fill();
     g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = "#22c55e"; g.fill();
     out[size] = g.getImageData(0, 0, size, size);
   }

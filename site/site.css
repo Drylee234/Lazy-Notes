@@ -121,6 +121,7 @@ footer.site { border-top: 1px solid var(--border); padding: 28px 0 40px; color: 
 footer.site .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }
 footer.site a { color: var(--sec); text-decoration: none; }
 footer.site a:hover { color: var(--pri); }
+footer.site .end { margin-left: auto; }
 
 /* Download page */
 .get { max-width: 680px; margin: 0 auto; padding: 60px 20px 80px; }
