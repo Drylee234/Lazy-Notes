@@ -31,7 +31,10 @@ const isReader = (url) => READER_RE.test(url || "");
 
 // New tab pages: Chrome's own side panel (the full panel with Home, to pick
 // a document) — the owner's choice; every other page uses ours.
-const isNewTab = (url) => /^chrome:\/\/(newtab|new-tab-page)\b/i.test(url || "") || /^chrome-search:\/\/local-ntp/i.test(url || "");
+// Edge: edge://newtab, which shows Microsoft's ntp.msn.com page (no extension
+// scripts run there either).
+const isNewTab = (url) => /^(chrome|edge):\/\/(newtab|new-tab-page)\b/i.test(url || "") ||
+  /^chrome-search:\/\/local-ntp/i.test(url || "") || /^https:\/\/ntp\.msn\.com\/edge\/ntp/i.test(url || "");
 function enableOnNewTab(tabId, url) {
   if (isNewTab(url)) { chrome.sidePanel.setOptions({ tabId, path: "sidepanel.html", enabled: true }).catch(() => {}); return; }
   // Left the new tab page for a normal page: Chrome's panel goes (ours takes over).

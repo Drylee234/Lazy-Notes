@@ -103,8 +103,8 @@ async function openFromUrl(url) {
     data = await res.arrayBuffer();
   } catch (err) {
     showMessage(url.startsWith("file:")
-      ? "Chrome blocked this local file. Either choose it with Open, or turn on " +
-        "“Allow access to file URLs” for Q-notes in chrome://extensions."
+      ? `${window.LN_BROWSER || "Chrome"} blocked this local file. Either choose it with Open, or turn on ` +
+        `“Allow access to file URLs” for Q-notes in ${window.LN_EXT_PAGE || "chrome://extensions"}.`
       : `Couldn't download the document (${err.message}).`, true);
     return showStartScreen();
   }

@@ -183,7 +183,7 @@
     // The status pill now opens and closes the notes: it shows whether they're open.
     document.getElementById("hl-status")?.classList.toggle("panel-open", on);
     btn.title = (mode === "docked" && chromePanelOpen && !forced
-      ? "Chrome's side panel is open, so the built-in one is hidden. Click to show it here too."
+      ? (window.LN_BROWSER || "Chrome") + "'s side panel is open, so the built-in one is hidden. Click to show it here too."
       : on ? "Hide notes" : "Show notes") + " (Ctrl+/)" + (!slides() ? ` · ${key}: jump to the note box and back` : ` · ${key}: quick note`);
     // The two other ways to show it.
     // Icons only; the name is in the tooltip.

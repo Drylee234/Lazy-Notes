@@ -146,8 +146,8 @@ globalThis.LazySettings = (() => {
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPlainInBoxes" data-off /> Plain as a choice in note boxes (else typing is saved as Note)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnDropPlain" data-off /> Text dragged into a note box goes in as normal text (not a quote)</label></div>
       <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnEmbedHome" data-off /> Home / Study / AI tab row inside the in-page / reader panel (the title bar switches views anyway)</label></div>
-      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" data-invert /> Chrome's own side panel on web pages, instead of Q-notes' panel</label></div>
-      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> Chrome's side panel inside readers too</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnPagePanelOwn" data-invert /> ${window.LN_BROWSER || "Chrome"}'s own side panel on web pages, instead of Q-notes' panel</label></div>
+      <div class="set-item"><label class="set-check"><input type="checkbox" data-key="lnReaderNativePanel" data-off /> ${window.LN_BROWSER || "Chrome"}'s side panel inside readers too</label></div>
     </details>
     <details class="set-sync set-ai set-item">
       <summary class="set-label set-sync-head">AI help <span class="set-ai-dot"></span></summary>
@@ -174,7 +174,7 @@ globalThis.LazySettings = (() => {
       <div class="set-backup">
         <button type="button" class="set-btn set-ai-test">Test connection</button>
       </div>
-      <div class="set-ai-note">Your key is kept in this Chrome only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
+      <div class="set-ai-note">Your key is kept in this ${window.LN_BROWSER || "Chrome"} only: it is never synced to your server, never put in a backup file, and never in a problem report.</div>
       </details>
       <div class="set-ai-status"></div>
     </details>
@@ -368,7 +368,7 @@ globalThis.LazySettings = (() => {
     const showLast = () => chrome.storage.local.get("lnLastBackup", ({ lnLastBackup }) => {
       if (!status.classList.contains("bad")) status.textContent = lnLastBackup
         ? `Last backup: ${new Date(lnLastBackup).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`
-        : "No backup yet: your notes only live in this Chrome.";
+        : "No backup yet: your notes only live in this " + (window.LN_BROWSER || "Chrome") + ".";
     });
     const count = (data) => {
       let topics = 0, notes = 0;

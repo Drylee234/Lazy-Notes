@@ -18,6 +18,18 @@
       navigator.clipboard.writeText(b.dataset.copy).then(function () { b.textContent = "Copied"; }, function () { b.textContent = "Select and copy it"; });
     });
   });
+  // Microsoft Edge runs the same extension: its own words and edge:// address.
+  if (/\bEdg\//.test(navigator.userAgent)) {
+    document.querySelectorAll("[data-edge]").forEach(function (el) { el.innerHTML = el.dataset.edge; });
+    document.querySelectorAll("code, .copy").forEach(function (el) {
+      if (el.dataset.copy) el.dataset.copy = el.dataset.copy.replace("chrome://", "edge://");
+      if (el.tagName === "CODE") el.textContent = el.textContent.replace("chrome://", "edge://");
+    });
+    document.querySelectorAll(".howto li").forEach(function (li) {
+      li.firstChild && li.firstChild.nodeType === 3 && (li.firstChild.nodeValue = li.firstChild.nodeValue.replace("In Chrome,", "In Edge,"));
+    });
+    if (/for Chrome/.test(document.title)) document.title = document.title.replace("Chrome", "Edge");
+  }
   var host = document.querySelector(".site-host");
   if (host) host.textContent = onServer ? location.host : "lazy-notes-c07b.onrender.com";
 })();

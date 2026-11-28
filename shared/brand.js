@@ -5,8 +5,18 @@
   const DEFAULT = "Q-notes";
   const name = (chrome.runtime?.getManifest?.().name || DEFAULT).trim() || DEFAULT;
   window.LN_NAME = name;
-  if (name === DEFAULT) return;
-  const swap = (s) => (s && s.includes(DEFAULT) ? s.split(DEFAULT).join(name) : s);
+  // Same files run in Chrome and Microsoft Edge: words about the browser
+  // ("Chrome blocked…", "chrome://extensions") follow the one it's in.
+  const edge = /\bEdg\//.test(navigator.userAgent);
+  window.LN_BROWSER = edge ? "Edge" : "Chrome";
+  window.LN_EXT_PAGE = edge ? "edge://extensions" : "chrome://extensions";
+  if (name === DEFAULT && !edge) return;
+  const swap = (s) => {
+    if (!s) return s;
+    if (name !== DEFAULT && s.includes(DEFAULT)) s = s.split(DEFAULT).join(name);
+    if (edge && /chrome/i.test(s)) s = s.replace(/chrome:\/\//g, "edge://").replace(/\bChrome\b/g, "Edge");
+    return s;
+  };
   const run = (root) => {
     const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let n;

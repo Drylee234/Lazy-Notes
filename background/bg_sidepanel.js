@@ -33,7 +33,7 @@ export function cannotHere(tab) {
   const tabId = tab.id;
   chrome.action.setBadgeBackgroundColor({ tabId, color: "#71717a" }).catch?.(() => {});
   chrome.action.setBadgeText({ tabId, text: "✕" }).catch?.(() => {});
-  chrome.action.setTitle({ tabId, title: "Chrome doesn't let extensions open a panel on this page" }).catch?.(() => {});
+  chrome.action.setTitle({ tabId, title: `${/\bEdg\//.test(navigator.userAgent) ? "Edge" : "Chrome"} doesn't let extensions open a panel on this page` }).catch?.(() => {});
   setTimeout(() => {
     chrome.action.setBadgeText({ tabId, text: "" }).catch?.(() => {});
     chrome.action.setTitle({ tabId, title: "Q-notes" }).catch?.(() => {});

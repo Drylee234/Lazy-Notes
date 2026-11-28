@@ -150,8 +150,8 @@ async function openFromUrl(url) {
   } catch (err) {
     if (url.startsWith("file:")) {
       showMessage(
-        "Chrome blocked this local file. Either choose it with Open, or turn on " +
-        "“Allow access to file URLs” for Q-notes in chrome://extensions.",
+        `${window.LN_BROWSER || "Chrome"} blocked this local file. Either choose it with Open, or turn on ` +
+        `“Allow access to file URLs” for Q-notes in ${window.LN_EXT_PAGE || "chrome://extensions"}.`,
         true
       );
     } else {

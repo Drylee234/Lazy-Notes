@@ -85,7 +85,7 @@ globalThis.LazyAIProviders = (() => {
       base: "",                     // uses your sync address
       needsServer: true,
       keyUrl: "",
-      keyHint: "No key goes in Chrome at all: your Render server keeps it and does the asking.",
+      keyHint: "No key goes in the browser at all: your Render server keeps it and does the asking.",
       free: "Uses the sync server you already set up. Put the AI key on Render as AI_KEY (and AI_PROVIDER, AI_MODEL) — see server/README.md. One key for every device, changed on Render without touching the extension.",
       models: [],
       defaultModel: ""
