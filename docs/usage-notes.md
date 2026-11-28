@@ -223,3 +223,7 @@ seen → cause → what changed (commit) or what's still open.
 - Owner screenshot (phone, side panel): a big red box "Sync isn't working: the server had a problem (is its database connected? check DATABASE_URL on Render). Next try 08:23 AM. [Retry] [Fix]". Owner: if sync fails it's most likely just being offline; users don't need all that.
 - Whose: ours. The box spoke server-owner language to everyone and showed for problems that fix themselves.
 - Now: no box for offline / asleep / server errors (it retries by itself; the online pill shows "Waiting"). The box only shows, as one line, when the user must act: "Sync paused: you're logged out. [Log in]" or "Sync paused: notes are over 30 MB. [Fix]".
+
+## 2026-11-28 · Expected a big green dot on the toolbar icon
+
+- Owner: the green dot in the panel's Highlighter switch is what they expected on the toolbar icon (beside the puzzle piece) when the highlighter is on. Whose: ours: Chrome's badge only draws a small square in the corner. Now the icon itself gets a big round green dot with a white ring; off = the plain icon.

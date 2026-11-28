@@ -54,14 +54,44 @@ export async function handleToggleTrigger() {
   await setHighlighterActive(!highlighterActive);
 }
 
-// "ON" on the toolbar icon, so it's visible at a glance whether selecting
-// text will open the save popup.
-export function updateBadge(active) {
-  // On: a small green dot on the toolbar icon (a badge with one space is
-  // drawn as a dot); off: no badge.
-  chrome.action.setBadgeText({ text: active ? " " : "" });
-  if (active) chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
+// Highlighter on: a big green dot on the toolbar icon (the one beside the
+// puzzle piece), the same green as the panel's Highlighter switch, so you see
+// at a glance that selecting text will open the save pop-up. Chrome's badge
+// can only draw a small square in the corner, so the dot is painted onto the
+// icon itself. Off: the plain icon.
+const ICON = { 16: "icons/icon-16.png", 32: "icons/icon-32.png" };
+let dotIcons = null;   // { 16: ImageData, 32: ImageData }, made once
+
+async function iconsWithDot() {
+  if (dotIcons) return dotIcons;
+  const out = {};
+  for (const size of [16, 32]) {
+    const blob = await (await fetch(chrome.runtime.getURL(ICON[size]))).blob();
+    const bmp = await createImageBitmap(blob);
+    const c = new OffscreenCanvas(size, size);
+    const g = c.getContext("2d");
+    g.drawImage(bmp, 0, 0, size, size);
+    // Bottom-right, about half the icon wide, with a white ring so it shows
+    // on the purple icon and on dark toolbars.
+    const r = size * 0.25, cx = size - r - size * 0.03, cy = size - r - size * 0.03;
+    g.beginPath(); g.arc(cx, cy, r + size * 0.07, 0, Math.PI * 2); g.fillStyle = "#ffffff"; g.fill();
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = "#22c55e"; g.fill();
+    out[size] = g.getImageData(0, 0, size, size);
+  }
+  return (dotIcons = out);
+}
+
+export async function updateBadge(active) {
+  chrome.action.setBadgeText({ text: "" });
   chrome.action.setTitle({ title: active ? "Q-notes · highlighter on" : "Q-notes · highlighter off" });
+  try {
+    if (active) await chrome.action.setIcon({ imageData: await iconsWithDot() });
+    else await chrome.action.setIcon({ path: ICON });
+  } catch (_) {
+    // Couldn't draw the icon: fall back to Chrome's small badge.
+    chrome.action.setBadgeText({ text: active ? " " : "" });
+    if (active) chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
+  }
 }
 
 export async function restoreBadge() {
