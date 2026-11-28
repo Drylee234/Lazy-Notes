@@ -286,7 +286,6 @@ globalThis.LazySettings = (() => {
           const on = seg.querySelector('[aria-checked="true"]');
           if (on && on.dataset.value !== seg.dataset.default) changed = true;
         });
-        if (item.contains(level) && level.value !== "1") changed = true;
         if (item.matches(".set-ai, .set-sync, .set-item--block")) changed = false;   // not simple switches
         item.classList.toggle("is-changed", changed);
         let reset = item.querySelector(":scope > .set-reset");
