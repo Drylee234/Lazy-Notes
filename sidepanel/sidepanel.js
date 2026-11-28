@@ -1505,3 +1505,29 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   tab.click();
 }, true);
+
+
+// "A newer Q-notes is out" (bg_update.js compares the download page's
+// version with this copy). Get it → the download page; ✕ hides it until the
+// next version. Asked again each time the panel opens.
+(() => {
+  const box = document.getElementById("update-note");
+  if (!box) return;
+  const ago = (t) => {
+    const m = Math.round((Date.now() - Date.parse(t)) / 60000);
+    return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} day${m < 2880 ? "" : "s"} ago`;
+  };
+  async function show() {
+    const { lnUpdate: u, lnUpdateDismissed, lnUpdateAlert } = await chrome.storage.local.get(["lnUpdate", "lnUpdateDismissed", "lnUpdateAlert"]);
+    const on = lnUpdateAlert !== false && u?.available && u.sha !== lnUpdateDismissed;
+    box.hidden = !on;
+    if (on) box.querySelector(".update-text").textContent = `🆕 A newer ${window.LN_NAME || "Q-notes"} is out (changed ${ago(u.time)}). Download it, replace your folder, then reload the extension.`;
+  }
+  box.querySelector(".update-x").addEventListener("click", async () => {
+    const { lnUpdate } = await chrome.storage.local.get("lnUpdate");
+    await chrome.storage.local.set({ lnUpdateDismissed: lnUpdate?.sha || "" });
+  });
+  chrome.storage.onChanged.addListener((c, a) => { if (a === "local" && (c.lnUpdate || c.lnUpdateDismissed || c.lnUpdateAlert)) show(); });
+  show();
+  try { chrome.runtime.sendMessage({ type: "CHECK_UPDATE" }, () => void chrome.runtime.lastError); } catch (_) {}
+})();

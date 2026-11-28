@@ -546,3 +546,11 @@ body.ln-win #brand .brand-name { display: none; }
 #settings-menu .settings-head h2 { margin: 0; font-size: 16px; font-weight: 650; }
 #settings-menu .settings-close { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--dim); font-size: 20px; line-height: 1; cursor: pointer; }
 #settings-menu .settings-close:hover { background: var(--hover); color: var(--pri); }
+
+/* "A newer Q-notes is out" */
+#update-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; padding: 7px 9px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); color: var(--pri); font-size: 12px; line-height: 1.35; }
+#update-note[hidden] { display: none; }
+#update-note .update-text { flex: 1 1 100%; }
+#update-note .update-get { padding: 3px 10px; border-radius: 5px; background: var(--accent); color: var(--on-accent); text-decoration: none; font-weight: 600; }
+#update-note .update-x { margin-left: auto; border: 0; background: none; color: var(--dim); cursor: pointer; font: inherit; }

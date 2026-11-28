@@ -12,6 +12,7 @@ import './bg_sidepanel.js';
 import './bg_pptx.js';
 import './bg_sync.js';
 import './bg_arrange.js';
+import './bg_update.js';
 import './bg_tidy.js';
 import './bg_ai.js';
 

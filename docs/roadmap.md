@@ -220,6 +220,10 @@ Today a topic reads like a pile of highlights. The parts that already feel like 
 
 - ✅ **Renamed to Q-notes (2026-11-28, owner):** every name people see (Chrome's extension list, panel, All notes, How to use, phone site, download pages, messages) says Q-notes; download is `qnotes.zip` (old `lazy-notes.zip` links still work), backups `qnotes-backup-….json`. **Unchanged on purpose:** storage keys (`lazynotes`, `ln…`), IndexedDB names, the sync/backup format (`app: "lazy-notes"`), the repo name (so github.io/Lazy-Notes stays), the Render address. The How-to tour's screenshots still show the old name until `tools/make-tour-shots.js` is rerun.
 
+- ✅ **Mnemonics (2026-11-28, owner):** AI chat › **Mnemonics** (notes, page or document): acronyms / catchy sentences from first letters, vivid one-liners for facts. Offline: first-letter acronyms for the lists ("CSTM: C = Concentration gradient · …").
+- ✅ **Topics in a document (2026-11-28, owner; first step of the textbook idea):** AI chat › **Find topics** (with a document open): the separate topics in a PDF/deck that doesn't list them, with page ranges; **Add as topics in <course>** makes the missing ones without switching your topic. Offline: from the headings it can spot (CAPITALS / Title lines, incl. ones glued to the next sentence).
+- ✅ **"A newer Q-notes is out" (2026-11-28, owner):** the download page publishes `version.json`; zips carry `build.json`; the extension checks a few times a day and when the panel opens (`bg_update.js`), and the panel shows a notice with **Get it** (✕ hides it until the next version). Copies taken from git compare with when they were loaded. Switch: `lnUpdateAlert`.
+
 ## 7. Learning / onboarding
 - ✅ How to use page, ? key, tour.
 - ✅ **Test bench** (2026-11-27): `node tools/make-test-bench.js <dir>` builds the real extension pages + a stand-in for Chrome's APIs (`tools/test-bench/`) as one web page: lecture page with the highlighter on the left, side panel on the right, All notes, pretend AI. For trying changes without reloading the extension. No PDF/slides/Word readers.

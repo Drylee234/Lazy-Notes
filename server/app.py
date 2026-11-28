@@ -889,6 +889,10 @@ def extension_zip():
                         continue
                     path = os.path.join(folder, f)
                     z.write(path, os.path.relpath(path, EXT_ROOT))   # top level: "Extract All" makes the folder
+            # Which version this is, for the extension's "newer version" notice.
+            sha = os.environ.get("RENDER_GIT_COMMIT", "")
+            if sha:
+                z.writestr("build.json", json.dumps({"sha": sha, "time": now_iso()}))
         _zip_cache = buf.getvalue()
     return _zip_cache
 

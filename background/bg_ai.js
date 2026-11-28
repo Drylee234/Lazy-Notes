@@ -100,6 +100,27 @@ const TASKS = {
       `Summarise this part of a lecture document for a student${extra ? ` (${extra})` : ""}. Give the main points as single lines, no numbering, no heading, at most 10 lines. Use only what is here.\n\n---\n${text}`
   },
 
+  // Memory aids for what's there: lists get an acronym or a sentence from
+  // their first letters; facts get a short image or story.
+  mnemonic: {
+    maxTokens: 1200,
+    prompt: (text) =>
+      `Make memory aids (mnemonics) a student can use to remember these notes for an exam. For each list or group of related points: give an acronym or a short, catchy sentence built from the first letters, then show which letter stands for what. For single facts or definitions: give a vivid one-line image, rhyme or link. Keep it fun and short, at most 5 mnemonics, plain text, no headings.\n\n---\n${text}`
+  },
+  mnemonicDoc: {
+    maxTokens: 1400,
+    prompt: (text) =>
+      `Make memory aids (mnemonics) a student can use to remember this lecture material for an exam. Pick the lists and facts most worth memorising. For lists: an acronym or a catchy sentence from the first letters, then which letter stands for what. For facts: a vivid one-line image, rhyme or link. At most 6, plain text, no headings.\n\n---\n${text}`
+  },
+
+  // The topics a document covers (lecture PDFs often hold several without
+  // saying so). Strict format so the panel can offer to make them topics.
+  topicsDoc: {
+    maxTokens: 900,
+    prompt: (text) =>
+      `This lecture document may cover several topics without listing them. Identify the separate topics in it, in order. Answer ONLY with lines in this exact form, one per topic, nothing else:\nTopic name | pages\nUse short topic names (2 to 6 words, like a chapter title) and page ranges like 3-7 (use the [Page n] markers). At most 12 topics.\n\n---\n${text}`
+  },
+
   quizDoc: {
     maxTokens: 2000,
     prompt: (text, extra) =>

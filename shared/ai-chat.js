@@ -58,7 +58,7 @@ globalThis.LazyAIChat = (() => {
           <textarea class="aic-input" rows="1" placeholder="Ask anything…" aria-label="Message"></textarea>
           <button type="submit" class="aic-send" title="Send (Enter)">↑</button>
         </div>
-        <div class="aic-quick"><button type="button" data-job="summarise">Summarise</button><button type="button" data-job="quiz">Quiz me</button>
+        <div class="aic-quick"><button type="button" data-job="summarise">Summarise</button><button type="button" data-job="quiz">Quiz me</button><button type="button" data-job="mnemonic" title="Memory aids: acronyms, catchy sentences, little images">Mnemonics</button><button type="button" data-job="topics" class="aic-doc-only" title="The separate topics in this document, with their pages">Find topics</button>
           <span class="aic-hint">Enter sends · Shift+Enter new line</span></div>
       </form>`;
     const $ = (c) => container.querySelector(c);
@@ -84,6 +84,7 @@ globalThis.LazyAIChat = (() => {
         if (s === "page") b.textContent = can.page ? `Page ${now.page}` : "This page";
       });
       if (!can[scope]) scope = ["doc", "notes", "page"].find((s) => can[s]) || scope;
+      container.querySelectorAll(".aic-doc-only").forEach((b) => { b.hidden = !can.doc; });
       scopeBtns.forEach((b) => { b.classList.toggle("on", b.dataset.scope === scope); b.setAttribute("aria-checked", String(b.dataset.scope === scope)); });
       input.placeholder = scope === "notes" ? `Ask about your notes${now.topicName ? ` on ${now.topicName}` : ""}…` : scope === "page" ? `Ask about page ${now.page}…` : "Ask about this document…";
     }
@@ -116,6 +117,20 @@ globalThis.LazyAIChat = (() => {
         const copy = el("button", null, "Copy"); copy.type = "button";
         copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(m.text); copy.textContent = "Copied"; } catch (_) { copy.textContent = "Couldn't copy"; } });
         acts.append(copy);
+        // A "Find topics" answer: make them topics in the course, one click.
+        const found = m.job === "topics" ? String(m.text).split("\n").map((l) => l.match(/^\s*(?:\d+[.)]\s*)?(.{2,60}?)\s*\|\s*([\d\s,–-]+)\s*$/)).filter(Boolean) : [];
+        if (found.length && t.course) {
+          const add = el("button", null, m.added ? "Added ✓" : `Add as topics in ${t.course}`); add.type = "button"; add.disabled = !!m.added;
+          add.title = found.map((f) => `${f[1]} (pp. ${f[2].trim()})`).join("\n");
+          add.addEventListener("click", async () => {
+            add.disabled = true;
+            const r = await send({ type: "ADD_TOPICS", courseName: t.course, names: found.map((f) => f[1].trim()) });
+            if (!r?.ok) { add.disabled = false; add.textContent = r?.reason || "Couldn't add them"; return; }
+            m.added = true; save();
+            add.textContent = r.added.length ? `Added ${r.added.length} topic${r.added.length === 1 ? "" : "s"} ✓` : "They're all there already ✓";
+          });
+          acts.append(add);
+        }
         if (typeof onKeep === "function") {
           const keep = el("button", null, m.kept ? "Kept ✓" : "Keep as note"); keep.type = "button"; keep.disabled = !!m.kept;
           keep.addEventListener("click", async () => {
@@ -167,6 +182,10 @@ globalThis.LazyAIChat = (() => {
       if (busy || !question) return;
       await refresh();
       if (scopeBtns.find((b) => b.dataset.scope === scope)?.disabled) return;
+      if (job === "topics") {
+        if (!now.doc) return;
+        if (scope === "notes") scope = "doc";
+      }
       let t = threads[openId];
       if (!t) {
         const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -187,7 +206,7 @@ globalThis.LazyAIChat = (() => {
       if (job === "ask") {
         r = await send({ type: "AI_CHAT", question, scope, page: now.page, text: notes, history, title: [t.course, t.topic].filter(Boolean).join(" › ") });
       } else {
-        const task = scope === "notes" ? job : `${job}Doc`;
+        const task = job === "topics" ? "topicsDoc" : scope === "notes" ? job : `${job}Doc`;
         r = await send({ type: "AI_RUN", task, text: notes || undefined, scope: scope === "page" ? "page" : "all", page: now.page });
       }
       delete reply.pending;
@@ -202,7 +221,8 @@ globalThis.LazyAIChat = (() => {
     $(".aic-form").addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (!q) return; input.value = ""; grow(); ask(q); });
     input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $(".aic-form").requestSubmit(); } });
     input.addEventListener("input", grow);
-    container.querySelectorAll(".aic-quick [data-job]").forEach((b) => b.addEventListener("click", () => ask(b.dataset.job === "quiz" ? "Quiz me" : "Summarise", b.dataset.job)));
+    const QUICK = { summarise: "Summarise", quiz: "Quiz me", mnemonic: "Mnemonics", topics: "Find the topics in this document" };
+    container.querySelectorAll(".aic-quick [data-job]").forEach((b) => b.addEventListener("click", () => ask(QUICK[b.dataset.job], b.dataset.job)));
     scopeBtns.forEach((b) => b.addEventListener("click", () => { scope = b.dataset.scope; try { chrome.storage.local.set({ lnAiAskScope: scope }); } catch (_) {} refresh(); input.focus(); }));
     $(".aic-new").addEventListener("click", () => { openId = null; showList(false); drawThread(); input.focus(); });
     $(".aic-list-btn").addEventListener("click", () => showList(drawer.hidden));

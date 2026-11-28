@@ -246,3 +246,23 @@ export async function handleImportTopic({ course, topic, from, notes }) {
   await chrome.storage.local.set({ lazynotes: data });
   return { ok: true, course: c, topic: t };
 }
+
+
+// "Add as topics" (the AI's Find topics): make the missing ones in a course,
+// without switching the topic you're on (handleCreateTopic would) and
+// without touching any topic that already exists.
+export async function handleAddTopics({ courseName, names }) {
+  const { lazynotes } = await chrome.storage.local.get("lazynotes");
+  const course = lazynotes?.courses?.[courseName];
+  if (!course) return { ok: false, reason: "That course isn't there any more." };
+  const added = [];
+  for (const raw of Array.isArray(names) ? names : []) {
+    const name = tidyName(raw).slice(0, 80);
+    if (!name || Object.keys(course.topics || {}).some((k) => k.toLowerCase() === name.toLowerCase())) continue;
+    course.topics = course.topics || {};
+    course.topics[name] = { created: new Date().toISOString(), highlights: {}, notes: {} };
+    added.push(name);
+  }
+  if (added.length) await chrome.storage.local.set({ lazynotes });
+  return { ok: true, added };
+}

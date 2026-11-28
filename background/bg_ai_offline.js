@@ -135,6 +135,43 @@ export function offlineJob(task, text, extra, corpus = "") {
       const lines = summarise(t, task === "summarise" ? 5 : 8);
       return lines.length ? { ok: true, text: lines.join("\n") } : { ok: false, reason: "There's too little text to summarise." };
     }
+    case "mnemonic":
+    case "mnemonicDoc": {
+      // No AI: first-letter acronyms for the lists in the text.
+      const groups = [];
+      let cur = [];
+      t.split("\n").forEach((line) => {
+        const l = line.replace(/^\s*(?:[-*•▪◦]|\d+[.)])\s*/, "").trim();
+        const point = /^\s*(?:[-*•▪◦]|\d+[.)])\s+/.test(line) || (l && l.split(/\s+/).length <= 5 && !/[.:]$/.test(l));
+        if (point && l) cur.push(l); else { if (cur.length >= 3) groups.push(cur); cur = []; }
+      });
+      if (cur.length >= 3) groups.push(cur);
+      if (!groups.length) return { ok: false, reason: "Couldn't find a list to make an acronym from. The AI can make other memory aids when you're online." };
+      return { ok: true, text: groups.slice(0, 5).map((g) => {
+        const letters = g.map((p) => (p.match(/[A-Za-z]/) || ["?"])[0].toUpperCase()).join("");
+        return `${letters}: ${g.map((p) => `${(p.match(/[A-Za-z]/) || ["?"])[0].toUpperCase()} = ${p}`).join(" · ")}`;
+      }).join("\n") };
+    }
+    case "topicsDoc": {
+      // No AI: lines that look like headings (short, Title or ALL CAPS) with their page.
+      const found = [];
+      let page = null;
+      t.split("\n").forEach((line) => {
+        const m = line.match(/^\[Page (\d+)\]$/);
+        if (m) { page = Number(m[1]); return; }
+        let l = line.trim();
+        // A heading the page text glued to the sentence after it:
+        // "TRANSPORT ACROSS MEMBRANES Passive transport needs…".
+        const glued = l.match(/^([A-Z][A-Z0-9 ,&()'-]{3,60}?)\s+(?=[A-Z][a-z])/);
+        if (glued && /[A-Z]{3}/.test(glued[1])) l = glued[1].trim();
+        const words = l.split(/\s+/);
+        const heading = l.length >= 4 && words.length <= 8 && !/[.,;]$/.test(l) &&
+          (l === l.toUpperCase() && /[A-Z]{3}/.test(l) || words.every((w) => /^[A-Z0-9(]/.test(w) || w.length <= 3));
+        if (heading && page && !found.some((f) => f.name.toLowerCase() === l.toLowerCase())) found.push({ name: l, page });
+      });
+      if (!found.length) return { ok: false, reason: "Couldn't spot headings in this document. The AI can find its topics when you're online." };
+      return { ok: true, text: found.slice(0, 12).map((f, i) => `${f.name.replace(/\s+/g, " ")} | ${f.page}${found[i + 1] && found[i + 1].page > f.page ? `-${found[i + 1].page - 1}` : ""}`).join("\n") };
+    }
     case "quiz":
     case "quizDoc": {
       const qs = quiz(t, n);

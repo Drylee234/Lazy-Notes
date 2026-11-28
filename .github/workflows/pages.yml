@@ -33,6 +33,11 @@ jobs:
           mkdir -p _site
           git archive --format=zip -o _site/qnotes.zip HEAD -- . \
             ':!server' ':!docs' ':!tools' ':!site' ':!.github' ':!*.md' ':!render.yaml'
+          # Which version this is: in the zip (the extension reads it) and
+          # next to it (the extension compares the two to say "newer version").
+          printf '{"sha":"%s","time":"%s"}\n' "$GITHUB_SHA" "$(git log -1 --format=%cI)" > build.json
+          zip -q _site/qnotes.zip build.json
+          cp build.json _site/version.json
           cp _site/qnotes.zip _site/lazy-notes.zip   # the old name, for links already sent
           cp site/index.html _site/index.html
           cp icons/logo.svg _site/logo.svg
